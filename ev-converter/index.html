@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pokémon Champions EV Converter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0c0c16;--surf:#13131f;--surf2:#1c1c2e;--bord:#2c2c48;--acc:#e63946;--acc2:#ffd166;--acc3:#06d6a0;--txt:#f0f0f8;--muted:#7777aa;--r:14px;--rs:8px;--fh:'Bebas Neue',sans-serif;--fb:'Nunito',sans-serif;}
+body{background:var(--bg);color:var(--txt);font-family:var(--fb);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 20% 50%,rgba(230,57,70,.07) 0%,transparent 60%),radial-gradient(ellipse at 80% 20%,rgba(6,214,160,.05) 0%,transparent 60%);pointer-events:none;z-index:0}
+.wrap{position:relative;z-index:1;max-width:860px;margin:0 auto;padding:32px 20px 80px}
+.hdr{text-align:center;margin-bottom:44px}
+.hdr-logo{display:inline-flex;align-items:center;gap:10px;margin-bottom:6px}
+.hdr-ball{width:44px;height:44px;background:var(--acc3);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 0 22px rgba(6,214,160,.45);animation:pulse 3s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 22px rgba(6,214,160,.45)}50%{box-shadow:0 0 42px rgba(6,214,160,.75)}}
+.hdr h1{font-family:var(--fh);font-size:clamp(2.2rem,6vw,3.8rem);letter-spacing:3px;background:linear-gradient(135deg,#fff 0%,var(--acc3) 50%,var(--acc2) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1}
+.hdr p{color:var(--muted);font-size:.8rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;margin-top:6px}
+.hdr p a{color:var(--acc2);text-decoration:none}.hdr p a:hover{text-decoration:underline}
+.card{background:var(--surf);border:1px solid var(--bord);border-radius:var(--r);padding:26px;margin-bottom:22px;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--acc3),var(--acc2));border-radius:var(--r) var(--r) 0 0}
+.card h2{font-family:var(--fh);font-size:1.55rem;letter-spacing:2px;margin-bottom:18px;display:flex;align-items:center;gap:9px}
+.fg{display:flex;flex-direction:column;gap:5px}
+.fg label{font-size:.72rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+input,textarea{background:var(--surf2);border:1px solid var(--bord);border-radius:var(--rs);color:var(--txt);font-family:var(--fb);font-size:.92rem;font-weight:600;padding:9px 13px;outline:none;transition:all .2s;width:100%}
+input:focus,textarea:focus{border-color:var(--acc2);box-shadow:0 0 0 3px rgba(255,209,102,.13)}
+textarea{resize:vertical;font-size:.82rem;font-family:monospace;line-height:1.5}
+.tabs{display:flex;gap:5px;margin-bottom:18px;background:var(--surf2);padding:4px;border-radius:var(--rs)}
+.tab{flex:1;padding:7px 10px;border:none;border-radius:6px;background:transparent;color:var(--muted);font-family:var(--fb);font-size:.75rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .2s}
+.tab.active{background:var(--acc3);color:#000}
+.info{background:rgba(6,214,160,.07);border:1px solid rgba(6,214,160,.2);border-radius:var(--rs);padding:9px 13px;font-size:.78rem;color:var(--muted);line-height:1.55;margin-bottom:14px}
+.info strong{color:var(--acc3)}.info a{color:var(--acc2);text-decoration:none}.info code{background:rgba(255,255,255,.07);padding:1px 5px;border-radius:4px;font-size:.9em}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:11px 22px;border:none;border-radius:var(--rs);font-family:var(--fh);font-size:1.05rem;letter-spacing:1.5px;cursor:pointer;transition:all .2s}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-primary{background:linear-gradient(135deg,var(--acc3),#04a07b);color:#000;box-shadow:0 4px 14px rgba(6,214,160,.32)}
+.btn-primary:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 6px 22px rgba(6,214,160,.48)}
+.btn-sec{background:var(--surf2);color:var(--txt);border:1px solid var(--bord)}
+.btn-sec:hover:not(:disabled){border-color:var(--acc2);color:var(--acc2)}
+.btn-danger{background:linear-gradient(135deg,var(--acc),#c1121f);color:#fff;box-shadow:0 4px 14px rgba(230,57,70,.32)}
+.btn-danger:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 6px 22px rgba(230,57,70,.48)}
+.btn-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:20px}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:99px;font-size:.7rem;font-weight:800;letter-spacing:.5px}
+.badge-green{background:rgba(6,214,160,.18);color:var(--acc3)}
+.badge-yellow{background:rgba(255,209,102,.18);color:var(--acc2)}
+.badge-red{background:rgba(230,57,70,.18);color:var(--acc)}
+.direction-sel{display:flex;gap:10px;margin-bottom:20px}
+.dir-opt{flex:1;padding:16px 14px;border:2px solid var(--bord);border-radius:var(--rs);background:var(--surf2);cursor:pointer;transition:all .2s;text-align:center}
+.dir-opt:hover{border-color:var(--muted)}
+.dir-opt.sel{border-color:var(--acc3);background:rgba(6,214,160,.07)}
+.dir-opt-icon{font-size:1.5rem;display:block;margin-bottom:5px}
+.dir-opt-title{font-family:var(--fh);font-size:1.15rem;letter-spacing:1px;display:block;color:var(--txt)}
+.dir-opt.sel .dir-opt-title{color:var(--acc3)}
+.dir-opt-desc{font-size:.69rem;color:var(--muted);font-weight:600;display:block;margin-top:4px;line-height:1.4}
+.formula-box{display:flex;align-items:center;justify-content:center;gap:16px;padding:14px;background:var(--surf2);border-radius:var(--rs);border:1px solid var(--bord);margin-bottom:20px;flex-wrap:wrap;text-align:center}
+.formula-step{font-size:.82rem;font-weight:700;color:var(--muted)}
+.formula-step strong{color:var(--txt);font-size:1rem}
+.formula-arrow{color:var(--acc3);font-size:1.2rem;font-weight:900}
+.io-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:600px){.io-grid{grid-template-columns:1fr}}
+.io-label{font-size:.72rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.io-label span{color:var(--acc2);font-size:.7rem;margin-left:6px}
+.result-box{background:var(--surf2);border:1px solid var(--bord);border-radius:var(--rs);padding:12px;font-family:monospace;font-size:.82rem;line-height:1.6;white-space:pre-wrap;word-break:break-word;min-height:180px;color:var(--txt)}
+.result-box.has-content{border-color:rgba(6,214,160,.35)}
+.changed{color:var(--acc3);font-weight:700}
+.url-row{display:flex;gap:8px;align-items:flex-end}
+.url-row input{flex:1}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:4px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.stats-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.stat-chip{background:var(--surf2);border:1px solid var(--bord);border-radius:var(--rs);padding:8px 13px;font-size:.75rem;font-weight:800;text-align:center}
+.stat-chip-val{font-family:var(--fh);font-size:1.3rem;letter-spacing:1px;display:block;color:var(--acc3)}
+.stat-chip-lbl{color:var(--muted);font-size:.67rem;letter-spacing:.5px;text-transform:uppercase}
+.toast{position:fixed;bottom:22px;right:22px;background:var(--surf);border:1px solid var(--bord);border-radius:var(--rs);padding:12px 18px;font-weight:700;font-size:.87rem;box-shadow:0 4px 22px rgba(0,0,0,.45);z-index:9999;transform:translateY(80px);opacity:0;transition:all .3s ease;max-width:300px}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.ok{border-left:4px solid var(--acc3)}.toast.err{border-left:4px solid var(--acc)}.toast.info{border-left:4px solid var(--acc2)}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hdr">
+    <div class="hdr-logo"><div class="hdr-ball">⚡</div></div>
+    <h1>Pokémon Champions EV Converter</h1>
+    <p>Convert EV spreads between <a href="#">Gen 9</a> &amp; <a href="#">Pokémon Champions</a> formats</p>
+  </header>
+
+  <!-- DIRECTION -->
+  <div class="card">
+    <h2>🔄 Conversion Direction</h2>
+    <div class="direction-sel">
+      <div class="dir-opt sel" id="dir-to-new" onclick="setDir('to-new')">
+        <span class="dir-opt-icon">🆕</span>
+        <span class="dir-opt-title">→ Champions</span>
+        <span class="dir-opt-desc">Old format → Pokémon Champions<br><code style="font-size:.75rem">(EV + 4) ÷ 8</code></span>
+      </div>
+      <div class="dir-opt" id="dir-to-old" onclick="setDir('to-old')">
+        <span class="dir-opt-icon">⏪</span>
+        <span class="dir-opt-title">→ Old Format</span>
+        <span class="dir-opt-desc">Champions → Old format<br><code style="font-size:.75rem">EV × 8 − 4</code></span>
+      </div>
+    </div>
+
+    <div class="formula-box" id="formula-box">
+      <span class="formula-step"><strong>252 SpA</strong><br><span style="font-size:.7rem">(old)</span></span>
+      <span class="formula-arrow">→</span>
+      <span class="formula-step" style="color:var(--acc2)"><strong>(252 + 4) ÷ 8</strong></span>
+      <span class="formula-arrow">→</span>
+      <span class="formula-step"><strong>32 SpA</strong><br><span style="font-size:.7rem">(Champions)</span></span>
+    </div>
+  </div>
+
+  <!-- INPUT -->
+  <div class="card">
+    <h2>📋 Input</h2>
+    <div class="tabs">
+      <button class="tab active" onclick="setTab('paste')">📝 Paste Text</button>
+      <button class="tab" onclick="setTab('url')">🔗 Poképast.es URL</button>
+    </div>
+
+    <!-- PASTE TAB -->
+    <div id="tab-paste">
+      <div class="info">Paste one or more Pokémon blocks from a <strong>Pokémon Showdown</strong> or <strong>pokepast.es</strong> teamsheet. Multiple Pokémon separated by blank lines are all converted at once.</div>
+      <div class="fg">
+        <label>Paste</label>
+        <textarea id="paste-in" rows="12" placeholder="Calyrex-Shadow @ Life Orb
+Ability: As One (Spectrier)
+Level: 50
+Tera Type: Dark
+EVs: 4 HP / 252 SpA / 252 Spe
+Timid Nature
+IVs: 0 Atk
+- Protect
+- Psychic
+- Nasty Plot
+- Astral Barrage"></textarea>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="convertPaste()">⚡ Convert</button>
+        <button class="btn btn-sec" onclick="clearAll()">✕ Clear</button>
+      </div>
+    </div>
+
+    <!-- URL TAB -->
+    <div id="tab-url" class="hidden">
+      <div class="info">Enter a <strong><a href="https://pokepast.es/">pokepast.es</a></strong> URL. The paste will be fetched, all EV lines converted, and the full converted paste shown below ready to copy.</div>
+      <div class="fg" style="margin-bottom:14px">
+        <label>Poképast.es URL</label>
+        <div class="url-row">
+          <input id="url-in" placeholder="https://pokepast.es/8sd0a5903952" autocomplete="off">
+          <button class="btn btn-primary" id="fetch-btn" onclick="convertURL()">⚡ Fetch &amp; Convert</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OUTPUT -->
+  <div class="card" id="output-card" style="display:none">
+    <h2>✅ Result</h2>
+    <div class="stats-row" id="stats-row"></div>
+
+    <div class="io-grid" style="margin-top:18px">
+      <div>
+        <div class="io-label">Input <span id="lbl-in"></span></div>
+        <div class="result-box" id="out-original"></div>
+      </div>
+      <div>
+        <div class="io-label">Converted <span id="lbl-out"></span></div>
+        <div class="result-box has-content" id="out-converted"></div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="copyResult()">📋 Copy Converted</button>
+      <button class="btn btn-sec" onclick="clearAll()">↩ Start Over</button>
+    </div>
+  </div>
+
+  <!-- REFERENCE CARD -->
+  <div class="card">
+    <h2>📊 EV Reference Table</h2>
+    <div class="info">Common EV values and their converted equivalents in both directions.</div>
+    <div id="ref-table" style="overflow-x:auto;margin-top:4px"></div>
+  </div>
+</div>
+<div id="toast" class="toast"></div>
+
+<script>
+/* ── STATE ─────────────────────────────────────────────── */
+let dir = 'to-new'; // 'to-new' or 'to-old'
+let activeTab = 'paste';
+let lastConverted = '';
+
+/* ── DIRECTION ──────────────────────────────────────────── */
+const FORMULA = {
+  'to-new': { label:'→ Champions', fn: v => Math.round((v + 4) / 8) },
+  'to-old': { label:'→ Old Format', fn: v => v * 8 - 4 }
+};
+
+const FORMULA_HTML = {
+  'to-new': `<span class="formula-step"><strong>252 SpA</strong><br><span style="font-size:.7rem">(old)</span></span><span class="formula-arrow">→</span><span class="formula-step" style="color:var(--acc2)"><strong>(252 + 4) ÷ 8</strong></span><span class="formula-arrow">→</span><span class="formula-step"><strong>32 SpA</strong><br><span style="font-size:.7rem">(Champions)</span></span>`,
+  'to-old': `<span class="formula-step"><strong>32 SpA</strong><br><span style="font-size:.7rem">(Champions)</span></span><span class="formula-arrow">→</span><span class="formula-step" style="color:var(--acc2)"><strong>32 × 8 − 4</strong></span><span class="formula-arrow">→</span><span class="formula-step"><strong>252 SpA</strong><br><span style="font-size:.7rem">(old)</span></span>`,
+};
+
+function setDir(d) {
+  dir = d;
+  ['to-new','to-old'].forEach(x => document.getElementById('dir-'+x).classList.toggle('sel', x === d));
+  document.getElementById('formula-box').innerHTML = FORMULA_HTML[d];
+  buildRefTable();
+  clearOutput();
+}
+
+/* ── TABS ───────────────────────────────────────────────── */
+function setTab(t) {
+  activeTab = t;
+  ['paste','url'].forEach(x => document.getElementById('tab-'+x).classList.toggle('hidden', x !== t));
+  document.querySelectorAll('.tab').forEach((b, i) => b.classList.toggle('active', ['paste','url'][i] === t));
+  clearOutput();
+}
+
+/* ── CORE EV CONVERSION ─────────────────────────────────── */
+function convertEVLine(line) {
+  // Matches: "EVs: 4 HP / 252 SpA / 252 Spe" (any number/order of stats)
+  const evMatch = line.match(/^(\s*EVs:\s*)(.+)$/i);
+  if (!evMatch) return { line, changed: false };
+
+  const prefix = evMatch[1];
+  const rest = evMatch[2];
+  const fn = FORMULA[dir].fn;
+
+  const converted = rest.replace(/(\d+)\s*([A-Za-z]+)/g, (_, num, stat) => {
+    const orig = parseInt(num, 10);
+    const newVal = fn(orig);
+    return `${newVal} ${stat}`;
+  });
+
+  return { line: prefix + converted, changed: converted !== rest };
+}
+
+function convertPasteText(txt) {
+  const lines = txt.split(/\r?\n/);
+  let changed = 0;
+  const outLines = lines.map(l => {
+    const r = convertEVLine(l);
+    if (r.changed) changed++;
+    return r;
+  });
+  return { lines: outLines, evLinesChanged: changed };
+}
+
+function pokemonCount(txt) {
+  // Count non-empty blocks
+  return txt.trim().split(/\r?\n\r?\n+/).filter(b => b.trim()).length;
+}
+
+/* ── RENDER OUTPUT ──────────────────────────────────────── */
+function renderOutput(originalTxt, convertedLines, evChanged) {
+  const card = document.getElementById('output-card');
+  card.style.display = '';
+
+  // Original panel — plain text
+  document.getElementById('out-original').textContent = originalTxt;
+
+  // Converted panel — highlight changed EV lines
+  const frag = document.createDocumentFragment();
+  convertedLines.forEach(({ line, changed }) => {
+    if (changed) {
+      const span = document.createElement('span');
+      span.className = 'changed';
+      span.textContent = line;
+      frag.appendChild(span);
+    } else {
+      frag.appendChild(document.createTextNode(line));
+    }
+    frag.appendChild(document.createTextNode('\n'));
+  });
+  const box = document.getElementById('out-converted');
+  box.innerHTML = '';
+  box.appendChild(frag);
+
+  lastConverted = convertedLines.map(r => r.line).join('\n');
+
+  // Labels
+  const isToNew = dir === 'to-new';
+  document.getElementById('lbl-in').textContent  = isToNew ? '(Old Format)' : '(Champions)';
+  document.getElementById('lbl-out').textContent = isToNew ? '(Champions)' : '(Old Format)';
+
+  // Stats
+  const pkmn = pokemonCount(originalTxt);
+  const stats = document.getElementById('stats-row');
+  stats.innerHTML = `
+    <div class="stat-chip"><span class="stat-chip-val">${pkmn}</span><span class="stat-chip-lbl">Pokémon</span></div>
+    <div class="stat-chip"><span class="stat-chip-val">${evChanged}</span><span class="stat-chip-lbl">EV Lines Converted</span></div>
+    <div class="stat-chip"><span class="stat-chip-val">${isToNew ? '(n+4)÷8' : 'n×8−4'}</span><span class="stat-chip-lbl">Formula</span></div>
+  `;
+
+  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* ── ACTIONS ────────────────────────────────────────────── */
+function convertPaste() {
+  const txt = document.getElementById('paste-in').value;
+  if (!txt.trim()) return toast('Paste some team text first', 'err');
+  const { lines, evLinesChanged } = convertPasteText(txt);
+  renderOutput(txt, lines, evLinesChanged);
+  if (evLinesChanged === 0) toast('No EV lines found to convert', 'info');
+  else toast(`Converted ${evLinesChanged} EV line${evLinesChanged !== 1 ? 's' : ''}`, 'ok');
+}
+
+async function convertURL() {
+  const raw = document.getElementById('url-in').value.trim();
+  if (!raw) return toast('Enter a pokepast.es URL', 'err');
+  if (!raw.includes('pokepast.es')) return toast('Must be a pokepast.es URL', 'err');
+
+  const btn = document.getElementById('fetch-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Fetching…';
+
+  try {
+    let u = raw.replace(/\/$/, '');
+    if (!u.endsWith('/json')) u += '/json';
+    const r = await fetch(u);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const j = await r.json();
+    const txt = j.paste || '';
+    if (!txt.trim()) throw new Error('Empty paste returned');
+    const { lines, evLinesChanged } = convertPasteText(txt);
+    renderOutput(txt, lines, evLinesChanged);
+    toast(`Fetched${j.title ? ' "' + j.title + '"' : ''} — ${evLinesChanged} EV line${evLinesChanged !== 1 ? 's' : ''} converted`, 'ok');
+  } catch(e) {
+    toast('Fetch failed: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '⚡ Fetch &amp; Convert';
+  }
+}
+
+function copyResult() {
+  if (!lastConverted) return;
+  navigator.clipboard.writeText(lastConverted).then(() => toast('Copied to clipboard!', 'ok')).catch(() => {
+    // Fallback
+    const ta = document.createElement('textarea');
+    ta.value = lastConverted;
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    toast('Copied!', 'ok');
+  });
+}
+
+function clearOutput() {
+  document.getElementById('output-card').style.display = 'none';
+  lastConverted = '';
+}
+
+function clearAll() {
+  document.getElementById('paste-in').value = '';
+  document.getElementById('url-in').value = '';
+  clearOutput();
+}
+
+/* ── REFERENCE TABLE ────────────────────────────────────── */
+function buildRefTable() {
+  const oldVals  = [0, 4, 8, 12, 60, 84, 100, 124, 148, 172, 196, 220, 236, 252];
+  const champVals = [0, 1, 2, 3, 8, 11, 13, 16, 19, 22, 25, 28, 30, 32];
+
+  const isToNew = dir === 'to-new';
+
+  let html = `<table style="width:100%;border-collapse:collapse;font-size:.82rem">
+    <thead>
+      <tr>
+        <th style="text-align:left;padding:8px 10px;color:var(--muted);font-size:.7rem;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid var(--bord)">${isToNew ? 'Old EV' : 'Champions EV'}</th>
+        <th style="text-align:center;padding:8px 10px;color:var(--acc2);font-size:.7rem;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid var(--bord)">Formula</th>
+        <th style="text-align:right;padding:8px 10px;color:var(--acc3);font-size:.7rem;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid var(--bord)">${isToNew ? 'Champions EV' : 'Old EV'}</th>
+      </tr>
+    </thead><tbody>`;
+
+  for (let i = 0; i < oldVals.length; i++) {
+    const oldV = oldVals[i];
+    const chV  = champVals[i];
+    const isHL = [252, 32].includes(isToNew ? oldV : chV);
+    const style = isHL ? 'background:rgba(255,209,102,.06)' : '';
+    if (isToNew) {
+      html += `<tr style="${style}">
+        <td style="padding:7px 10px;font-weight:700;border-bottom:1px solid rgba(44,44,72,.5)">${oldV}</td>
+        <td style="padding:7px 10px;text-align:center;color:var(--muted);border-bottom:1px solid rgba(44,44,72,.5)">(${oldV} + 4) ÷ 8</td>
+        <td style="padding:7px 10px;text-align:right;font-weight:800;color:var(--acc3);border-bottom:1px solid rgba(44,44,72,.5)">${chV}</td>
+      </tr>`;
+    } else {
+      html += `<tr style="${style}">
+        <td style="padding:7px 10px;font-weight:700;border-bottom:1px solid rgba(44,44,72,.5)">${chV}</td>
+        <td style="padding:7px 10px;text-align:center;color:var(--muted);border-bottom:1px solid rgba(44,44,72,.5)">${chV} × 8 − 4</td>
+        <td style="padding:7px 10px;text-align:right;font-weight:800;color:var(--acc2);border-bottom:1px solid rgba(44,44,72,.5)">${oldV}</td>
+      </tr>`;
+    }
+  }
+  html += '</tbody></table>';
+  document.getElementById('ref-table').innerHTML = html;
+}
+
+/* ── TOAST ──────────────────────────────────────────────── */
+let tt;
+function toast(msg, type='info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast ${type} show`;
+  clearTimeout(tt); tt = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+/* ── INIT ───────────────────────────────────────────────── */
+buildRefTable();
+</script>
+</body>
+</html>
