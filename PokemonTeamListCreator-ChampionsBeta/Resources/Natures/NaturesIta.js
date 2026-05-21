@@ -1,0 +1,7 @@
+var naturesIta = {
+    "Hardy": "Ardente", "Lonely": "Schiva", "Brave": "Audace", "Adamant": "Decisa", "Naughty": "Birbona",
+    "Bold": "Sicura", "Docile": "Docile", "Relaxed": "Placida", "Impish": "Scaltra", "Lax": "Fiacca",
+    "Timid": "Timida", "Hasty": "Lesta", "Serious": "Seria", "Jolly": "Allegra", "Naive": "Ingenua",
+    "Modest": "Modesta", "Mild": "Mite", "Quiet": "Quieta", "Bashful": "Ritrosa", "Rash": "Ardita",
+    "Calm": "Calma", "Gentle": "Gentile", "Sassy": "Vivace", "Careful": "Cauta", "Quirky": "Furba"
+};
