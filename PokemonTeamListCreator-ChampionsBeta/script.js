@@ -252,20 +252,6 @@ function generatePdf(element) {
 
         var pokes = parsedTeam.teams[0].pokemon;
 
-        // Stat Alignment Multi-Language Dictionary for OTS/Closed Sheets
-        const statAlignmentDict = {
-            "En": "Stat Alignment",
-            "Es": "Alineac. Estad.",
-            "Ita": "Allineam. Stat.",
-            "Ger": "Werteausrichtung",
-            "Fre": "Alignement Stats",
-            "Jpn": "ステータス補正",
-            "Kor": "능력치 보정",
-            "Chs": "能力值取向",
-            "Cht": "能力值取向"
-        };
-        var statAlignmentLabel = statAlignmentDict[chosenLang] || "Stat Alignment";
-
         for (let i = 0; i < pokes.length; i++) {
 
             var textX = 35;
@@ -282,7 +268,6 @@ function generatePdf(element) {
             var moveY = pokeY + 34;
             var moveGapY = 8;
 
-            // Aligned bottom-right to the 8px height boxes (pushed down)
             var statY = pokeY + 19.5; 
             var statGapY = 8;
 
@@ -294,12 +279,12 @@ function generatePdf(element) {
                 itemId = ItemTranslator[pokes[i].item];
             }
 
-            var nature = 'Serious';
-            if (pokes[i].nature){
-                nature = pokes[i].nature;
+            var natureBaseId = 'Serious';
+            if (pokes[i].nature) {
+                natureBaseId = NatureTranslator[pokes[i].nature] || pokes[i].nature;
             }
 
-            var level = 50; // Forced to 50 for math calculation
+            var level = 50;
             if (pokes[i].level){
                 level = pokes[i].level;
             }
@@ -325,10 +310,9 @@ function generatePdf(element) {
 
             var name = window['pokes' + chosenLang][nameId];
             
-            // Check for localized nature, fallback to english nature if not found
-            var printedNature = nature;
-            if (window['natures' + chosenLang] && window['natures' + chosenLang][nature]) {
-                printedNature = window['natures' + chosenLang][nature];
+            var printedNature = natureBaseId;
+            if (window['natures' + chosenLang] && window['natures' + chosenLang][natureBaseId]) {
+                printedNature = window['natures' + chosenLang][natureBaseId];
             }
 
             var ability = window['abilities' + chosenLang][abilityId];
@@ -349,10 +333,25 @@ function generatePdf(element) {
             doc.setFont("customFont", 'normal');
             doc.text(name, textX + (i%2) * gapX, pokeY + (Math.floor(i/2)) * gapY);
 
-            // Stat Alignment replacement block
-            doc.setFontSize(11.5); // Slightly smaller to ensure translations fit
+            // ================== FIXED STAT ALIGNMENT FONT SCALING ==================
+            var statAlignmentLabel = "Stat Alignment";
+            var alignmentFontSize = 13; // Start at default label size
             doc.setFont("text1", 'normal');
+            doc.setFontSize(alignmentFontSize);
+
+            var scaleFactor = doc.internal.scaleFactor || 2.83464;
+            var alignmentTextWidth = (doc.getStringUnitWidth(statAlignmentLabel) * alignmentFontSize) / scaleFactor;
+            var maxAlignmentWidth = 19.5; // Strict limit to keep it away from the left border (6.5)
+
+            while (alignmentTextWidth > maxAlignmentWidth && alignmentFontSize > 5) {
+                alignmentFontSize -= 0.5;
+                doc.setFontSize(alignmentFontSize);
+                alignmentTextWidth = (doc.getStringUnitWidth(statAlignmentLabel) * alignmentFontSize) / scaleFactor;
+            }
+
             doc.text(statAlignmentLabel, textXX + (i%2) * gapX, natureY + (Math.floor(i/2)) * gapY, "right");
+            // =========================================================================
+
             doc.setFontSize(11);
             doc.setFont("customFont", 'normal');
             doc.text(printedNature, textX + (i%2) * gapX, natureY + (Math.floor(i/2)) * gapY);
@@ -381,9 +380,8 @@ function generatePdf(element) {
             }
             
             if (sheet == "close") {
-                var stats = getStats(pokes[i].name, ivs, evs, level, nature);
+                var stats = getStats(pokes[i].name, ivs, evs, level, natureBaseId);
                 
-                // Force font to be large and legible for the final numbers
                 doc.setFontSize(11);
                 doc.setFont("customFont", 'normal');
     
@@ -455,10 +453,8 @@ function generatePdf(element) {
             var x = 6.5 + 99 * (i%2);
             var y = 59.5 + 70 * Math.floor(i/2);
 
-            // Left the vertical line drawn exactly beside the 6 remaining boxes
             doc.line(x+80, y+20, x+80, y+68); 
             
-            // Shrunk font and perfectly tucked into top-left corner
             doc.setFontSize(5.5); 
             doc.setFont("text1", 'normal');
             
@@ -543,7 +539,6 @@ function generatePdf(element) {
             doc.addImage({imageData:line, format:'png', x:9+c_width*i, y:15, width:0.1, height:273.6});
         }
 
-        // GUI Stat Alignment Update for the Registration Page
         const gui = {
             "En": {
                 "item": " Held Item",
@@ -671,10 +666,10 @@ function generatePdf(element) {
                     }
                     doc.setFontSize(startFontSize);
 
-                    var natId = pokes[i].nature || 'Serious';
-                    var translatedNature = natId;
-                    if (window['natures' + currentLang] && window['natures' + currentLang][natId]) {
-                        translatedNature = window['natures' + currentLang][natId];
+                    var natIdBase = pokes[i].nature || 'Serious';
+                    var translatedNature = natIdBase;
+                    if (window['natures' + currentLang] && window['natures' + currentLang][natIdBase]) {
+                        translatedNature = window['natures' + currentLang][natIdBase];
                     }
                     doc.text(translatedNature, 22+c_width*(i+1), ystart+ygap+8*ygap*u,"center");
 
