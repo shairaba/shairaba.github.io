@@ -2,7 +2,68 @@
 
 import { Koffing } from './koff.js';
 
-//Thanks a lot to @joezhuu for these brilliant changes
+// =========================================================================
+// MASTER NATURE TRANSLATOR (Embedded to prevent loading order errors)
+// =========================================================================
+var NatureTranslator = {
+    // English
+    "Hardy": "Hardy", "Docile": "Docile", "Bashful": "Bashful", "Quirky": "Quirky", "Serious": "Serious",
+    "Bold": "Bold", "Modest": "Modest", "Calm": "Calm", "Timid": "Timid", "Lonely": "Lonely", "Mild": "Mild",
+    "Gentle": "Gentle", "Hasty": "Hasty", "Adamant": "Adamant", "Impish": "Impish", "Careful": "Careful",
+    "Jolly": "Jolly", "Naughty": "Naughty", "Lax": "Lax", "Rash": "Rash", "Naive": "Naive", "Brave": "Brave",
+    "Relaxed": "Relaxed", "Quiet": "Quiet", "Sassy": "Sassy",
+
+    // Spanish
+    "Fuerte": "Hardy", "Dócil": "Docile", "Tímida": "Bashful", "Rara": "Quirky", "Seria": "Serious",
+    "Osada": "Bold", "Modesta": "Modest", "Serena": "Calm", "Miedosa": "Timid", "Huraña": "Lonely",
+    "Afable": "Mild", "Amable": "Gentle", "Activa": "Hasty", "Firme": "Adamant", "Agitada": "Impish",
+    "Cauta": "Careful", "Alegre": "Jolly", "Pícara": "Naughty", "Floja": "Lax", "Alocada": "Rash",
+    "Ingenua": "Naive", "Audaz": "Brave", "Plácida": "Relaxed", "Mansa": "Quiet", "Grosera": "Sassy",
+
+    // Italian
+    "Ardente": "Hardy", "Ritrosa": "Bashful", "Furba": "Quirky", "Seria": "Serious",
+    "Sicura": "Bold", "Modesta": "Modest", "Calma": "Calm", "Timida": "Timid", "Schiva": "Lonely",
+    "Mite": "Mild", "Gentile": "Gentile", "Lesta": "Hasty", "Decisa": "Adamant", "Scaltra": "Impish",
+    "Cauta": "Careful", "Allegra": "Jolly", "Birbona": "Naughty", "Fiacca": "Lax", "Ardita": "Rash",
+    "Ingenua": "Naive", "Audace": "Brave", "Placida": "Relaxed", "Quieta": "Quiet", "Vivace": "Sassy",
+
+    // German
+    "Robust": "Hardy", "Sanft": "Docile", "Zaghaft": "Bashful", "Kauzig": "Quirky", "Ernst": "Serious",
+    "Kühn": "Bold", "Mäßig": "Modest", "Still": "Calm", "Scheu": "Timid", "Solo": "Lonely",
+    "Zart": "Gentle", "Hastig": "Hasty", "Hart": "Adamant", "Pfiffig": "Impish",
+    "Sacht": "Careful", "Froh": "Jolly", "Frech": "Naughty", "Lasch": "Lax", "Hitzig": "Rash",
+    "Naiv": "Naive", "Mutig": "Brave", "Locker": "Relaxed", "Ruhig": "Quiet", "Forsch": "Sassy",
+
+    // French
+    "Hardi": "Hardy", "Pudique": "Bashful", "Bizarre": "Quirky", "Sérieux": "Serious",
+    "Assuré": "Bold", "Modeste": "Modest", "Calme": "Calm", "Timide": "Timid",
+    "Doux": "Mild", "Gentil": "Gentle", "Pressé": "Hasty", "Rigide": "Adamant", "Malin": "Impish",
+    "Prudent": "Careful", "Jovial": "Jolly", "Mauvais": "Naughty", "Lâche": "Lax", "Foufou": "Rash",
+    "Naïf": "Naive", "Relax": "Relaxed", "Discret": "Quiet", "Malpoli": "Sassy",
+
+    // Japanese
+    "\u304c\u3093\u3070\u308a\u3084": "Hardy", "\u3059\u306a\u304a": "Docile", "\u3066\u308c\u3084": "Bashful", "\u304d\u307e\u3050\u308c": "Quirky", "\u307e\u3058\u3081": "Serious",
+    "\u305a\u3076\u3068\u3044": "Bold", "\u3072\u304b\u3048\u3081": "Modest", "\u304a\u3060\u3084\u304b": "Calm", "\u304a\u304f\u3073\u3087\u3046": "Timid", "\u3055\u307f\u3057\u304c\u308a": "Lonely",
+    "\u304a\u306b\u3068\u308a": "Mild", "\u304a\u3068\u306a\u3057\u3044": "Gentle", "\u305b\u3063\u304b\u3061": "Hasty", "\u3044\u3058\u3063\u3071\u308a": "Adamant", "\u308f\u3093\u3071\u304f": "Impish",
+    "\u3057\u3093\u3061\u3087\u3046": "Careful", "\u3088\u3046\u304d": "Jolly", "\u3084\u3093\u3061\u3083": "Naughty", "\u306e\u3046\u3066\u3093\u304d": "Lax", "\u3046\u304b\u308a\u3084": "Rash",
+    "\u3091\u3058\u3083\u304d": "Naive", "\u3083\u3046\u304b\u3093": "Brave", "\u306e\u3093\u304d": "Relaxed", "\u308c\u3044\u305b\u3044": "Quiet", "\u306a\u307e\u3044\u304d": "Sassy",
+
+    // Korean
+    "\ub178\ub825": "Hardy", "\uc628\uc21c": "Docile", "\uc218\uc90d\uc7ac": "Bashful", "\ubca0\ub355": "Quirky", "\uc131\uc2e4": "Serious",
+    "\ub300\ub2f4": "Bold", "\uc170\uc2ec": "Modest", "\ucc28\ubd84": "Calm", "\uac81\uc7ac\uc774": "Timid", "\uc678\ub85c\uc6c0": "Lonely",
+    "\uc758\uc813": "Mild", "\uc58c\uc804": "Gentle", "\uc131\uae09": "Hasty", "\uace0\uc9d1": "Adamant", "\uc7a5\ub09c\ubf40\ub7ec\uae30": "Impish",
+    "\uc2e0\uc911": "Careful", "\uba85\ub791": "Jolly", "\uac1c\uad6c\uc7ac\uc774": "Naughty", "\ucca8\ub791": "Lax", "\ub35c\ub801": "Rash",
+    "\ucca1\uc9c4\ub09c\ub9cc": "Naive", "\uc6a9\uac10": "Brave", "\ubbc2\uc0ac\ud0dc\ud3c9": "Relaxed", "\ub0c9\uc815": "Quiet", "\uac74\ubc29": "Sassy",
+
+    // Chinese (Simplified & Traditional)
+    "\u52e4\u594b": "Hardy", "\u52e4\u596b": "Hardy", "\u5766\u7387": "Docile", "\u8146\u8147": "Bashful", "\u976c\u977c": "Bashful", "\u6d6e\u8e81": "Quirky", "\u8ba4\u771f": "Serious", "\u8a8d\u771f": "Serious",
+    "\u5927\u80c6": "Bold", "\u5927\u81bd": "Bold", "\u5185\u655b": "Modest", "\u5167\u6582": "Modest", "\u6e29\u548c": "Calm", "\u6eab\u548c": "Calm", "\u80c6\u5c0f": "Timid", "\u81bd\u5c0f": "Timid",
+    "\u6015\u5bc2\u5bde": "Lonely", "\u6162\u541e\u541e": "Mild", "\u6e29\u987a": "Gentle", "\u6eab\u9806": "Gentle", "\u6025\u8e81": "Hasty", "\u56fa\u6267": "Adamant", "\u56fa\u57f7": "Adamant",
+    "\u6dd8\u6c14": "Impish", "\u6dd8\u6c23": "Impish", "\u614e\u91cd": "Careful", "\u723d\u6717": "Jolly", "\u987d\u76ae": "Naughty", "\u9811\u76ae": "Naughty", "\u4e50\u5929": "Lax", "\u6a02\u5929": "Lax",
+    "\u9a6c\u864e": "Rash", "\u99ac\u864e": "Rash", "\u5929\u771f": "Naive", "\u52c7\u6562": "Brave", "\u60a0\u95f2": "Relaxed", "\u60a0\u9592": "Relaxed", "\u51b7\u9759": "Quiet", "\u51b7\u975c": "Quiet", "\u81ea\u5927": "Sassy"
+};
+// =========================================================================
+
 const urlParams = new URLSearchParams(window.location.search);
 document.getElementById('playerName').value = urlParams.get('player');
 document.getElementById('trainerName').value = urlParams.get('trainer');
@@ -284,7 +345,7 @@ function generatePdf(element) {
                 natureBaseId = NatureTranslator[pokes[i].nature] || pokes[i].nature;
             }
 
-            var level = 50;
+            var level = 50; // Forced to 50 for math calculation
             if (pokes[i].level){
                 level = pokes[i].level;
             }
@@ -310,6 +371,7 @@ function generatePdf(element) {
 
             var name = window['pokes' + chosenLang][nameId];
             
+            // Check for localized nature, fallback to english nature if not found
             var printedNature = natureBaseId;
             if (window['natures' + chosenLang] && window['natures' + chosenLang][natureBaseId]) {
                 printedNature = window['natures' + chosenLang][natureBaseId];
@@ -382,6 +444,7 @@ function generatePdf(element) {
             if (sheet == "close") {
                 var stats = getStats(pokes[i].name, ivs, evs, level, natureBaseId);
                 
+                // Force font to be large and legible for the final numbers
                 doc.setFontSize(11);
                 doc.setFont("customFont", 'normal');
     
@@ -453,8 +516,10 @@ function generatePdf(element) {
             var x = 6.5 + 99 * (i%2);
             var y = 59.5 + 70 * Math.floor(i/2);
 
+            // Left the vertical line drawn exactly beside the 6 remaining boxes
             doc.line(x+80, y+20, x+80, y+68); 
             
+            // Shrunk font and perfectly tucked into top-left corner
             doc.setFontSize(5.5); 
             doc.setFont("text1", 'normal');
             
@@ -539,6 +604,7 @@ function generatePdf(element) {
             doc.addImage({imageData:line, format:'png', x:9+c_width*i, y:15, width:0.1, height:273.6});
         }
 
+        // GUI Stat Alignment Update for the Registration Page
         const gui = {
             "En": {
                 "item": " Held Item",
