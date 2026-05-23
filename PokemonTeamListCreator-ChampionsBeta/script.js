@@ -44,7 +44,7 @@ var NatureTranslator = {
     // Japanese
     "\u304c\u3093\u3070\u308a\u3084": "Hardy", "\u3059\u306a\u304a": "Docile", "\u3066\u308c\u3084": "Bashful", "\u304d\u307e\u3050\u308c": "Quirky", "\u307e\u3058\u3081": "Serious",
     "\u305a\u3076\u3068\u3044": "Bold", "\u3072\u304b\u3048\u3081": "Modest", "\u304a\u3060\u3084\u304b": "Calm", "\u304a\u304f\u3073\u3087\u3046": "Timid", "\u3055\u307f\u3057\u304c\u308a": "Lonely",
-    "\u304a\u306b\u3068\u308a": "Mild", "\u304a\u3068\u306a\u3057\u3044": "Gentle", "\u305b\u3063\u304b\u3061": "Hasty", "\u3044\u3058\u3063\u3071\u308a": "Adamant", "\u308f\u3093\u3071\u304f": "Impish",
+    "\u304a\u306b\u3068\u308a": "Mild", "\u304a\u3068\u306a\u3057\u3044": "Gentle", "\u305b\u3063\u304b\u3061": "Hasty", "\u304e\u3051\u3063\u3071\u308a": "Adamant", "\u308f\u3093\u3071\u304f": "Impish",
     "\u3057\u3093\u3061\u3087\u3046": "Careful", "\u3088\u3046\u304d": "Jolly", "\u3084\u3093\u3061\u3083": "Naughty", "\u306e\u3046\u3066\u3093\u304d": "Lax", "\u3046\u304b\u308a\u3084": "Rash",
     "\u3091\u3058\u3083\u304d": "Naive", "\u3083\u3046\u304b\u3093": "Brave", "\u306e\u3093\u304d": "Relaxed", "\u308c\u3044\u305b\u3044": "Quiet", "\u306a\u307e\u3044\u304d": "Sassy",
 
@@ -53,7 +53,7 @@ var NatureTranslator = {
     "\ub300\ub2f4": "Bold", "\uc170\uc2ec": "Modest", "\ucc28\ubd84": "Calm", "\uac81\uc7ac\uc774": "Timid", "\uc678\ub85c\uc6c0": "Lonely",
     "\uc758\uc813": "Mild", "\uc58c\uc804": "Gentle", "\uc131\uae09": "Hasty", "\uace0\uc9d1": "Adamant", "\uc7a5\ub09c\ubf40\ub7ec\uae30": "Impish",
     "\uc2e0\uc911": "Careful", "\uba85\ub791": "Jolly", "\uac1c\uad6c\uc7ac\uc774": "Naughty", "\ucca8\ub791": "Lax", "\ub35c\ub801": "Rash",
-    "\ucca1\uc9c4\ub09c\ub9cc": "Naive", "\uc6a9\uac10": "Brave", "\ubbc2\uc0ac\ud0dc\ud3c9": "Relaxed", "\ub0c9\uc815": "Quiet", "\uac74\ubc29": "Sassy",
+    "\ucca1\uc9c4\ub09c\ub9cc": "Naive", "\uc6a9\uac10": "Brave", "\ubbc2\uc0ac\ud0dc\ud3c9": "Relaxed", "\ub0c9\uc815": "Quiet", "\uac1c\ubc29": "Sassy",
 
     // Chinese (Simplified & Traditional)
     "\u52e4\u594b": "Hardy", "\u52e4\u596b": "Hardy", "\u5766\u7387": "Docile", "\u8146\u8147": "Bashful", "\u976c\u977c": "Bashful", "\u6d6e\u8e81": "Quirky", "\u8ba4\u771f": "Serious", "\u8a8d\u771f": "Serious",
@@ -99,6 +99,15 @@ for (let i = 0; i < langs.length; i++) {
 
 const button = document.getElementById('print');
 const sheets = document.getElementsByName('sheet');
+
+// Master Translation Helper: Prevents crashes on missing translation IDs
+function getTranslation(category, lang, id, fallback) {
+    var dict = window[category + lang];
+    if (dict && dict[id] !== undefined) {
+        return dict[id];
+    }
+    return fallback || "";
+}
 
 function getStats(poke, ivs, evs, level, nat) {
 
@@ -194,10 +203,10 @@ function generatePdf(element) {
         return
     }
 
+    // SANITIZE PASTE: Strip out invisible mobile word-joiner characters (\u2060, \u200B, etc.)
+    var cleanPaste = paste.replace(/[\u200B-\u200D\uFEFF\u2060]/g, "");
 
-
-
-    var parsedTeam = Koffing.parse(paste);
+    var parsedTeam = Koffing.parse(cleanPaste);
 
     const doc = new jsPDF();
 
@@ -345,7 +354,7 @@ function generatePdf(element) {
                 natureBaseId = NatureTranslator[pokes[i].nature] || pokes[i].nature;
             }
 
-            var level = 50; // Forced to 50 for math calculation
+            var level = 50;
             if (pokes[i].level){
                 level = pokes[i].level;
             }
@@ -369,23 +378,22 @@ function generatePdf(element) {
                 return;
             }
 
-            var name = window['pokes' + chosenLang][nameId];
+            var name = getTranslation('pokes', chosenLang, nameId, pokes[i].name);
             
-            // Check for localized nature, fallback to english nature if not found
             var printedNature = natureBaseId;
             if (window['natures' + chosenLang] && window['natures' + chosenLang][natureBaseId]) {
                 printedNature = window['natures' + chosenLang][natureBaseId];
             }
 
-            var ability = window['abilities' + chosenLang][abilityId];
+            var ability = getTranslation('abilities', chosenLang, abilityId, pokes[i].ability);
             var item = 'NO ITEM';
             if (itemId != 'NOITEM'){
-                item = window['items' + chosenLang][itemId];
+                item = getTranslation('items', chosenLang, itemId, pokes[i].item);
             }
             var movs = [];
             for (let x = 0; x < pokes[i].moves.length; x++){
                 var moveId = MoveTranslator[pokes[i].moves[x]];
-                movs.push(window['moves' + chosenLang][moveId]);
+                movs.push(getTranslation('moves', chosenLang, moveId, pokes[i].moves[x]));
             }
 
             doc.setFontSize(13);
@@ -604,7 +612,6 @@ function generatePdf(element) {
             doc.addImage({imageData:line, format:'png', x:9+c_width*i, y:15, width:0.1, height:273.6});
         }
 
-        // GUI Stat Alignment Update for the Registration Page
         const gui = {
             "En": {
                 "item": " Held Item",
@@ -715,7 +722,9 @@ function generatePdf(element) {
                 for (let i = 0; i < pokes.length; i++) {
                     var id = PokeTranslator[pokes[i].name];
                     var pokeFontSize=startFontSize;
-                    var pokeTextWidth= doc.getStringUnitWidth(window['pokes' + currentLang][id])*pokeFontSize;
+                    
+                    var translatedPoke = getTranslation('pokes', currentLang, id, pokes[i].name);
+                    var pokeTextWidth= doc.getStringUnitWidth(translatedPoke)*pokeFontSize;
                     var limitTextWidth=72;
                     if (u>=5) {
                         limitTextWidth=70;
@@ -723,12 +732,12 @@ function generatePdf(element) {
                     while (pokeTextWidth>limitTextWidth) {
                         pokeFontSize-=0.5;
                         doc.setFontSize(pokeFontSize);
-                        pokeTextWidth= doc.getStringUnitWidth(window['pokes' + currentLang][id])*pokeFontSize;
+                        pokeTextWidth= doc.getStringUnitWidth(translatedPoke)*pokeFontSize;
                     }
                     if (u<5) {
-                        doc.text(window['pokes' + currentLang][id], 22+c_width*(i+1), ystart+8*ygap*u,"center");
+                        doc.text(translatedPoke, 22+c_width*(i+1), ystart+8*ygap*u,"center");
                     } else {
-                        doc.text(window['pokes' + currentLang][id], 22+c_width*(i+1), ystart+0.4+8*ygap*u,"center");
+                        doc.text(translatedPoke, 22+c_width*(i+1), ystart+0.4+8*ygap*u,"center");
                     }
                     doc.setFontSize(startFontSize);
 
@@ -740,35 +749,39 @@ function generatePdf(element) {
                     doc.text(translatedNature, 22+c_width*(i+1), ystart+ygap+8*ygap*u,"center");
 
                     id = AbilityTranslator[pokes[i].ability];
+                    var translatedAbility = getTranslation('abilities', currentLang, id, pokes[i].ability);
                     var abilityFontSize=startFontSize;
-                    var abilityTextWidth= doc.getStringUnitWidth(window['abilities' + currentLang][id])*abilityFontSize;
+                    var abilityTextWidth= doc.getStringUnitWidth(translatedAbility)*abilityFontSize;
                     while (abilityTextWidth>limitTextWidth) {
                         abilityFontSize-=0.5;
                         doc.setFontSize(abilityFontSize);
-                        abilityTextWidth= doc.getStringUnitWidth(window['abilities' + currentLang][id])*abilityFontSize;
+                        abilityTextWidth= doc.getStringUnitWidth(translatedAbility)*abilityFontSize;
                     }
-                    doc.text(window['abilities' + currentLang][id], 22+c_width*(i+1), ystart+2*ygap+8*ygap*u,"center");
+                    doc.text(translatedAbility, 22+c_width*(i+1), ystart+2*ygap+8*ygap*u,"center");
                     doc.setFontSize(startFontSize);
+                    
                     id = ItemTranslator[pokes[i].item];
+                    var translatedItem = getTranslation('items', currentLang, id, pokes[i].item || "NO ITEM");
                     var itemFontSize=startFontSize;
-                    var itemTextWidth= doc.getStringUnitWidth(window['items' + currentLang][id])*itemFontSize;
+                    var itemTextWidth= doc.getStringUnitWidth(translatedItem)*itemFontSize;
                     while (itemTextWidth>limitTextWidth) {
                         itemFontSize-=0.5;
                         doc.setFontSize(itemFontSize);
-                        itemTextWidth= doc.getStringUnitWidth(window['items' + currentLang][id])*itemFontSize;
+                        itemTextWidth= doc.getStringUnitWidth(translatedItem)*itemFontSize;
                     }
-                    doc.text(window['items' + currentLang][id], 22+c_width*(i+1), ystart+3*ygap+8*ygap*u,"center");
+                    doc.text(translatedItem, 22+c_width*(i+1), ystart+3*ygap+8*ygap*u,"center");
                     doc.setFontSize(startFontSize);
                     for (let x = 0; x < pokes[i].moves.length; x++){
                         var moveId = MoveTranslator[pokes[i].moves[x]];
+                        var translatedMove = getTranslation('moves', currentLang, moveId, pokes[i].moves[x]);
                         var moveFontSize=startFontSize;
-                        var moveTextWidth= doc.getStringUnitWidth(window['moves' + currentLang][moveId])*moveFontSize;
+                        var moveTextWidth= doc.getStringUnitWidth(translatedMove)*moveFontSize;
                         while (moveTextWidth>limitTextWidth) {
                             moveFontSize-=0.5;
                             doc.setFontSize(moveFontSize);
-                            moveTextWidth= doc.getStringUnitWidth(window['moves' + currentLang][moveId])*moveFontSize;
+                            moveTextWidth= doc.getStringUnitWidth(translatedMove)*moveFontSize;
                         }
-                        doc.text(window['moves' + currentLang][moveId], 22+c_width*(i+1), ystart+4*ygap+30.4*u+ygap*x,"center");
+                        doc.text(translatedMove, 22+c_width*(i+1), ystart+4*ygap+30.4*u+ygap*x,"center");
                         doc.setFontSize(startFontSize);
                     }
     
