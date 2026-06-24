@@ -818,12 +818,14 @@ const VGC_NATURES = {
     spe: { atk: 'Timid',  def: 'Hasty',   spa: 'Jolly',   spd: 'Naive' }
 };
 
-// Color evaluator tracking the dark purple card panels relative to cream background
+// 1. Relaxed color evaluator to accommodate compressed JPGs and varying device tints
 function isCardPanelPixel(r, g, b) {
-    return (b > r + 12) && (r < 140 && g < 140);
+    // The yellow/cream background has incredibly high Red and Green, but low Blue.
+    // The card panels are dark purple/indigo where Blue is close to or higher than Green.
+    return (b > g - 10) && (r < 175 && g < 175) && (r + g + b < 480);
 }
 
-// Aspect-ratio independent Projection Profile Grid Analysis
+// 2. Resilient Grid Analyzer that extracts the 3 LARGEST rows (ignoring header/footer noise)
 function detectCardGridCoordinates(imgElement) {
     const canvas = document.createElement('canvas');
     const w = imgElement.width;
@@ -838,7 +840,7 @@ function detectCardGridCoordinates(imgElement) {
     const colDensity = new Array(w).fill(0);
     const rowDensity = new Array(h).fill(0);
 
-    // Fast resolution-independent pixel sampling loop
+    // Scan pixels
     for (let y = 0; y < h; y += 2) {
         for (let x = 0; x < w; x += 2) {
             const idx = (y * w + x) * 4;
@@ -849,36 +851,45 @@ function detectCardGridCoordinates(imgElement) {
         }
     }
 
-    // Isolate Column Segments
-    const xThreshold = Math.max(...colDensity) * 0.25;
+    // Isolate Column Segments (Lowered threshold to 15% for safer edge detection)
+    const xThreshold = Math.max(...colDensity) * 0.15;
     let xSegments = [], inSeg = false, startX = 0;
     for (let x = 0; x < w; x++) {
         if (colDensity[x] > xThreshold && !inSeg) { inSeg = true; startX = x; }
         else if (colDensity[x] <= xThreshold && inSeg) { inSeg = false; xSegments.push({ start: startX, end: x, w: x - startX }); }
     }
+    
+    if (xSegments.length < 2) return null;
     xSegments.sort((a, b) => b.w - a.w);
     const leftCol = xSegments[0].start < xSegments[1].start ? xSegments[0] : xSegments[1];
     const rightCol = xSegments[0].start < xSegments[1].start ? xSegments[1] : xSegments[0];
 
     // Isolate Row Segments
-    const yThreshold = Math.max(...rowDensity) * 0.25;
+    const yThreshold = Math.max(...rowDensity) * 0.15;
     let ySegments = []; inSeg = false; let startY = 0;
     for (let y = 0; y < h; y++) {
         if (rowDensity[y] > yThreshold && !inSeg) { inSeg = true; startY = y; }
         else if (rowDensity[y] <= yThreshold && inSeg) { inSeg = false; ySegments.push({ start: startY, end: y, h: y - startY }); }
     }
-    const targetRows = ySegments.filter(seg => seg.h > h * 0.08).sort((a, b) => a.start - b.start);
+    
+    // Filter out tiny single-pixel lines
+    const validRows = ySegments.filter(seg => seg.h > h * 0.04);
+    if (validRows.length < 3) return null;
 
-    if (targetRows.length < 3) return null;
+    // HEURISTIC WIN: Sort by height descending to isolate the 3 massive card blocks, 
+    // instantly throwing away thin system headers/footers or copy-paste buttons!
+    let topThreeRows = [...validRows].sort((a, b) => b.h - a.h).slice(0, 3);
+    
+    // Re-sort chronologically from top to bottom
+    topThreeRows.sort((a, b) => a.start - b.start);
 
-    // Returns structural bounding boxes for the 6 cards across any layout
     return [
-        { x: leftCol.start,  y: targetRows[0].start, w: leftCol.w, h: targetRows[0].h },
-        { x: rightCol.start, y: targetRows[0].start, w: rightCol.w, h: targetRows[0].h },
-        { x: leftCol.start,  y: targetRows[1].start, w: leftCol.w, h: targetRows[1].h },
-        { x: rightCol.start, y: targetRows[1].start, w: rightCol.w, h: targetRows[1].h },
-        { x: leftCol.start,  y: targetRows[2].start, w: leftCol.w, h: targetRows[2].h },
-        { x: rightCol.start, y: targetRows[2].start, w: rightCol.w, h: targetRows[2].h }
+        { x: leftCol.start,  y: topThreeRows[0].start, w: leftCol.w, h: topThreeRows[0].h },
+        { x: rightCol.start, y: topThreeRows[0].start, w: rightCol.w, h: topThreeRows[0].h },
+        { x: leftCol.start,  y: topThreeRows[1].start, w: leftCol.w, h: topThreeRows[1].h },
+        { x: rightCol.start, y: topThreeRows[1].start, w: rightCol.w, h: topThreeRows[1].h },
+        { x: leftCol.start,  y: topThreeRows[2].start, w: leftCol.w, h: topThreeRows[2].h },
+        { x: rightCol.start, y: topThreeRows[2].start, w: rightCol.w, h: topThreeRows[2].h }
     ];
 }
 
