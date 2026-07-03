@@ -804,142 +804,56 @@ document.getElementById("open").checked = true;
 window.generatePdf = generatePdf;
 window.jsPDF = window.jspdf.jsPDF;
 
-// =========================================================================
-// SCREENSHOT TO SHOWDOWN PASTE PARSER ENGINE (Dynamic Aspect-Ratio Grid)
-// =========================================================================
+const API_ENDPOINT = "https://shabarai-pokepaste-generator.hf.space/api/generate";
 
-// Complete Nature Lookup Matrix
-const VGC_NATURES = {
-    neutral: 'Serious',
-    atk: { def: 'Lonely', spa: 'Adamant', spd: 'Naughty', spe: 'Brave' },
-    def: { atk: 'Bold',   spa: 'Impish',  spd: 'Lax',     spe: 'Relaxed' },
-    spa: { atk: 'Modest', def: 'Mild',    spd: 'Rash',    spe: 'Quiet' },
-    spd: { atk: 'Calm',   def: 'Gentle',  spa: 'Careful', spe: 'Sassy' },
-    spe: { atk: 'Timid',  def: 'Hasty',   spa: 'Jolly',   spd: 'Naive' }
+// ============================================================================
+// NATURE / STAT CONSTANTS
+// ============================================================================
+const NATURE_MAP = {
+    ('Attack', 'Defense'): 'Lonely', ('Attack', 'Speed'): 'Brave',
+    ('Attack', 'Sp. Atk'): 'Adamant', ('Attack', 'Sp. Def'): 'Naughty',
+    ('Defense', 'Attack'): 'Bold', ('Defense', 'Speed'): 'Relaxed',
+    ('Defense', 'Sp. Atk'): 'Impish', ('Defense', 'Sp. Def'): 'Lax',
+    ('Speed', 'Attack'): 'Timid', ('Speed', 'Defense'): 'Hasty',
+    ('Speed', 'Sp. Atk'): 'Jolly', ('Speed', 'Sp. Def'): 'Naive',
+    ('Sp. Atk', 'Attack'): 'Modest', ('Sp. Atk', 'Defense'): 'Mild',
+    ('Sp. Atk', 'Speed'): 'Quiet', ('Sp. Atk', 'Sp. Def'): 'Rash',
+    ('Sp. Def', 'Attack'): 'Calm', ('Sp. Def', 'Defense'): 'Gentle',
+    ('Sp. Def', 'Speed'): 'Sassy', ('Sp. Def', 'Sp. Atk'): 'Careful',
 };
 
-// 1. Relaxed color evaluator to accommodate compressed JPGs and varying device tints
-function isCardPanelPixel(r, g, b) {
-    // The yellow/cream background has incredibly high Red and Green, but low Blue.
-    // The card panels are dark purple/indigo where Blue is close to or higher than Green.
-    return (b > g - 10) && (r < 175 && g < 175) && (r + g + b < 480);
-}
+const STAT_FULL_NAME = {'Atk': 'Attack', 'Def': 'Defense', 'SpA': 'Sp. Atk', 'SpD': 'Sp. Def', 'Spe': 'Speed'};
 
-// 2. Resilient Grid Analyzer that extracts the 3 LARGEST rows (ignoring header/footer noise)
-function detectCardGridCoordinates(imgElement) {
-    const canvas = document.createElement('canvas');
-    const w = imgElement.width;
-    const h = imgElement.height;
-    canvas.width = w;
-    canvas.height = h;
-    
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(imgElement, 0, 0);
-    const imgData = ctx.getImageData(0, 0, w, h).data;
+// ============================================================================
+// CORE WORKFLOW LOGIC
+// ============================================================================
 
-    const colDensity = new Array(w).fill(0);
-    const rowDensity = new Array(h).fill(0);
-
-    // Scan pixels
-    for (let y = 0; y < h; y += 2) {
-        for (let x = 0; x < w; x += 2) {
-            const idx = (y * w + x) * 4;
-            if (isCardPanelPixel(imgData[idx], imgData[idx+1], imgData[idx+2])) {
-                colDensity[x]++;
-                rowDensity[y]++;
-            }
+function formatTeamDataToShowdown(team) {
+    return team.map(mon => {
+        let lines = [];
+        let header = mon.name;
+        if (mon.item) {
+            header += ` @ ${mon.item}`;
         }
-    }
-
-    // Isolate Column Segments (Lowered threshold to 15% for safer edge detection)
-    const xThreshold = Math.max(...colDensity) * 0.15;
-    let xSegments = [], inSeg = false, startX = 0;
-    for (let x = 0; x < w; x++) {
-        if (colDensity[x] > xThreshold && !inSeg) { inSeg = true; startX = x; }
-        else if (colDensity[x] <= xThreshold && inSeg) { inSeg = false; xSegments.push({ start: startX, end: x, w: x - startX }); }
-    }
-    
-    if (xSegments.length < 2) return null;
-    xSegments.sort((a, b) => b.w - a.w);
-    const leftCol = xSegments[0].start < xSegments[1].start ? xSegments[0] : xSegments[1];
-    const rightCol = xSegments[0].start < xSegments[1].start ? xSegments[1] : xSegments[0];
-
-    // Isolate Row Segments
-    const yThreshold = Math.max(...rowDensity) * 0.15;
-    let ySegments = []; inSeg = false; let startY = 0;
-    for (let y = 0; y < h; y++) {
-        if (rowDensity[y] > yThreshold && !inSeg) { inSeg = true; startY = y; }
-        else if (rowDensity[y] <= yThreshold && inSeg) { inSeg = false; ySegments.push({ start: startY, end: y, h: y - startY }); }
-    }
-    
-    // Filter out tiny single-pixel lines
-    const validRows = ySegments.filter(seg => seg.h > h * 0.04);
-    if (validRows.length < 3) return null;
-
-    // HEURISTIC WIN: Sort by height descending to isolate the 3 massive card blocks, 
-    // instantly throwing away thin system headers/footers or copy-paste buttons!
-    let topThreeRows = [...validRows].sort((a, b) => b.h - a.h).slice(0, 3);
-    
-    // Re-sort chronologically from top to bottom
-    topThreeRows.sort((a, b) => a.start - b.start);
-
-    return [
-        { x: leftCol.start,  y: topThreeRows[0].start, w: leftCol.w, h: topThreeRows[0].h },
-        { x: rightCol.start, y: topThreeRows[0].start, w: rightCol.w, h: topThreeRows[0].h },
-        { x: leftCol.start,  y: topThreeRows[1].start, w: leftCol.w, h: topThreeRows[1].h },
-        { x: rightCol.start, y: topThreeRows[1].start, w: rightCol.w, h: topThreeRows[1].h },
-        { x: leftCol.start,  y: topThreeRows[2].start, w: leftCol.w, h: topThreeRows[2].h },
-        { x: rightCol.start, y: topThreeRows[2].start, w: rightCol.w, h: topThreeRows[2].h }
-    ];
+        lines.append(header);
+        if (mon.ability) {
+            lines.append(`Ability: ${mon.ability}`);
+        }
+        lines.append("Level: 50");
+        if (mon.shiny) {
+            lines.append("Shiny: Yes");
+        }
+        if (mon.ev_str) {
+            lines.append(`EVs: ${mon.ev_str}`);
+        }
+        lines.append(`${mon.nature} Nature`);
+        mon.moves.forEach(move => {
+            if (move) lines.append(`- ${move}`);
+        });
+        return lines.join('\n');
+    }).join('\n\n');
 }
 
-// Percentages mapping out card subdivisions internally
-function getCardInternalZones(card) {
-    return {
-        header:  { x: card.x + (card.w * 0.08), y: card.y + (card.h * 0.02), w: card.w * 0.40, h: card.h * 0.18 },
-        ability: { x: card.x + (card.w * 0.10), y: card.y + (card.h * 0.21), w: card.w * 0.38, h: card.h * 0.14 },
-        item:    { x: card.x + (card.w * 0.10), y: card.y + (card.h * 0.36), w: card.w * 0.38, h: card.h * 0.14 },
-        move1:   { x: card.x + (card.w * 0.48), y: card.y + (card.h * 0.02), w: card.w * 0.45, h: card.h * 0.14 },
-        move2:   { x: card.x + (card.w * 0.48), y: card.y + (card.h * 0.17), w: card.w * 0.45, h: card.h * 0.14 },
-        move3:   { x: card.x + (card.w * 0.48), y: card.y + (card.h * 0.32), w: card.w * 0.45, h: card.h * 0.14 },
-        move4:   { x: card.x + (card.w * 0.48), y: card.y + (card.h * 0.47), w: card.w * 0.45, h: card.h * 0.14 }
-    };
-}
-
-function getStatZonesForNature(card) {
-    return {
-        atk: { x: card.x + (card.w * 0.08), y: card.y + (card.h * 0.36), w: card.w * 0.35, h: card.h * 0.14 },
-        def: { x: card.x + (card.w * 0.08), y: card.y + (card.h * 0.51), w: card.w * 0.35, h: card.h * 0.14 },
-        spa: { x: card.x + (card.w * 0.48), y: card.y + (card.h * 0.21), w: card.w * 0.35, h: card.h * 0.14 },
-        spd: { x: card.x + (card.w * 0.48), y: card.y + (card.h * 0.36), w: card.w * 0.35, h: card.h * 0.14 },
-        spe: { x: card.x + (card.w * 0.48), y: card.y + (card.h * 0.51), w: card.w * 0.35, h: card.h * 0.14 }
-    };
-}
-
-// High performance pixel evaluation scan for Nature chevrons
-function evaluateStatLuminanceTone(ctx, zone) {
-    const data = ctx.getImageData(zone.x, zone.y, zone.w, zone.h).data;
-    for (let i = 0; i < data.length; i += 4) {
-        const r = data[i], g = data[i+1], b = data[i+2];
-        if (r > 175 && g < 100 && b < 125) return 'boosted'; // Pink Nature Up Chevron
-        if (r < 100 && g > 115 && b > 195) return 'dropped'; // Blue Nature Down Chevron
-    }
-    return 'neutral';
-}
-
-function convertImageToElement(file) {
-    return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const img = new Image();
-            img.onload = () => resolve(img);
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-    });
-}
-
-// Controller Logic handling coordination between the separate files
 async function executeUnifiedTeamScreenParsing() {
     const fileMoves = document.getElementById('img-moves').files[0];
     const fileStats = document.getElementById('img-stats').files[0];
@@ -952,99 +866,43 @@ async function executeUnifiedTeamScreenParsing() {
     }
 
     statusText.style.color = '#6c5ce7';
-    statusText.innerText = "⏳ Reading screens & locking aspect profiles...";
+    statusText.innerText = "⏳ Uploading images to Hugging Face API (Waking up server if asleep)...";
 
-    const imgMovesElement = await convertImageToElement(fileMoves);
-    const imgStatsElement = await convertImageToElement(fileStats);
+    // Build the multipart payload
+    const formData = new FormData();
+    formData.append('moves_file', fileMoves);
+    formData.append('stats_file', fileStats);
 
-    const movesCards = detectCardGridCoordinates(imgMovesElement);
-    const statsCards = detectCardGridCoordinates(imgStatsElement);
+    try {
+        const response = await fetch(API_ENDPOINT, {
+            method: 'POST',
+            body: formData
+        });
 
-    if (!movesCards || !statsCards) {
-        statusText.style.color = '#e74c3c';
-        statusText.innerText = "❌ Failed to align card grids. Check image clear visibility.";
-        return;
-    }
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.detail || "Server error occurred during processing.");
+        }
 
-    statusText.innerText = "⏳ Initializing Character OCR Model Core...";
-    const worker = await Tesseract.createWorker('eng');
-    await worker.setParameters({
-        tessedit_char_whitelist: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-() ',
-    });
-
-    // Create contexts for target processing canvas items
-    const canvasM = document.createElement('canvas'); canvasM.width = imgMovesElement.width; canvasM.height = imgMovesElement.height;
-    const ctxM = canvasM.getContext('2d'); ctxM.drawImage(imgMovesElement, 0, 0);
-
-    const canvasS = document.createElement('canvas'); canvasS.width = imgStatsElement.width; canvasS.height = imgStatsElement.height;
-    const ctxS = canvasS.getContext('2d'); ctxS.drawImage(imgStatsElement, 0, 0);
-
-    let finalShowdownPasteString = "";
-
-    for (let i = 0; i < 6; i++) {
-        statusText.innerText = `⏳ Parsing Pokémon Slot ${i+1} of 6...`;
+        const result = await response.json();
         
-        const mCard = movesCards[i];
-        const sCard = statsCards[i];
-        const textRegions = getCardInternalZones(mCard);
-        const statRegions = getStatZonesForNature(sCard);
-
-        // Compute Nature tracking via active stats pixel maps
-        let boosted = null, dropped = null;
-        for (const [statName, zone] of Object.entries(statRegions)) {
-            const status = evaluateStatLuminanceTone(ctxS, zone);
-            if (status === 'boosted') boosted = statName;
-            if (status === 'dropped') dropped = statName;
-        }
-        let calculatedNature = "Serious";
-        if (boosted && dropped) {
-            calculatedNature = VGC_NATURES[boosted][dropped] || "Serious";
-        } else if (boosted || dropped) {
-            calculatedNature = VGC_NATURES.neutral;
-        }
-
-        // Run isolated text parsing over Moves layout canvas boundaries
-        const rawOcrData = {};
-        for (const [fieldName, zone] of Object.entries(textRegions)) {
-            const tempCanvas = document.createElement('canvas'); tempCanvas.width = zone.w; tempCanvas.height = zone.h;
-            tempCanvas.getContext('2d').drawImage(canvasM, zone.x, zone.y, zone.w, zone.h, 0, 0, zone.w, zone.h);
-            const { data: { text } } = await worker.recognize(tempCanvas);
-            rawOcrData[fieldName] = text.trim();
-        }
-
-        // Clean name values & detect Gender strings cleanly
-        let speciesLine = rawOcrData.header;
-        let genderString = "";
-        if (speciesLine.includes("(M)")) { genderString = " (M)"; speciesLine = speciesLine.replace("(M)", "").trim(); }
-        if (speciesLine.includes("(F)")) { genderString = " (F)"; speciesLine = speciesLine.replace("(F)", "").trim(); }
-        
-        // Remove text styling anomalies or accidental numbering trails
-        const sanitizedSpecies = speciesLine.split('\n')[0].replace(/[^a-zA-Z0-9- ]/g, '').trim();
-        const sanitizedAbility = rawOcrData.ability.replace(/[^a-zA-Z0-9- ]/g, '').trim();
-        let sanitizedItem    = rawOcrData.item.replace(/[^a-zA-Z0-9- ]/g, '').trim();
-        if (!sanitizedItem || sanitizedItem.toLowerCase() === "no item") sanitizedItem = "";
-
-        // Build standard Showdown output string block
-        if (sanitizedSpecies) {
-            finalShowdownPasteString += `${sanitizedSpecies}${genderString}${sanitizedItem ? ' @ ' + sanitizedItem : ''}\n`;
-            if (sanitizedAbility) finalShowdownPasteString += `Ability: ${sanitizedAbility}\n`;
-            finalShowdownPasteString += `${calculatedNature} Nature\n`;
+        if (result.success && result.team) {
+            // Render structured output
+            const showdownPaste = formatTeamDataToShowdown(result.team);
+            document.getElementById('paste').value = showdownPaste;
             
-            if (rawOcrData.move1) finalShowdownPasteString += `- ${rawOcrData.move1.split('\n')[0]}\n`;
-            if (rawOcrData.move2) finalShowdownPasteString += `- ${rawOcrData.move2.split('\n')[0]}\n`;
-            if (rawOcrData.move3) finalShowdownPasteString += `- ${rawOcrData.move3.split('\n')[0]}\n`;
-            if (rawOcrData.move4) finalShowdownPasteString += `- ${rawOcrData.move4.split('\n')[0]}\n`;
-            finalShowdownPasteString += `\n`;
+            statusText.style.color = '#2ecc71';
+            statusText.innerText = "✅ Done! Team loaded below. You can click 'PRINT SELECTED' now.";
+        } else {
+            throw new Error("API returned an invalid data payload.");
         }
+    } catch (error) {
+        statusText.style.color = '#e74c3c';
+        statusText.innerText = `❌ Error: ${error.message}`;
+        console.error("API Error Trace:", error);
     }
-
-    await worker.terminate();
-    
-    // Inject generated paste string directly into the existing site workflow textarea
-    document.getElementById('paste').value = finalShowdownPasteString.trim();
-    statusText.style.color = '#2ecc71';
-    statusText.innerText = "✅ Done! Team loaded below. You can click 'PRINT SELECTED' now.";
 }
 
-// Bind to UI elements
+// Bind to frontend buttons
 document.getElementById('btn-parse-screens').addEventListener('click', executeUnifiedTeamScreenParsing);
+
