@@ -1,6 +1,8 @@
 'use strict'
 
 import { Koffing } from './koff.js';
+import { processImages, renderPokepaste } from './client-ocr/pipeline.mjs';
+import { loadResourceBundle } from './client-ocr/loadResources.mjs';
 
 // =========================================================================
 // MASTER NATURE TRANSLATOR (Embedded to prevent loading order errors)
@@ -803,3 +805,57 @@ for (const element of sheets) {
 document.getElementById("open").checked = true;
 window.generatePdf = generatePdf;
 window.jsPDF = window.jspdf.jsPDF;
+
+// Screenshot-to-pokepaste parsing, running entirely in the browser via
+// client-ocr/ (see that folder's pipeline.mjs) - no server, no upload.
+function loadImageFile(file) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error(`Could not read ${file.name} as an image.`));
+        img.src = URL.createObjectURL(file);
+    });
+}
+
+async function executeUnifiedTeamScreenParsing() {
+    const fileMoves = document.getElementById('img-moves').files[0];
+    const fileStats = document.getElementById('img-stats').files[0];
+    const lang = document.getElementById('screenshot-lang').value;
+    const statusText = document.getElementById('parser-status');
+
+    if (!fileMoves || !fileStats) {
+        statusText.style.color = '#e74c3c';
+        statusText.innerText = "⚠️ Please select BOTH image screenshots first.";
+        return;
+    }
+
+    statusText.style.color = '#6c5ce7';
+    statusText.innerText = "⏳ Reading screenshots (running locally in your browser)...";
+
+    try {
+        const [imgMoves, imgStats] = await Promise.all([
+            loadImageFile(fileMoves),
+            loadImageFile(fileStats),
+        ]);
+        const idToNameByLang = await loadResourceBundle('./Resources', [lang]);
+
+        const monData = await processImages(imgMoves, imgStats, {
+            idToNameByLang,
+            pokedex: window.pokedex,
+            lang,
+            onProgress: (_step, index) => {
+                statusText.innerText = `⏳ Reading Pokemon ${index + 1} of 6...`;
+            },
+        });
+
+        document.getElementById('paste').value = renderPokepaste(monData);
+        statusText.style.color = '#2ecc71';
+        statusText.innerText = "✅ Done! Team loaded below. You can click 'PRINT SELECTED' now.";
+    } catch (error) {
+        statusText.style.color = '#e74c3c';
+        statusText.innerText = `❌ Error: ${error.message}`;
+        console.error("Screenshot parsing error:", error);
+    }
+}
+
+document.getElementById('btn-parse-screens').addEventListener('click', executeUnifiedTeamScreenParsing);
