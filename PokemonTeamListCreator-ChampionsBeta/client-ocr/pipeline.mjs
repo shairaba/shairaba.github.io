@@ -8,6 +8,7 @@ import { parseStatsCard } from "./parseStats.mjs";
 import { detectNature } from "./natureDetect.mjs";
 import { computeEvsFromTotals } from "./evCalc.mjs";
 import { parseMovesCard } from "./movesCard.mjs";
+import { detectHeaderIcons, resolveAlternateForm } from "./formResolve.mjs";
 
 const SCALE = 3;
 const OVERLAP = 0.03;
@@ -75,13 +76,33 @@ export async function processImages(imgMoves, imgStats, { idToNameByLang, pokede
     const statBox = statsBoxes[i];
 
     const moveTokens = await ocrCardHalves(imgMoves, moveBox);
-    const { name, ability, item, moves } = parseMovesCard(moveTokens, moveBox.width * SCALE, idToNameByLang, lang);
+    const { name: baseName, ability, item, moves } = parseMovesCard(moveTokens, moveBox.width * SCALE, idToNameByLang, lang);
 
     const statCanvas = drawFullCard(imgStats, statBox);
     const statImageData = statCanvas.getContext("2d").getImageData(0, 0, statCanvas.width, statCanvas.height);
     const statTokens = await ocrCardHalves(imgStats, statBox);
     const { statRows, gaps } = parseStatsCard(statTokens, statBox.width * SCALE);
     const nature = detectNature(statImageData, gaps, statBox.height * SCALE);
+
+    // Regional variants (Alolan/Galarian/Hisuian/Paldean) and gender-
+    // stat variants (Basculegion/Indeedee/...) never show up in the
+    // on-screen name text itself - only in the small icon badges next to
+    // it (type icons for regional forms, the gender icon otherwise) - so
+    // this reads pixels instead of more OCR. Harmless no-op for every
+    // other species (resolveAlternateForm returns baseName unchanged).
+    //
+    // The name token has to be picked carefully here: the sprite artwork
+    // to its left is sometimes misread as a short, plausible-looking
+    // word too (e.g. "SNB" for Basculegion's fish sprite, positioned even
+    // further left than the real name), so a confidence floor is added
+    // on top of the usual height filter - a real species name has read
+    // at ~1.00 confidence in every sample seen so far, while sprite
+    // noise consistently reads markedly lower.
+    const headerTokens = statTokens
+      .filter((t) => t.cy < statImageData.height * 0.25 && t.confidence >= 0.9)
+      .sort((a, b) => a.x0 - b.x0);
+    const icons = detectHeaderIcons(statImageData, headerTokens[0]);
+    const name = resolveAlternateForm(baseName, icons, pokedex);
 
     // Prefer EVs derived from the (reliably-read) total stats over the
     // small, failure-prone EV digit read directly off the bar - see

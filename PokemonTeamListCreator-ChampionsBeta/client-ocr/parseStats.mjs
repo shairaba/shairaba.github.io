@@ -163,15 +163,24 @@ function extractRowInfo(rowTokens) {
   // tolerance would have to be uncomfortably large to cover that, and
   // could then risk admitting real icon noise elsewhere instead.
   //
-  // When totalTok itself contains letters, the real label is already
-  // fused into it - any *other* wordy token in the row can't also be the
-  // label, so it must be noise, and gapLabelTokens is left empty,
-  // routing this row to parseStatsCard's borrow-from-another-row
-  // fallback instead of trusting that noise.
-  const totalTokIsWordy = /\p{L}/u.test(totalTok.text);
-  const gapLabelTokens = totalTokIsWordy || !wordyTokens.length
-    ? []
-    : [wordyTokens.reduce((closest, t) => (t.x1 > closest.x1 ? t : closest))];
+  // Candidates are restricted to tokens that look like an actual word -
+  // no digits at all, and at least 3 letters - rather than just "any
+  // token with a letter in it". That excludes totalTok itself even when
+  // it happens to carry a single stray misread letter (e.g. "154—25I",
+  // where the trailing "I" is noise, not a fused label - naively
+  // treating totalTok-has-a-letter as "label fused into the number"
+  // wrongly discarded the real, separate "Attack" label token in that
+  // exact row). It also still excludes lone icon-outline noise like "C"
+  // (a letter, but only one). Only when nothing passes this bar - a
+  // genuinely fused "Sp. Def 165 — 20" style token, which is mostly
+  // digits - does gapLabelTokens end up empty, correctly routing to
+  // parseStatsCard's borrow-from-another-row fallback instead.
+  const labelCandidates = wordyTokens.filter(
+    (t) => !/\d/.test(t.text) && (t.text.match(/\p{L}/gu) ?? []).length >= 3
+  );
+  const gapLabelTokens = labelCandidates.length
+    ? [labelCandidates.reduce((closest, t) => (t.x1 > closest.x1 ? t : closest))]
+    : [];
 
   if (gapLabelTokens.length) {
     // A real, separate label token - its measured edges give a
