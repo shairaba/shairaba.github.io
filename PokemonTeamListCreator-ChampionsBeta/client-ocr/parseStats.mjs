@@ -190,7 +190,10 @@ function extractRowInfo(rowTokens) {
     return {
       total, ev, confirmed, cy, alt,
       reliable: true,
-      labelWidth: labelEnd - labelStartX,
+      // Kept only so parseStatsCard can flag a row whose label and
+      // number boxes overlap (negative) as unfit to *lend* its geometry
+      // to another row, even though its own total/EV read fine - see
+      // there for why.
       gapExtra: totalTok.x0 - labelEnd,
       gap: [labelEnd - 0.35 * (labelEnd - labelStartX), totalTok.x0],
     };
@@ -203,15 +206,16 @@ function extractRowInfo(rowTokens) {
   // uniform per-character estimate assumes, in whichever direction pulls
   // the true split away from the estimate, and the chevron icon between
   // label and number isn't a character at all, so it's invisible to any
-  // count-based estimate regardless. parseStatsCard fills in
-  // labelWidth/gapExtra from another, reliable row in the same column
-  // when one exists; the crude interpolation below is only a last resort
-  // for when every row in the column fused (seen in practice on some
-  // Japanese screenshots, where every stat row fuses this way and there's
-  // no reliable row anywhere in the column to borrow from instead). The
-  // window is widened on both sides of the estimated split rather than
-  // trusting it precisely, since it's been observed landing up to ~10%
-  // of the box width off in either direction.
+  // count-based estimate regardless. parseStatsCard borrows the *number
+  // column's position* from another, reliable row in the same column
+  // when one exists (see there for why that's a more robust anchor than
+  // reconstructing this row's own label width); the crude interpolation
+  // below is only a last resort for when every row in the column fused
+  // (seen in practice on some Japanese screenshots, where every stat row
+  // fuses this way and there's no reliable row anywhere in the column to
+  // borrow from instead). The window is widened on both sides of the
+  // estimated split rather than trusting it precisely, since it's been
+  // observed landing up to ~10% of the box width off in either direction.
   const digitMatch = totalTok.text.match(/\d/);
   let gap = null;
   if (digitMatch && digitMatch.index > 0) {
@@ -219,7 +223,7 @@ function extractRowInfo(rowTokens) {
     const splitX = totalTok.x0 + (digitMatch.index / totalTok.text.length) * boxWidth;
     gap = [splitX - boxWidth * 0.15, splitX + boxWidth * 0.12];
   }
-  return { total, ev, confirmed, cy, alt, reliable: false, tokenX0: totalTok.x0, gap };
+  return { total, ev, confirmed, cy, alt, reliable: false, gap };
 }
 
 // The stat card's real text (species name, labels, totals, EVs) is all
@@ -249,7 +253,7 @@ export function dropTinyText(tokens, ratio = 0.6) {
   // instead of letting it drag the whole threshold up and wrongly filter
   // out genuine stat rows.
   const heights = [...new Set(tokens.map((t) => t.h))].sort((a, b) => b - a);
-  const referenceH = heights.length > 1 && heights[0] > heights[1] * 1.4 ? heights[1] : heights[0];
+  const referenceH = heights.length > 1 && heights[0] > heights[1] * 1.2 ? heights[1] : heights[0];
   return tokens.filter((t) => t.h >= referenceH * ratio);
 }
 
@@ -278,17 +282,26 @@ export function parseStatsCard(tokens, cardWidth) {
       column[key] = info;
     }
 
-    // Other rows in this column almost always share the same label font
-    // and the same small icon-glyph gap before the number, regardless of
-    // which stat they are - so a fused row can borrow those two measured
-    // quantities from any reliable row instead of guessing its own split
-    // point by character count. HP is excluded as a *source* to borrow
-    // from: real games never translate "HP" even on a fully localized
-    // screenshot, so it's always short, Latin, fixed-width text - a poor
-    // stand-in for a same-column label that's actually in the
-    // screenshot's own language (e.g. borrowing "HP"'s 2-character width
-    // for a 4-character Japanese "こうげき" badly undershoots it, missing
-    // the real gap entirely).
+    // A fused row can't reconstruct where its own label ends and its
+    // number column begins, but the *number column's pixel position*
+    // turns out to be near-constant across rows in the same column
+    // regardless of label length or language - the game right-aligns
+    // (or otherwise fixes) that column, so "Sp. Atk"'s total and
+    // "Speed"'s total start at close to the same x even though the
+    // labels are very different lengths. Borrowing that absolute
+    // position (and the typical gap width leading into it) from any
+    // reliable row in the column is far more robust than trying to
+    // rebuild the fused row's own label width first and derive the
+    // number position from *that* - reconstructing the label was tried
+    // and kept landing tens of pixels off in one direction or another
+    // depending on how the borrowed label's length/abbreviation style
+    // compared to the fused one's.
+    //
+    // HP is excluded as a source to borrow from: real games never
+    // translate "HP" even on a fully localized screenshot, so its own
+    // number column can sit at a different x than the other, actually-
+    // localized labels' columns.
+    //
     // A row can measure as "reliable" (a real, separate label token was
     // found) yet still have its box overlap the number's box at low
     // resolutions (see the "closest x1" note above) - fine for reading
@@ -303,15 +316,14 @@ export function parseStatsCard(tokens, cardWidth) {
       const sorted = [...values].sort((a, b) => a - b);
       return sorted.length ? sorted[Math.floor(sorted.length / 2)] : null;
     };
-    const refLabelWidth = median(reliableRows.map((c) => c.labelWidth));
-    const refGapExtra = median(reliableRows.map((c) => c.gapExtra));
+    const refNumberStartX = median(reliableRows.map((c) => c.gap[1]));
+    const refGapWidth = median(reliableRows.map((c) => c.gap[1] - c.gap[0]));
 
     for (const [key, c] of Object.entries(column)) {
       if (c.reliable) {
         gaps[key] = [c.gap[0], c.gap[1], c.cy];
-      } else if (refLabelWidth !== null && refGapExtra !== null) {
-        const labelEnd = c.tokenX0 + refLabelWidth;
-        gaps[key] = [labelEnd - 0.35 * refLabelWidth, labelEnd + refGapExtra, c.cy];
+      } else if (refNumberStartX !== null && refGapWidth !== null) {
+        gaps[key] = [refNumberStartX - refGapWidth, refNumberStartX, c.cy];
       } else if (c.gap !== null) {
         gaps[key] = [c.gap[0], c.gap[1], c.cy];
       }

@@ -41,7 +41,16 @@ function largestBlobArea(mask, width, height, x0, y0, x1, y1) {
       sub[y * w + x] = mask[(y0 + y) * width + (x0 + x)];
     }
   }
-  const blobs = connectedComponents({ mask: sub, width: w, height: h });
+  // A real chevron is a small, roughly square blob - restricting to that
+  // shape matters most when the search window has to be widened to
+  // absorb uncertainty in where a fused label+number row's gap actually
+  // falls (see parseStatsCard): a wider window is more likely to also
+  // sweep in an unrelated same-hue sliver (e.g. the stat bar's own thin
+  // "unfilled" segment, seen ~60x11px, nothing like a ~20-35px-square
+  // chevron), and without this filter that sliver's larger area can
+  // outscore the real chevron and flip which nature gets picked.
+  const blobs = connectedComponents({ mask: sub, width: w, height: h })
+    .filter((b) => b.width / b.height >= 0.4 && b.width / b.height <= 2.5);
   return blobs.length ? Math.max(...blobs.map((b) => b.area)) : 0;
 }
 
