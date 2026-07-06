@@ -307,5 +307,12 @@ var abilitiesGer = {
     "306": "S\u00fc\u00dfer Nektar",
     "307": "Tera-Wandel",
     "308": "Tera-Panzer",
-    "309": "Teraforming Null"
+    "309": "Teraforming Null",
+    "310": "Giftpuppenspiel",
+    "311": "Stichbohrer",
+    "312": "Drachenschicht",
+    "313": "Emporwindung",
+    "315": "Mega-Solarladung",
+    "316": "Flammenm\u00e4hne",
+    "318": "Chilispritzer"
 }

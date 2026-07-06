@@ -1644,5 +1644,16 @@ var itemsGer = {
     "2546": "Phantoross-Snack",
     "2547": "Indigoblaue Scheibe",
     "2548": "Flammen-Pikser",
-    "2549": "Tera-St\u00fcck (Stellar)"
+    "2549": "Tera-St\u00fcck (Stellar)",
+    "2550": "Thanathoranit",
+    "2551": "Tandraknit",
+    "2552": "Legiosnit",
+    "2553": "Calamaneronit",
+    "2554": "Pyroleonit",
+    "2555": "Raichunit X",
+    "2556": "Raichunit Y",
+    "2557": "Cerapendranit",
+    "2558": "Irokexonit",
+    "2559": "Staraptornit",
+    "2560": "Zapplarangonit"
 }

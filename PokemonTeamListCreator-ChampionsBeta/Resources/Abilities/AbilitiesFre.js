@@ -307,5 +307,12 @@ var abilitiesFre = {
     "306": "Nectar Mielleux",
     "307": "T\u00e9ramorphose",
     "308": "T\u00e9ra-Carapace",
-    "309": "T\u00e9raformation 0"
+    "309": "T\u00e9raformation 0",
+    "310": "Emprise Toxique",
+    "311": "Transperceuse",
+    "312": "Peau Draconique",
+    "313": "L\u00e9vitaboost",
+    "315": "M\u00e9ga-Soleil",
+    "316": "Crini\u00e8re de Feu",
+    "318": "Haban\u00e9ruption"
 }

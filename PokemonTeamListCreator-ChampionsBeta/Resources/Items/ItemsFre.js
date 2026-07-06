@@ -1644,5 +1644,16 @@ var itemsFre = {
     "2546": "Friandise Spectreval",
     "2547": "Disque Indigo",
     "2548": "Pique Volcanique",
-    "2549": "T\u00e9ra-\u00c9clat Stellaire"
+    "2549": "T\u00e9ra-\u00c9clat Stellaire",
+    "2550": "Golgopathite",
+    "2551": "Kravarekite",
+    "2552": "Hexadronite",
+    "2553": "Sepiatrocite",
+    "2554": "N\u00e9m\u00e9liosite",
+    "2555": "Raichu\u00efte X",
+    "2556": "Raichu\u00efte Y",
+    "2557": "Brutapodite",
+    "2558": "Bagga\u00efdite",
+    "2559": "\u00c9touraptorite",
+    "2560": "Ohmassacrite"
 }

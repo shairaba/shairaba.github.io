@@ -1644,5 +1644,16 @@ var itemsEs = {
     "2546": "Galleta Spectrier",
     "2547": "Disco \u00cdndigo",
     "2548": "Palillo \u00cdgneo",
-    "2549": "Teralito Astral"
+    "2549": "Teralito Astral",
+    "2550": "Barbaraclita",
+    "2551": "Dragalgita",
+    "2552": "Falinksita",
+    "2553": "Malamarita",
+    "2554": "Pyroarita",
+    "2555": "Raichunita X",
+    "2556": "Raichunita Y",
+    "2557": "Scolipedita",
+    "2558": "Scraftita",
+    "2559": "Staraptorita",
+    "2560": "Eelektrossita"
 }

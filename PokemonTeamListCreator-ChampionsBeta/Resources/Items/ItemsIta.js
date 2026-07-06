@@ -1644,5 +1644,16 @@ var itemsIta = {
     "2546": "Spuntino per Spectrier",
     "2547": "Disco indaco",
     "2548": "Stecchino infuocato",
-    "2549": "Teralite Astrale"
+    "2549": "Teralite Astrale",
+    "2550": "Barbaraclite",
+    "2551": "Dragalgite",
+    "2552": "Falinksite",
+    "2553": "Malamarite",
+    "2554": "Pyroarite",
+    "2555": "Raichuite X",
+    "2556": "Raichuite Y",
+    "2557": "Scolipedite",
+    "2558": "Scraftite",
+    "2559": "Staraptorite",
+    "2560": "Eelektrossite"
 }

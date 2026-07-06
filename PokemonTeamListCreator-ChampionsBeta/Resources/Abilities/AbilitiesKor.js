@@ -307,5 +307,12 @@ var abilitiesKor = {
     "306": "\uac10\ubbf8\ub85c\uc6b4\uafc0",
     "307": "\ud14c\ub77c\uccb4\uc778\uc9c0",
     "308": "\ud14c\ub77c\uc178",
-    "309": "\uc81c\ub85c\ud3ec\ubc0d"
+    "309": "\uc81c\ub85c\ud3ec\ubc0d",
+    "310": "\ub3c5\uc870\uc885",
+    "311": "\uad00\ud1b5\ub4dc\ub9b4",
+    "312": "\ub4dc\ub798\uace4\uc2a4\ud0a8",
+    "313": "\ucc9c\uc815\ubd80\uc9c0",
+    "315": "\uba54\uac00\uc194\ub77c",
+    "316": "\ubd88\uaf43\uc758\uac08\uae30",
+    "318": "\ud558\ubc14\ub124\ub85c\ubd84\ucd9c"
 }

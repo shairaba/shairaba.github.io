@@ -916,5 +916,7 @@ var movesIta = {
     "915": "Rabbia Bruciante",
     "916": "Elettrotuffo",
     "917": "Psicorumore",
-    "918": "Colpo di Mano"
+    "918": "Colpo di Mano",
+    "919": "Intossicatena",
+    "920": "Tabula Laser"
 }

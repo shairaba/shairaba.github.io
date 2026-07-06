@@ -573,6 +573,7 @@ var MoveTranslator = {
     "Nightmare": "171",
     "Night Shade": "101",
     "Night Slash": "400",
+    "Nihil Light": "920",
     "Noble Roar": "568",
     "No Retreat": "748",
     "Noxious Torque": "898",

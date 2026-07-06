@@ -916,5 +916,7 @@ var movesEn = {
     "915": "Temper Flare",
     "916": "Supercell Slam",
     "917": "Psychic Noise",
-    "918": "Upper Hand"
+    "918": "Upper Hand",
+    "919": "Malignant Chain",
+    "920": "Nihil Light"
 }

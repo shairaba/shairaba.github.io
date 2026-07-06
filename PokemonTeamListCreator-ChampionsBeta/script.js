@@ -73,6 +73,7 @@ document.getElementById('teamName').value = urlParams.get('team');
 document.getElementById('switchName').value = urlParams.get('switch');
 document.getElementById('playerId').value = urlParams.get('id');
 document.getElementById('birth').value = urlParams.get('dob');
+document.getElementById('supportId').value = urlParams.get('support');
 if (urlParams.get('age')){
     document.getElementById(urlParams.get('age')).checked = true;
 }
@@ -181,6 +182,7 @@ function generatePdf(element) {
     var switchName = document.getElementById('switchName').value;
     var playerId = document.getElementById('playerId').value;
     var birth = document.getElementById('birth').value;
+    var supportId = document.getElementById('supportId').value;
     var paste = document.getElementById('paste').value;
     var ageDivision = document.querySelector('input[name="ageDivision"]:checked');
     var chosenLang = document.querySelectorAll('input[name="radioLang"]:checked');
@@ -209,6 +211,14 @@ function generatePdf(element) {
     var cleanPaste = paste.replace(/[\u200B-\u200D\uFEFF\u2060]/g, "");
 
     var parsedTeam = Koffing.parse(cleanPaste);
+
+    var megaMon = parsedTeam.teams[0].pokemon.find(function (poke) {
+        return poke.name.indexOf('-Mega') !== -1;
+    });
+    if (megaMon) {
+        document.getElementById('error').innerText = 'MEGA EVOLVED FORMS (' + megaMon.name + ') CANNOT BE LISTED ON A TEAMSHEET. LIST THE BASE SPECIES INSTEAD.';
+        return;
+    }
 
     const doc = new jsPDF();
 
@@ -505,20 +515,29 @@ function generatePdf(element) {
         doc.setFontSize(9);
         doc.setFont("text1", 'normal');
         var msg = "Player ID: ";
-        doc.text(140, 43, msg, "right");
-        doc.line(140, 44.5, 180, 44.5);
+        doc.text(140, 40, msg, "right");
+        doc.line(140, 41.5, 180, 41.5);
         doc.setFontSize(13);
         doc.setFont("text2", 'normal');
-        doc.text(playerId, 142, 43);
+        doc.text(playerId, 142, 40);
 
         doc.setFontSize(9);
         doc.setFont("text1", 'normal');
         var msg = "Date of Birth: ";
-        doc.text(140, 51, msg, "right");
-        doc.line(140, 52.5, 180, 52.5);
+        doc.text(140, 47, msg, "right");
+        doc.line(140, 48.5, 180, 48.5);
         doc.setFontSize(13);
         doc.setFont("text2", 'normal');
-        doc.text(birth, 142, 51);
+        doc.text(birth, 142, 47);
+
+        doc.setFontSize(9);
+        doc.setFont("text1", 'normal');
+        var msg = "Support ID: ";
+        doc.text(140, 54, msg, "right");
+        doc.line(140, 55.5, 180, 55.5);
+        doc.setFontSize(13);
+        doc.setFont("text2", 'normal');
+        doc.text(supportId, 142, 54);
 
 
         for (let i = 0; i < 6; i++) {
@@ -817,6 +836,12 @@ function loadImageFile(file) {
     });
 }
 
+function setStatus(el, text, kind) {
+    el.classList.remove('status-error', 'status-success', 'status-info');
+    if (kind) el.classList.add('status-' + kind);
+    el.innerText = text;
+}
+
 async function executeUnifiedTeamScreenParsing() {
     const fileMoves = document.getElementById('img-moves').files[0];
     const fileStats = document.getElementById('img-stats').files[0];
@@ -824,13 +849,11 @@ async function executeUnifiedTeamScreenParsing() {
     const statusText = document.getElementById('parser-status');
 
     if (!fileMoves || !fileStats) {
-        statusText.style.color = '#e74c3c';
-        statusText.innerText = "⚠️ Please select BOTH image screenshots first.";
+        setStatus(statusText, 'Please select both image screenshots first.', 'error');
         return;
     }
 
-    statusText.style.color = '#6c5ce7';
-    statusText.innerText = "⏳ Reading screenshots (running locally in your browser)...";
+    setStatus(statusText, 'Reading screenshots (running locally in your browser)...', 'info');
 
     try {
         const [imgMoves, imgStats] = await Promise.all([
@@ -844,18 +867,128 @@ async function executeUnifiedTeamScreenParsing() {
             pokedex: window.pokedex,
             lang,
             onProgress: (_step, index) => {
-                statusText.innerText = `⏳ Reading Pokemon ${index + 1} of 6...`;
+                setStatus(statusText, `Reading Pokemon ${index + 1} of 6...`, 'info');
             },
         });
 
         document.getElementById('paste').value = renderPokepaste(monData);
-        statusText.style.color = '#2ecc71';
-        statusText.innerText = "✅ Done! Team loaded below. You can click 'PRINT SELECTED' now.";
+        setStatus(statusText, "Done! Team loaded below. You can click 'PRINT SELECTED' now.", 'success');
     } catch (error) {
-        statusText.style.color = '#e74c3c';
-        statusText.innerText = `❌ Error: ${error.message}`;
+        setStatus(statusText, `Error: ${error.message}`, 'error');
         console.error("Screenshot parsing error:", error);
     }
 }
 
 document.getElementById('btn-parse-screens').addEventListener('click', executeUnifiedTeamScreenParsing);
+
+// Import a Showdown paste from a pokepast.es or vrpastes.com link.
+// Runs entirely client-side; vrpastes.com goes through its public API with a
+// CORS-proxy fallback since that API does not always send CORS headers.
+async function importFromURL() {
+    const statusText = document.getElementById('url-import-status');
+    const urlInput = document.getElementById('paste-url');
+    const urlValue = urlInput.value.trim();
+
+    if (!urlValue) {
+        setStatus(statusText, 'Please enter a URL first.', 'error');
+        return;
+    }
+
+    setStatus(statusText, 'Importing...', 'info');
+
+    try {
+        let rawPaste = '';
+
+        if (urlValue.includes('pokepast.es')) {
+            let targetUrl = urlValue.replace(/\/$/, '');
+            if (!targetUrl.endsWith('/json')) {
+                targetUrl += '/json';
+            }
+
+            const response = await fetch(targetUrl);
+            if (!response.ok) throw new Error('Could not download Pokepaste.');
+            const data = await response.json();
+            rawPaste = data.paste || '';
+        }
+
+        else if (urlValue.includes('vrpastes.com')) {
+            const parts = urlValue.split('/');
+            const pasteId = parts[parts.length - 1].split('?')[0];
+
+            if (!pasteId) throw new Error('Could not extract paste ID from URL.');
+
+            const apiUrl = `https://vrpaste-backend.vercel.app/api/paste/${pasteId}?lang=english`;
+
+            let data = null;
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) throw new Error(`Status ${response.status}`);
+                data = await response.json();
+            } catch (e) {
+                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`;
+                const proxyResponse = await fetch(proxyUrl);
+                if (!proxyResponse.ok) throw new Error(`Proxy returned ${proxyResponse.status}`);
+                data = await proxyResponse.json();
+            }
+
+            if (!data || !data.teams || !Array.isArray(data.teams)) {
+                throw new Error('Invalid team data returned from VR Pastes API.');
+            }
+
+            let reconstructedPaste = '';
+            data.teams.forEach(pkmn => {
+                if (!pkmn.name) return;
+
+                if (pkmn.item && pkmn.item !== 'None') {
+                    reconstructedPaste += `${pkmn.name} @ ${pkmn.item}\n`;
+                } else {
+                    reconstructedPaste += `${pkmn.name}\n`;
+                }
+
+                if (pkmn.ability) reconstructedPaste += `Ability: ${pkmn.ability}\n`;
+                if (pkmn.teraType) reconstructedPaste += `Tera Type: ${pkmn.teraType}\n`;
+
+                if (pkmn.evs) {
+                    const evArray = [];
+                    if (pkmn.evs.hp) evArray.push(`${pkmn.evs.hp} HP`);
+                    if (pkmn.evs.atk) evArray.push(`${pkmn.evs.atk} Atk`);
+                    if (pkmn.evs.def) evArray.push(`${pkmn.evs.def} Def`);
+                    if (pkmn.evs.spa) evArray.push(`${pkmn.evs.spa} SpA`);
+                    if (pkmn.evs.spd) evArray.push(`${pkmn.evs.spd} SpD`);
+                    if (pkmn.evs.spe) evArray.push(`${pkmn.evs.spe} Spe`);
+                    if (evArray.length > 0) reconstructedPaste += `EVs: ${evArray.join(' / ')}\n`;
+                }
+
+                if (pkmn.nature) reconstructedPaste += `${pkmn.nature} Nature\n`;
+
+                if (pkmn.moves && Array.isArray(pkmn.moves)) {
+                    pkmn.moves.forEach(move => {
+                        reconstructedPaste += `- ${move}\n`;
+                    });
+                }
+
+                reconstructedPaste += `\n`;
+            });
+
+            rawPaste = reconstructedPaste.trim();
+        }
+
+        else {
+            setStatus(statusText, 'Unsupported website. Please paste a pokepast.es or vrpastes.com link.', 'error');
+            return;
+        }
+
+        if (rawPaste) {
+            document.getElementById('paste').value = rawPaste;
+            setStatus(statusText, 'Team imported successfully.', 'success');
+            urlInput.value = '';
+        } else {
+            setStatus(statusText, 'No team data found at that URL.', 'error');
+        }
+    } catch (error) {
+        console.error(error);
+        setStatus(statusText, 'Import failed: ' + error.message, 'error');
+    }
+}
+
+document.getElementById('btn-import-url').addEventListener('click', importFromURL);

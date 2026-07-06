@@ -916,5 +916,7 @@ var movesEs = {
     "915": "C\u00f3lera Ardiente",
     "916": "Plancha Voltaica",
     "917": "Psicorruido",
-    "918": "Palma Rauda"
+    "918": "Palma Rauda",
+    "919": "Cadena Virulenta",
+    "920": "Luz Devastadora"
 }

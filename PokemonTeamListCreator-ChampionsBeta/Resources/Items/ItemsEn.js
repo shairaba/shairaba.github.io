@@ -1644,5 +1644,16 @@ var itemsEn = {
     "2546": "Spectrier Treat",
     "2547": "Indigo Disk",
     "2548": "Fiery Pick",
-    "2549": "Stellar Tera Shard"
+    "2549": "Stellar Tera Shard",
+    "2550": "Barbaracite",
+    "2551": "Dragalgite",
+    "2552": "Falinksite",
+    "2553": "Malamarite",
+    "2554": "Pyroarite",
+    "2555": "Raichunite X",
+    "2556": "Raichunite Y",
+    "2557": "Scolipite",
+    "2558": "Scraftinite",
+    "2559": "Staraptite",
+    "2560": "Eelektrossite"
 }

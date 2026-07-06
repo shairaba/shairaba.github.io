@@ -307,5 +307,12 @@ var abilitiesEs = {
     "306": "N\u00e9ctar Dulce",
     "307": "Teracambio",
     "308": "Teracaparaz\u00f3n",
-    "309": "Teraformaci\u00f3n 0"
+    "309": "Teraformaci\u00f3n 0",
+    "310": "T\u00edtere T\u00f3xico",
+    "311": "Turbotaladro",
+    "312": "Piel Dragontina",
+    "313": "Impulso Anguila",
+    "315": "Megasolar",
+    "316": "Melena de Fuego",
+    "318": "Salpicante"
 }

@@ -916,5 +916,7 @@ var movesFre = {
     "915": "Indignition",
     "916": "Volt Assaut",
     "917": "Dissonance Psy",
-    "918": "Prio-Parade"
+    "918": "Prio-Parade",
+    "919": "Cha\u00eene Malsaine",
+    "920": "Lux Nihilum"
 }

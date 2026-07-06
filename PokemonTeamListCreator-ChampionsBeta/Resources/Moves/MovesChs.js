@@ -916,5 +916,7 @@ var movesChs = {
     "915": "\u8c41\u51fa\u53bb",
     "916": "\u95ea\u7535\u5f3a\u88ad",
     "917": "\u7cbe\u795e\u566a\u97f3",
-    "918": "\u5feb\u624b\u8fd8\u51fb"
+    "918": "\u5feb\u624b\u8fd8\u51fb",
+    "919": "\u90aa\u6bd2\u9501\u94fe",
+    "920": "\u5f52\u65e0\u4e4b\u5149"
 }

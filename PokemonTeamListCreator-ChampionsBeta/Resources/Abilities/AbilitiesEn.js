@@ -307,5 +307,12 @@ var abilitiesEn = {
     "306": "Supersweet Syrup",
     "307": "Tera Shift",
     "308": "Tera Shell",
-    "309": "Teraform Zero"
+    "309": "Teraform Zero",
+    "310": "Poison Puppeteer",
+    "311": "Piercing Drill",
+    "312": "Dragonize",
+    "313": "Eelevate",
+    "315": "Mega Sol",
+    "316": "Fire Mane",
+    "318": "Spicy Spray"
 }

@@ -916,5 +916,7 @@ var movesGer = {
     "915": "Frustflamme",
     "916": "Donnersto\u00df",
     "917": "Psychol\u00e4rm",
-    "918": "Schnellkonter"
+    "918": "Schnellkonter",
+    "919": "Giftkettung",
+    "920": "Tilgungslicht"
 }

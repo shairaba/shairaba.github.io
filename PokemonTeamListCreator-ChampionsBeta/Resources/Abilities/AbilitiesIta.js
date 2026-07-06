@@ -307,5 +307,12 @@ var abilitiesIta = {
     "306": "Sciroppo Sublime",
     "307": "Teramorfosi",
     "308": "Teraguscio",
-    "309": "Zeroformazione"
+    "309": "Zeroformazione",
+    "310": "Malia Tossica",
+    "311": "Punta Perforante",
+    "312": "Pelledrago",
+    "313": "Rapidascesa",
+    "315": "Megasolar",
+    "316": "Pirocriniera",
+    "318": "Spargipiccante"
 }

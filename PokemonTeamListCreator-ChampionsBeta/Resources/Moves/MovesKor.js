@@ -916,5 +916,7 @@ var movesKor = {
     "915": "\uc5f4\ubd88\ub0b4\uae30",
     "916": "\uc36c\ub354\ub2e4\uc774\ube0c",
     "917": "\uc0ac\uc774\ucf54\ub178\uc774\uc988",
-    "918": "\uae30\uc120\uc81c\uc555"
+    "918": "\uae30\uc120\uc81c\uc555",
+    "919": "\uc545\ub3c5\uc0ac\uc2ac",
+    "920": "\ub2c8\ud790\ub808\uc774\uc800"
 }
