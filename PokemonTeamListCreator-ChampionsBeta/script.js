@@ -172,6 +172,45 @@ function sheetChange(event) {
 
 
 
+// Small set of decorative symbols (stars, suits, gender signs, etc.) that the
+// main text fonts (Calibri-based text1/text2/text3) don't include. These are
+// covered by a separate embedded font ("fontSymbols") and are drawn as their
+// own run so a player-typed name like "★ Team ★" doesn't silently lose the stars.
+const SYMBOL_CHARS = new Set(['★', '☆', '♥', '❤', '♦', '♣', '♠', '☀', '☾', '♪', '♫', '✓', '✔', '✗', '⚡', '♂', '♀']);
+
+// Draws left-aligned text that may mix "normal" characters (rendered with
+// baseFont) and symbol characters (rendered with the fontSymbols font),
+// switching fonts per contiguous run so both sets render correctly side by side.
+function drawMixedFontText(doc, text, x, y, baseFont, fontSize) {
+    if (!text) return;
+
+    doc.setFontSize(fontSize);
+
+    var cursorX = x;
+    var currentRun = '';
+    var currentIsSymbol = null;
+
+    function flush() {
+        if (!currentRun) return;
+        doc.setFont(currentIsSymbol ? 'fontSymbols' : baseFont, 'normal');
+        doc.text(currentRun, cursorX, y);
+        cursorX += doc.getTextWidth(currentRun);
+        currentRun = '';
+    }
+
+    for (const ch of text) {
+        const isSymbol = SYMBOL_CHARS.has(ch);
+        if (currentIsSymbol !== null && isSymbol !== currentIsSymbol) {
+            flush();
+        }
+        currentRun += ch;
+        currentIsSymbol = isSymbol;
+    }
+    flush();
+
+    doc.setFont(baseFont, 'normal');
+}
+
 function generatePdf(element) {
 
     document.getElementById('error').innerText = '';
@@ -252,6 +291,8 @@ function generatePdf(element) {
         doc.addFont('text2.ttf', 'text2', 'normal');
         doc.addFileToVFS("text3.ttf", text3);
         doc.addFont('text3.ttf', 'text3', 'normal');
+        doc.addFileToVFS("fontSymbols.ttf", fontSymbols);
+        doc.addFont('fontSymbols.ttf', 'fontSymbols', 'normal');
 
         doc.setFontSize(7);
         doc.setFont("text2", 'normal');
@@ -303,12 +344,10 @@ function generatePdf(element) {
         var msg = "Masters ";
         doc.text(196, 33, msg, "right");
 
-        doc.setFont("text2", 'normal');
-        doc.setFontSize(13);
-        doc.text(playerName, 47, 33);
-        doc.text(trainerName, 47, 40);
-        doc.text(teamName, 47, 47);
-        doc.text(switchName, 47, 54);
+        drawMixedFontText(doc, playerName, 47, 33, 'text2', 13);
+        drawMixedFontText(doc, trainerName, 47, 40, 'text2', 13);
+        drawMixedFontText(doc, teamName, 47, 47, 'text2', 13);
+        drawMixedFontText(doc, switchName, 47, 54, 'text2', 13);
 
         for (let i = 0; i < 6; i++) {
             doc.setLineWidth(0.6);
@@ -517,27 +556,21 @@ function generatePdf(element) {
         var msg = "Player ID: ";
         doc.text(140, 40, msg, "right");
         doc.line(140, 41.5, 180, 41.5);
-        doc.setFontSize(13);
-        doc.setFont("text2", 'normal');
-        doc.text(playerId, 142, 40);
+        drawMixedFontText(doc, playerId, 142, 40, 'text2', 13);
 
         doc.setFontSize(9);
         doc.setFont("text1", 'normal');
         var msg = "Date of Birth: ";
         doc.text(140, 47, msg, "right");
         doc.line(140, 48.5, 180, 48.5);
-        doc.setFontSize(13);
-        doc.setFont("text2", 'normal');
-        doc.text(birth, 142, 47);
+        drawMixedFontText(doc, birth, 142, 47, 'text2', 13);
 
         doc.setFontSize(9);
         doc.setFont("text1", 'normal');
         var msg = "Support ID: ";
         doc.text(140, 54, msg, "right");
         doc.line(140, 55.5, 180, 55.5);
-        doc.setFontSize(13);
-        doc.setFont("text2", 'normal');
-        doc.text(supportId, 142, 54);
+        drawMixedFontText(doc, supportId, 142, 54, 'text2', 13);
 
 
         for (let i = 0; i < 6; i++) {
@@ -582,7 +615,10 @@ function generatePdf(element) {
         doc.addFileToVFS("customFont.ttf", fontKor);
         doc.addFont('customFont.ttf', 'customFont', 'normal');
         doc.setFont("customFont", 'normal');
-        
+
+        doc.addFileToVFS("fontSymbols.ttf", fontSymbols);
+        doc.addFont('fontSymbols.ttf', 'fontSymbols', 'normal');
+
         const canvas = document.createElement('canvas');
         canvas.width = 100;
         canvas.height = 100;
@@ -591,8 +627,8 @@ function generatePdf(element) {
         ctx.fillRect(0, 0, 100, 100);
         const line = canvas.toDataURL();
 
+        drawMixedFontText(doc, playerName+" - "+trainerName, 20, 8, 'customFont', 14);
         doc.setFontSize(14);
-        doc.text(playerName+" - "+trainerName, 20, 8, 'left');
         doc.text(ageDivision.id, 199, 11, 'right');
 
         let c_width=190/7;
