@@ -1,0 +1,1478 @@
+{
+  "Abomasnow": {
+    "abilities": [
+      "Snow Warning"
+    ],
+    "hidden": "Soundproof"
+  },
+  "Absol": {
+    "abilities": [
+      "Pressure",
+      "Super Luck"
+    ],
+    "hidden": "Justified"
+  },
+  "Aegislash": {
+    "abilities": [
+      "Stance Change"
+    ],
+    "hidden": null
+  },
+  "Aerodactyl": {
+    "abilities": [
+      "Rock Head",
+      "Pressure"
+    ],
+    "hidden": "Unnerve"
+  },
+  "Aggron": {
+    "abilities": [
+      "Sturdy",
+      "Rock Head"
+    ],
+    "hidden": "Heavy Metal"
+  },
+  "Alakazam": {
+    "abilities": [
+      "Synchronize",
+      "Inner Focus"
+    ],
+    "hidden": "Magic Guard"
+  },
+  "Alcremie": {
+    "abilities": [
+      "Sweet Veil"
+    ],
+    "hidden": "Aroma Veil"
+  },
+  "Altaria": {
+    "abilities": [
+      "Natural Cure"
+    ],
+    "hidden": "Cloud Nine"
+  },
+  "Ampharos": {
+    "abilities": [
+      "Static"
+    ],
+    "hidden": "Plus"
+  },
+  "Annihilape": {
+    "abilities": [
+      "Vital Spirit",
+      "Inner Focus"
+    ],
+    "hidden": "Defiant"
+  },
+  "Appletun": {
+    "abilities": [
+      "Ripen",
+      "Gluttony"
+    ],
+    "hidden": "Thick Fat"
+  },
+  "Araquanid": {
+    "abilities": [
+      "Water Bubble"
+    ],
+    "hidden": "Water Absorb"
+  },
+  "Arbok": {
+    "abilities": [
+      "Intimidate",
+      "Shed Skin"
+    ],
+    "hidden": "Unnerve"
+  },
+  "Arcanine": {
+    "abilities": [
+      "Intimidate",
+      "Flash Fire"
+    ],
+    "hidden": "Justified"
+  },
+  "Arcanine-Hisui": {
+    "abilities": [
+      "Intimidate",
+      "Flash Fire"
+    ],
+    "hidden": "Rock Head"
+  },
+  "Archaludon": {
+    "abilities": [
+      "Stamina",
+      "Sturdy"
+    ],
+    "hidden": "Stalwart"
+  },
+  "Ariados": {
+    "abilities": [
+      "Swarm",
+      "Insomnia"
+    ],
+    "hidden": "Sniper"
+  },
+  "Armarouge": {
+    "abilities": [
+      "Flash Fire"
+    ],
+    "hidden": "Weak Armor"
+  },
+  "Aromatisse": {
+    "abilities": [
+      "Healer"
+    ],
+    "hidden": "Aroma Veil"
+  },
+  "Audino": {
+    "abilities": [
+      "Healer",
+      "Regenerator"
+    ],
+    "hidden": "Klutz"
+  },
+  "Aurorus": {
+    "abilities": [
+      "Refrigerate"
+    ],
+    "hidden": "Snow Warning"
+  },
+  "Avalugg": {
+    "abilities": [
+      "Own Tempo",
+      "Ice Body"
+    ],
+    "hidden": "Sturdy"
+  },
+  "Avalugg-Hisui": {
+    "abilities": [
+      "Strong Jaw",
+      "Ice Body"
+    ],
+    "hidden": "Sturdy"
+  },
+  "Azumarill": {
+    "abilities": [
+      "Thick Fat",
+      "Huge Power"
+    ],
+    "hidden": "Sap Sipper"
+  },
+  "Banette": {
+    "abilities": [
+      "Insomnia",
+      "Frisk"
+    ],
+    "hidden": "Cursed Body"
+  },
+  "Barbaracle": {
+    "abilities": [
+      "Sniper",
+      "Tough Claws"
+    ],
+    "hidden": "Pickpocket"
+  },
+  "Basculegion": {
+    "abilities": [
+      "Swift Swim",
+      "Adaptability"
+    ],
+    "hidden": "Mold Breaker"
+  },
+  "Bastiodon": {
+    "abilities": [
+      "Sturdy"
+    ],
+    "hidden": "Soundproof"
+  },
+  "Beartic": {
+    "abilities": [
+      "Snow Cloak",
+      "Slush Rush"
+    ],
+    "hidden": "Swift Swim"
+  },
+  "Beedrill": {
+    "abilities": [
+      "Swarm"
+    ],
+    "hidden": "Sniper"
+  },
+  "Bellibolt": {
+    "abilities": [
+      "Electromorphosis",
+      "Static"
+    ],
+    "hidden": "Damp"
+  },
+  "Blastoise": {
+    "abilities": [
+      "Torrent"
+    ],
+    "hidden": "Rain Dish"
+  },
+  "Blaziken": {
+    "abilities": [
+      "Blaze"
+    ],
+    "hidden": "Speed Boost"
+  },
+  "Camerupt": {
+    "abilities": [
+      "Magma Armor",
+      "Solid Rock"
+    ],
+    "hidden": "Anger Point"
+  },
+  "Castform": {
+    "abilities": [
+      "Forecast"
+    ],
+    "hidden": null
+  },
+  "Ceruledge": {
+    "abilities": [
+      "Flash Fire"
+    ],
+    "hidden": "Weak Armor"
+  },
+  "Chandelure": {
+    "abilities": [
+      "Flash Fire",
+      "Flame Body"
+    ],
+    "hidden": "Infiltrator"
+  },
+  "Charizard": {
+    "abilities": [
+      "Blaze"
+    ],
+    "hidden": "Solar Power"
+  },
+  "Chesnaught": {
+    "abilities": [
+      "Overgrow"
+    ],
+    "hidden": "Bulletproof"
+  },
+  "Chimecho": {
+    "abilities": [
+      "Levitate"
+    ],
+    "hidden": null
+  },
+  "Clawitzer": {
+    "abilities": [
+      "Mega Launcher"
+    ],
+    "hidden": null
+  },
+  "Clefable": {
+    "abilities": [
+      "Cute Charm",
+      "Magic Guard"
+    ],
+    "hidden": "Unaware"
+  },
+  "Cofagrigus": {
+    "abilities": [
+      "Mummy"
+    ],
+    "hidden": null
+  },
+  "Conkeldurr": {
+    "abilities": [
+      "Guts",
+      "Sheer Force"
+    ],
+    "hidden": "Iron Fist"
+  },
+  "Corviknight": {
+    "abilities": [
+      "Pressure",
+      "Unnerve"
+    ],
+    "hidden": "Mirror Armor"
+  },
+  "Crabominable": {
+    "abilities": [
+      "Hyper Cutter",
+      "Iron Fist"
+    ],
+    "hidden": "Anger Point"
+  },
+  "Decidueye": {
+    "abilities": [
+      "Overgrow"
+    ],
+    "hidden": "Long Reach"
+  },
+  "Decidueye-Hisui": {
+    "abilities": [
+      "Overgrow"
+    ],
+    "hidden": "Scrappy"
+  },
+  "Dedenne": {
+    "abilities": [
+      "Cheek Pouch",
+      "Pickup"
+    ],
+    "hidden": "Plus"
+  },
+  "Delphox": {
+    "abilities": [
+      "Blaze"
+    ],
+    "hidden": "Magician"
+  },
+  "Diggersby": {
+    "abilities": [
+      "Pickup",
+      "Cheek Pouch"
+    ],
+    "hidden": "Huge Power"
+  },
+  "Ditto": {
+    "abilities": [
+      "Limber"
+    ],
+    "hidden": "Imposter"
+  },
+  "Dragalge": {
+    "abilities": [
+      "Poison Point",
+      "Poison Touch"
+    ],
+    "hidden": "Adaptability"
+  },
+  "Dragapult": {
+    "abilities": [
+      "Clear Body",
+      "Infiltrator"
+    ],
+    "hidden": "Cursed Body"
+  },
+  "Dragonite": {
+    "abilities": [
+      "Inner Focus"
+    ],
+    "hidden": "Multiscale"
+  },
+  "Drampa": {
+    "abilities": [
+      "Berserk",
+      "Sap Sipper"
+    ],
+    "hidden": "Cloud Nine"
+  },
+  "Eelektross": {
+    "abilities": [
+      "Levitate"
+    ],
+    "hidden": null
+  },
+  "Emboar": {
+    "abilities": [
+      "Blaze"
+    ],
+    "hidden": "Reckless"
+  },
+  "Emolga": {
+    "abilities": [
+      "Static"
+    ],
+    "hidden": "Motor Drive"
+  },
+  "Empoleon": {
+    "abilities": [
+      "Torrent"
+    ],
+    "hidden": "Competitive"
+  },
+  "Espathra": {
+    "abilities": [
+      "Opportunist",
+      "Frisk"
+    ],
+    "hidden": "Speed Boost"
+  },
+  "Espeon": {
+    "abilities": [
+      "Synchronize"
+    ],
+    "hidden": "Magic Bounce"
+  },
+  "Excadrill": {
+    "abilities": [
+      "Sand Rush",
+      "Sand Force"
+    ],
+    "hidden": "Mold Breaker"
+  },
+  "Falinks": {
+    "abilities": [
+      "Battle Armor"
+    ],
+    "hidden": "Defiant"
+  },
+  "Farigiraf": {
+    "abilities": [
+      "Cud Chew",
+      "Armor Tail"
+    ],
+    "hidden": "Sap Sipper"
+  },
+  "Feraligatr": {
+    "abilities": [
+      "Torrent"
+    ],
+    "hidden": "Sheer Force"
+  },
+  "Flapple": {
+    "abilities": [
+      "Ripen",
+      "Gluttony"
+    ],
+    "hidden": "Hustle"
+  },
+  "Flareon": {
+    "abilities": [
+      "Flash Fire"
+    ],
+    "hidden": "Guts"
+  },
+  "Floette": {
+    "abilities": [
+      "Flower Veil"
+    ],
+    "hidden": "Symbiosis"
+  },
+  "Florges": {
+    "abilities": [
+      "Flower Veil"
+    ],
+    "hidden": "Symbiosis"
+  },
+  "Forretress": {
+    "abilities": [
+      "Sturdy"
+    ],
+    "hidden": "Overcoat"
+  },
+  "Froslass": {
+    "abilities": [
+      "Snow Cloak"
+    ],
+    "hidden": "Cursed Body"
+  },
+  "Furfrou": {
+    "abilities": [
+      "Fur Coat"
+    ],
+    "hidden": null
+  },
+  "Gallade": {
+    "abilities": [
+      "Steadfast",
+      "Sharpness"
+    ],
+    "hidden": "Justified"
+  },
+  "Garbodor": {
+    "abilities": [
+      "Stench",
+      "Weak Armor"
+    ],
+    "hidden": "Aftermath"
+  },
+  "Garchomp": {
+    "abilities": [
+      "Sand Veil"
+    ],
+    "hidden": "Rough Skin"
+  },
+  "Gardevoir": {
+    "abilities": [
+      "Synchronize",
+      "Trace"
+    ],
+    "hidden": "Telepathy"
+  },
+  "Garganacl": {
+    "abilities": [
+      "Purifying Salt",
+      "Sturdy"
+    ],
+    "hidden": "Clear Body"
+  },
+  "Gengar": {
+    "abilities": [
+      "Cursed Body"
+    ],
+    "hidden": null
+  },
+  "Gholdengo": {
+    "abilities": [
+      "Good as Gold"
+    ],
+    "hidden": null
+  },
+  "Glaceon": {
+    "abilities": [
+      "Snow Cloak"
+    ],
+    "hidden": "Ice Body"
+  },
+  "Glalie": {
+    "abilities": [
+      "Inner Focus",
+      "Ice Body"
+    ],
+    "hidden": "Moody"
+  },
+  "Glimmora": {
+    "abilities": [
+      "Toxic Debris"
+    ],
+    "hidden": "Corrosion"
+  },
+  "Gliscor": {
+    "abilities": [
+      "Hyper Cutter",
+      "Sand Veil"
+    ],
+    "hidden": "Poison Heal"
+  },
+  "Golurk": {
+    "abilities": [
+      "Iron Fist",
+      "Klutz"
+    ],
+    "hidden": "No Guard"
+  },
+  "Goodra": {
+    "abilities": [
+      "Sap Sipper",
+      "Hydration"
+    ],
+    "hidden": "Gooey"
+  },
+  "Goodra-Hisui": {
+    "abilities": [
+      "Sap Sipper",
+      "Shell Armor"
+    ],
+    "hidden": "Gooey"
+  },
+  "Gourgeist": {
+    "abilities": [
+      "Pickup",
+      "Frisk"
+    ],
+    "hidden": "Insomnia"
+  },
+  "Greninja": {
+    "abilities": [
+      "Torrent"
+    ],
+    "hidden": "Protean"
+  },
+  "Grimmsnarl": {
+    "abilities": [
+      "Prankster",
+      "Frisk"
+    ],
+    "hidden": "Pickpocket"
+  },
+  "Gyarados": {
+    "abilities": [
+      "Intimidate"
+    ],
+    "hidden": "Moxie"
+  },
+  "Hatterene": {
+    "abilities": [
+      "Healer",
+      "Anticipation"
+    ],
+    "hidden": "Magic Bounce"
+  },
+  "Hawlucha": {
+    "abilities": [
+      "Limber",
+      "Unburden"
+    ],
+    "hidden": "Mold Breaker"
+  },
+  "Heliolisk": {
+    "abilities": [
+      "Dry Skin",
+      "Sand Veil"
+    ],
+    "hidden": "Solar Power"
+  },
+  "Heracross": {
+    "abilities": [
+      "Swarm",
+      "Guts"
+    ],
+    "hidden": "Moxie"
+  },
+  "Hippowdon": {
+    "abilities": [
+      "Sand Stream"
+    ],
+    "hidden": "Sand Force"
+  },
+  "Houndoom": {
+    "abilities": [
+      "Early Bird",
+      "Flash Fire"
+    ],
+    "hidden": "Unnerve"
+  },
+  "Houndstone": {
+    "abilities": [
+      "Sand Rush"
+    ],
+    "hidden": "Fluffy"
+  },
+  "Hydrapple": {
+    "abilities": [
+      "Supersweet Syrup",
+      "Regenerator"
+    ],
+    "hidden": "Sticky Hold"
+  },
+  "Hydreigon": {
+    "abilities": [
+      "Levitate"
+    ],
+    "hidden": null
+  },
+  "Incineroar": {
+    "abilities": [
+      "Blaze"
+    ],
+    "hidden": "Intimidate"
+  },
+  "Infernape": {
+    "abilities": [
+      "Blaze"
+    ],
+    "hidden": "Iron Fist"
+  },
+  "Jolteon": {
+    "abilities": [
+      "Volt Absorb"
+    ],
+    "hidden": "Quick Feet"
+  },
+  "Kangaskhan": {
+    "abilities": [
+      "Early Bird",
+      "Scrappy"
+    ],
+    "hidden": "Inner Focus"
+  },
+  "Kingambit": {
+    "abilities": [
+      "Defiant",
+      "Supreme Overlord"
+    ],
+    "hidden": "Pressure"
+  },
+  "Kleavor": {
+    "abilities": [
+      "Swarm",
+      "Sheer Force"
+    ],
+    "hidden": "Sharpness"
+  },
+  "Klefki": {
+    "abilities": [
+      "Prankster"
+    ],
+    "hidden": "Magician"
+  },
+  "Kommo-o": {
+    "abilities": [
+      "Bulletproof",
+      "Soundproof"
+    ],
+    "hidden": "Overcoat"
+  },
+  "Krookodile": {
+    "abilities": [
+      "Intimidate",
+      "Moxie"
+    ],
+    "hidden": "Anger Point"
+  },
+  "Leafeon": {
+    "abilities": [
+      "Leaf Guard"
+    ],
+    "hidden": "Chlorophyll"
+  },
+  "Liepard": {
+    "abilities": [
+      "Limber",
+      "Unburden"
+    ],
+    "hidden": "Prankster"
+  },
+  "Lopunny": {
+    "abilities": [
+      "Cute Charm",
+      "Klutz"
+    ],
+    "hidden": "Limber"
+  },
+  "Lucario": {
+    "abilities": [
+      "Steadfast",
+      "Inner Focus"
+    ],
+    "hidden": "Justified"
+  },
+  "Luxray": {
+    "abilities": [
+      "Rivalry",
+      "Intimidate"
+    ],
+    "hidden": "Guts"
+  },
+  "Lycanroc": {
+    "abilities": [
+      "Keen Eye",
+      "Sand Rush"
+    ],
+    "hidden": "Steadfast"
+  },
+  "Lycanroc-Dusk": {
+    "abilities": [
+      "Tough Claws"
+    ],
+    "hidden": null
+  },
+  "Lycanroc-Midnight": {
+    "abilities": [
+      "Keen Eye",
+      "Vital Spirit"
+    ],
+    "hidden": "No Guard"
+  },
+  "Machamp": {
+    "abilities": [
+      "Guts",
+      "No Guard"
+    ],
+    "hidden": "Steadfast"
+  },
+  "Malamar": {
+    "abilities": [
+      "Contrary",
+      "Suction Cups"
+    ],
+    "hidden": "Infiltrator"
+  },
+  "Mamoswine": {
+    "abilities": [
+      "Oblivious",
+      "Snow Cloak"
+    ],
+    "hidden": "Thick Fat"
+  },
+  "Manectric": {
+    "abilities": [
+      "Static",
+      "Lightning Rod"
+    ],
+    "hidden": "Minus"
+  },
+  "Maushold": {
+    "abilities": [
+      "Friend Guard",
+      "Cheek Pouch"
+    ],
+    "hidden": "Technician"
+  },
+  "Mawile": {
+    "abilities": [
+      "Hyper Cutter",
+      "Intimidate"
+    ],
+    "hidden": "Sheer Force"
+  },
+  "Medicham": {
+    "abilities": [
+      "Pure Power"
+    ],
+    "hidden": "Telepathy"
+  },
+  "Meganium": {
+    "abilities": [
+      "Overgrow"
+    ],
+    "hidden": "Leaf Guard"
+  },
+  "Meowscarada": {
+    "abilities": [
+      "Overgrow"
+    ],
+    "hidden": "Protean"
+  },
+  "Meowstic": {
+    "abilities": [
+      "Keen Eye",
+      "Infiltrator"
+    ],
+    "hidden": "Prankster"
+  },
+  "Meowstic-F": {
+    "abilities": [
+      "Keen Eye",
+      "Infiltrator"
+    ],
+    "hidden": "Competitive"
+  },
+  "Metagross": {
+    "abilities": [
+      "Clear Body"
+    ],
+    "hidden": "Light Metal"
+  },
+  "Milotic": {
+    "abilities": [
+      "Marvel Scale",
+      "Competitive"
+    ],
+    "hidden": "Cute Charm"
+  },
+  "Mimikyu": {
+    "abilities": [
+      "Disguise"
+    ],
+    "hidden": null
+  },
+  "Morpeko": {
+    "abilities": [
+      "Hunger Switch"
+    ],
+    "hidden": null
+  },
+  "Mr. Rime": {
+    "abilities": [
+      "Tangled Feet",
+      "Screen Cleaner"
+    ],
+    "hidden": "Ice Body"
+  },
+  "Mudsdale": {
+    "abilities": [
+      "Own Tempo",
+      "Stamina"
+    ],
+    "hidden": "Inner Focus"
+  },
+  "Musharna": {
+    "abilities": [
+      "Forewarn",
+      "Synchronize"
+    ],
+    "hidden": "Telepathy"
+  },
+  "Ninetales": {
+    "abilities": [
+      "Flash Fire"
+    ],
+    "hidden": "Drought"
+  },
+  "Ninetales-Alola": {
+    "abilities": [
+      "Snow Cloak"
+    ],
+    "hidden": "Snow Warning"
+  },
+  "Noivern": {
+    "abilities": [
+      "Frisk",
+      "Infiltrator"
+    ],
+    "hidden": "Telepathy"
+  },
+  "Oranguru": {
+    "abilities": [
+      "Inner Focus",
+      "Telepathy"
+    ],
+    "hidden": "Symbiosis"
+  },
+  "Orthworm": {
+    "abilities": [
+      "Earth Eater"
+    ],
+    "hidden": "Sand Veil"
+  },
+  "Overqwil": {
+    "abilities": [
+      "Poison Point",
+      "Swift Swim"
+    ],
+    "hidden": "Intimidate"
+  },
+  "Palafin": {
+    "abilities": [
+      "Zero to Hero"
+    ],
+    "hidden": null
+  },
+  "Pangoro": {
+    "abilities": [
+      "Iron Fist",
+      "Mold Breaker"
+    ],
+    "hidden": "Scrappy"
+  },
+  "Passimian": {
+    "abilities": [
+      "Receiver"
+    ],
+    "hidden": "Defiant"
+  },
+  "Pelipper": {
+    "abilities": [
+      "Keen Eye",
+      "Drizzle"
+    ],
+    "hidden": "Rain Dish"
+  },
+  "Pidgeot": {
+    "abilities": [
+      "Keen Eye",
+      "Tangled Feet"
+    ],
+    "hidden": "Big Pecks"
+  },
+  "Pikachu": {
+    "abilities": [
+      "Static"
+    ],
+    "hidden": "Lightning Rod"
+  },
+  "Pinsir": {
+    "abilities": [
+      "Hyper Cutter",
+      "Mold Breaker"
+    ],
+    "hidden": "Moxie"
+  },
+  "Politoed": {
+    "abilities": [
+      "Water Absorb",
+      "Damp"
+    ],
+    "hidden": "Drizzle"
+  },
+  "Polteageist": {
+    "abilities": [
+      "Weak Armor"
+    ],
+    "hidden": "Cursed Body"
+  },
+  "Primarina": {
+    "abilities": [
+      "Torrent"
+    ],
+    "hidden": "Liquid Voice"
+  },
+  "Pyroar": {
+    "abilities": [
+      "Rivalry",
+      "Unnerve"
+    ],
+    "hidden": "Moxie"
+  },
+  "Quaquaval": {
+    "abilities": [
+      "Torrent"
+    ],
+    "hidden": "Moxie"
+  },
+  "Qwilfish": {
+    "abilities": [
+      "Poison Point",
+      "Swift Swim"
+    ],
+    "hidden": "Intimidate"
+  },
+  "Raichu": {
+    "abilities": [
+      "Static"
+    ],
+    "hidden": "Lightning Rod"
+  },
+  "Raichu-Alola": {
+    "abilities": [
+      "Surge Surfer"
+    ],
+    "hidden": null
+  },
+  "Rampardos": {
+    "abilities": [
+      "Mold Breaker"
+    ],
+    "hidden": "Sheer Force"
+  },
+  "Reuniclus": {
+    "abilities": [
+      "Overcoat",
+      "Magic Guard"
+    ],
+    "hidden": "Regenerator"
+  },
+  "Rhyperior": {
+    "abilities": [
+      "Lightning Rod",
+      "Solid Rock"
+    ],
+    "hidden": "Reckless"
+  },
+  "Roserade": {
+    "abilities": [
+      "Natural Cure",
+      "Poison Point"
+    ],
+    "hidden": "Technician"
+  },
+  "Rotom": {
+    "abilities": [
+      "Levitate"
+    ],
+    "hidden": null
+  },
+  "Runerigus": {
+    "abilities": [
+      "Wandering Spirit"
+    ],
+    "hidden": null
+  },
+  "Sableye": {
+    "abilities": [
+      "Keen Eye",
+      "Stall"
+    ],
+    "hidden": "Prankster"
+  },
+  "Salazzle": {
+    "abilities": [
+      "Corrosion"
+    ],
+    "hidden": "Oblivious"
+  },
+  "Samurott": {
+    "abilities": [
+      "Torrent"
+    ],
+    "hidden": "Shell Armor"
+  },
+  "Samurott-Hisui": {
+    "abilities": [
+      "Torrent"
+    ],
+    "hidden": "Sharpness"
+  },
+  "Sandaconda": {
+    "abilities": [
+      "Sand Spit",
+      "Shed Skin"
+    ],
+    "hidden": "Sand Veil"
+  },
+  "Sceptile": {
+    "abilities": [
+      "Overgrow"
+    ],
+    "hidden": "Unburden"
+  },
+  "Scizor": {
+    "abilities": [
+      "Swarm",
+      "Technician"
+    ],
+    "hidden": "Light Metal"
+  },
+  "Scolipede": {
+    "abilities": [
+      "Poison Point",
+      "Swarm"
+    ],
+    "hidden": "Speed Boost"
+  },
+  "Scovillain": {
+    "abilities": [
+      "Chlorophyll",
+      "Insomnia"
+    ],
+    "hidden": "Moody"
+  },
+  "Scrafty": {
+    "abilities": [
+      "Shed Skin",
+      "Moxie"
+    ],
+    "hidden": "Intimidate"
+  },
+  "Serperior": {
+    "abilities": [
+      "Overgrow"
+    ],
+    "hidden": "Contrary"
+  },
+  "Sharpedo": {
+    "abilities": [
+      "Rough Skin"
+    ],
+    "hidden": "Speed Boost"
+  },
+  "Simipour": {
+    "abilities": [
+      "Gluttony"
+    ],
+    "hidden": "Torrent"
+  },
+  "Simisage": {
+    "abilities": [
+      "Gluttony"
+    ],
+    "hidden": "Overgrow"
+  },
+  "Simisear": {
+    "abilities": [
+      "Gluttony"
+    ],
+    "hidden": "Blaze"
+  },
+  "Sinistcha": {
+    "abilities": [
+      "Hospitality"
+    ],
+    "hidden": "Heatproof"
+  },
+  "Skarmory": {
+    "abilities": [
+      "Keen Eye",
+      "Sturdy"
+    ],
+    "hidden": "Weak Armor"
+  },
+  "Skeledirge": {
+    "abilities": [
+      "Blaze"
+    ],
+    "hidden": "Unaware"
+  },
+  "Slowbro": {
+    "abilities": [
+      "Oblivious",
+      "Own Tempo"
+    ],
+    "hidden": "Regenerator"
+  },
+  "Slowbro-Galar": {
+    "abilities": [
+      "Quick Draw",
+      "Own Tempo"
+    ],
+    "hidden": "Regenerator"
+  },
+  "Slowking": {
+    "abilities": [
+      "Oblivious",
+      "Own Tempo"
+    ],
+    "hidden": "Regenerator"
+  },
+  "Slowking-Galar": {
+    "abilities": [
+      "Curious Medicine",
+      "Own Tempo"
+    ],
+    "hidden": "Regenerator"
+  },
+  "Slurpuff": {
+    "abilities": [
+      "Sweet Veil"
+    ],
+    "hidden": "Unburden"
+  },
+  "Sneasler": {
+    "abilities": [
+      "Pressure",
+      "Unburden"
+    ],
+    "hidden": "Poison Touch"
+  },
+  "Snorlax": {
+    "abilities": [
+      "Immunity",
+      "Thick Fat"
+    ],
+    "hidden": "Gluttony"
+  },
+  "Spiritomb": {
+    "abilities": [
+      "Pressure"
+    ],
+    "hidden": "Infiltrator"
+  },
+  "Staraptor": {
+    "abilities": [
+      "Intimidate"
+    ],
+    "hidden": "Reckless"
+  },
+  "Starmie": {
+    "abilities": [
+      "Illuminate",
+      "Natural Cure"
+    ],
+    "hidden": "Analytic"
+  },
+  "Steelix": {
+    "abilities": [
+      "Rock Head",
+      "Sturdy"
+    ],
+    "hidden": "Sheer Force"
+  },
+  "Stunfisk": {
+    "abilities": [
+      "Static",
+      "Limber"
+    ],
+    "hidden": "Sand Veil"
+  },
+  "Stunfisk-Galar": {
+    "abilities": [
+      "Mimicry"
+    ],
+    "hidden": null
+  },
+  "Swampert": {
+    "abilities": [
+      "Torrent"
+    ],
+    "hidden": "Damp"
+  },
+  "Sylveon": {
+    "abilities": [
+      "Cute Charm"
+    ],
+    "hidden": "Pixilate"
+  },
+  "Talonflame": {
+    "abilities": [
+      "Flame Body"
+    ],
+    "hidden": "Gale Wings"
+  },
+  "Tauros": {
+    "abilities": [
+      "Intimidate",
+      "Anger Point"
+    ],
+    "hidden": "Sheer Force"
+  },
+  "Tauros-Paldea-Aqua": {
+    "abilities": [
+      "Intimidate",
+      "Anger Point"
+    ],
+    "hidden": "Cud Chew"
+  },
+  "Tauros-Paldea-Blaze": {
+    "abilities": [
+      "Intimidate",
+      "Anger Point"
+    ],
+    "hidden": "Cud Chew"
+  },
+  "Tauros-Paldea-Combat": {
+    "abilities": [
+      "Intimidate",
+      "Anger Point"
+    ],
+    "hidden": "Cud Chew"
+  },
+  "Tinkaton": {
+    "abilities": [
+      "Mold Breaker",
+      "Own Tempo"
+    ],
+    "hidden": "Pickpocket"
+  },
+  "Torkoal": {
+    "abilities": [
+      "White Smoke",
+      "Drought"
+    ],
+    "hidden": "Shell Armor"
+  },
+  "Torterra": {
+    "abilities": [
+      "Overgrow"
+    ],
+    "hidden": "Shell Armor"
+  },
+  "Toucannon": {
+    "abilities": [
+      "Keen Eye",
+      "Skill Link"
+    ],
+    "hidden": "Sheer Force"
+  },
+  "Toxapex": {
+    "abilities": [
+      "Merciless",
+      "Limber"
+    ],
+    "hidden": "Regenerator"
+  },
+  "Toxicroak": {
+    "abilities": [
+      "Anticipation",
+      "Dry Skin"
+    ],
+    "hidden": "Poison Touch"
+  },
+  "Trevenant": {
+    "abilities": [
+      "Natural Cure",
+      "Frisk"
+    ],
+    "hidden": "Harvest"
+  },
+  "Tsareena": {
+    "abilities": [
+      "Leaf Guard",
+      "Queenly Majesty"
+    ],
+    "hidden": "Sweet Veil"
+  },
+  "Typhlosion": {
+    "abilities": [
+      "Blaze"
+    ],
+    "hidden": "Flash Fire"
+  },
+  "Typhlosion-Hisui": {
+    "abilities": [
+      "Blaze"
+    ],
+    "hidden": "Frisk"
+  },
+  "Tyranitar": {
+    "abilities": [
+      "Sand Stream"
+    ],
+    "hidden": "Unnerve"
+  },
+  "Tyrantrum": {
+    "abilities": [
+      "Strong Jaw"
+    ],
+    "hidden": "Rock Head"
+  },
+  "Umbreon": {
+    "abilities": [
+      "Synchronize"
+    ],
+    "hidden": "Inner Focus"
+  },
+  "Vanilluxe": {
+    "abilities": [
+      "Ice Body",
+      "Snow Warning"
+    ],
+    "hidden": "Weak Armor"
+  },
+  "Vaporeon": {
+    "abilities": [
+      "Water Absorb"
+    ],
+    "hidden": "Hydration"
+  },
+  "Venusaur": {
+    "abilities": [
+      "Overgrow"
+    ],
+    "hidden": "Chlorophyll"
+  },
+  "Victreebel": {
+    "abilities": [
+      "Chlorophyll"
+    ],
+    "hidden": "Gluttony"
+  },
+  "Vileplume": {
+    "abilities": [
+      "Chlorophyll"
+    ],
+    "hidden": "Effect Spore"
+  },
+  "Vivillon": {
+    "abilities": [
+      "Shield Dust",
+      "Compound Eyes"
+    ],
+    "hidden": "Friend Guard"
+  },
+  "Volcarona": {
+    "abilities": [
+      "Flame Body"
+    ],
+    "hidden": "Swarm"
+  },
+  "Watchog": {
+    "abilities": [
+      "Illuminate",
+      "Keen Eye"
+    ],
+    "hidden": "Analytic"
+  },
+  "Weavile": {
+    "abilities": [
+      "Pressure"
+    ],
+    "hidden": "Pickpocket"
+  },
+  "Whimsicott": {
+    "abilities": [
+      "Prankster",
+      "Infiltrator"
+    ],
+    "hidden": "Chlorophyll"
+  },
+  "Wyrdeer": {
+    "abilities": [
+      "Intimidate",
+      "Frisk"
+    ],
+    "hidden": "Sap Sipper"
+  },
+  "Zoroark": {
+    "abilities": [
+      "Illusion"
+    ],
+    "hidden": null
+  },
+  "Zoroark-Hisui": {
+    "abilities": [
+      "Illusion"
+    ],
+    "hidden": null
+  }
+}

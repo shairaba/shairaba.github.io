@@ -4,6 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Team List Generator</title>
+    <!-- Applied before the stylesheet/first paint, from a saved cookie (or
+         the OS preference on a first visit) - so a returning dark-mode
+         user never sees a flash of the light theme while the page loads.
+         The toggle button's own click handler (script.js) keeps this in
+         sync afterward and re-saves the cookie. -->
+    <script>
+    (function () {
+        var m = document.cookie.match(/(?:^|; )theme=(dark|light)/);
+        var theme = m ? m[1] : (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        document.documentElement.setAttribute("data-theme", theme);
+    })();
+    </script>
     <link rel="stylesheet" href="style.css?v=2">
 
     <!-- Needed for the in-browser screenshot-to-pokepaste OCR (client-ocr/) -->
@@ -22,11 +34,25 @@
 <div class="page">
 
     <header class="site-header">
-        <img class="logo" src="logo.png" alt="Team List Creator from Showdown paste">
+        <img class="logo" src="logo-icon.png" alt="Team List Creator from Showdown paste">
         <div class="header-text">
             <h1>Pokémon Team List Generator</h1>
             <p class="badge">Pokémon Champions update &middot; based on the <a target="_blank" href="https://github.com/DhSufi/Showdown-Team-List-Generator">original project by DhSufi</a></p>
         </div>
+        <button id="theme-toggle" type="button" aria-label="Toggle dark mode">
+            <span class="theme-switch-icon theme-switch-sun" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <circle cx="12" cy="12" r="4"></circle>
+                    <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+                </svg>
+            </span>
+            <span class="theme-switch-icon theme-switch-moon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                    <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 1 0 10.5 10.5z"></path>
+                </svg>
+            </span>
+            <span class="theme-switch-knob"></span>
+        </button>
     </header>
 
     <main class="layout">
@@ -73,7 +99,13 @@
                 <div id="parser-status" class="status-text"></div>
             </div>
 
-            <textarea id="paste" placeholder="Showdown team paste here =)"></textarea>
+            <div class="review-panel" id="review-card" style="display:none">
+                <p class="screenshot-parser-title">Low-confidence reads <span>(please confirm)</span></p>
+                <div id="review-list"></div>
+                <button id="review-confirm" type="button">Confirm &amp; Continue</button>
+            </div>
+
+            <textarea id="paste" placeholder="Paste your Showdown team here..."></textarea>
         </section>
 
         <section class="panel" id="area2">
@@ -99,7 +131,7 @@
                 <div class="Dcontainer">
                     <input id="playerId" class="info" placeholder=" " type="text">
                     <label class="info">Player ID</label>
-                    <a target="_blank" href="https://support.pokemon.com/hc/en-us/articles/360001031234-How-do-I-generate-a-Player-ID">What is my Player ID?</a>
+                    <a target="_blank" href="https://play.pokemon.com/en-us/resources/documents/player-id-generation-article/">What is my Player ID?</a>
                 </div>
                 <div class="Dcontainer">
                     <input id="birth" class="info" placeholder=" " type="text">
@@ -294,7 +326,8 @@
     <script type="text/javascript" src="Resources/Abilities/TranslatorAbilities.js" ></script>
     <script type="text/javascript" src="Resources/Items/TranslatorItems.js" ></script>
     <script type="text/javascript" src="Resources/Moves/TranslatorMoves.js" ></script>
-    <script type="text/javascript" src="Resources/Types/TranslatorTypes.js" ></script>
+    <script type="text/javascript" src="Resources/Natures/TranslatorNatures.js" ></script>
+    <script type="text/javascript" src="Resources/PrintLabels.js" ></script>
     <script type="text/javascript" src="Resources/Showdown/pokedex.js" ></script>
     <script type="text/javascript" src="Resources/Showdown/natures.js" ></script>
     <script src="./fontChs.js"></script>
@@ -306,7 +339,7 @@
     <script src="./font2.js"></script>
     <script src="./font3.js"></script>
     <script src="./fontSymbols.js"></script>
-    <script src="script.js?v=4" type="module"></script>
+    <script src="script.js?v=5" type="module"></script>
     <script src="jspdf.js" type="text/javascript"></script>
 </body>
 </html>

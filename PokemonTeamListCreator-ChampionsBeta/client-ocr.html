@@ -65,6 +65,31 @@
   }
   #copy-btn { margin-top: 10px; background: #2b2b38; }
   #copy-btn:hover:not(:disabled) { background: #37374a; }
+  .review-item { margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid #2b2b38; }
+  .review-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  .review-item-title { font-size: 13px; font-weight: bold; margin-bottom: 8px; }
+  .review-choices { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+  .review-choice-btn {
+    width: auto;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: normal;
+    background: #0b0b10;
+    border: 1px solid #2b2b38;
+    color: #f2f3f7;
+  }
+  .review-choice-btn:hover:not(:disabled) { background: #24242f; }
+  .review-choice-btn.selected { background: #7c5cff; border-color: #7c5cff; }
+  .review-manual-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid #2b2b38;
+    background: #0b0b10;
+    color: #f2f3f7;
+    font-size: 13px;
+  }
 </style>
 </head>
 <body>
@@ -99,6 +124,13 @@
 
   <button id="btn-generate" disabled>Generate PokePaste</button>
   <div id="status">Pick both screenshots to begin.</div>
+</div>
+
+<div class="card" id="review-card" style="display:none">
+  <label>Low-confidence reads - please confirm</label>
+  <p class="sub" style="margin-top:0;">Pick the correct value for each field below, or type your own.</p>
+  <div id="review-list"></div>
+  <button id="review-confirm">Confirm &amp; Generate</button>
 </div>
 
 <div class="card">

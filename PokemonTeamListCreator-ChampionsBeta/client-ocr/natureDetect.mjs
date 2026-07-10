@@ -28,6 +28,11 @@ const NATURE_MAP = {
 const RED_RANGE = [[163, 60, 120], [180, 255, 255]];
 const BLUE_RANGE = [[90, 80, 120], [118, 255, 255]];
 
+// See detectNature's use of this below for the calibration story - real
+// chevron blob areas observed across a real sample set cluster at 0 (no
+// chevron) or >=20ish (a clear one), with one confirmed genuine miss at 2.
+const MIN_CHEVRON_AREA = 2;
+
 function largestBlobArea(mask, width, height, x0, y0, x1, y1) {
   x0 = Math.max(0, Math.floor(x0));
   y0 = Math.max(0, Math.floor(y0));
@@ -54,11 +59,10 @@ function largestBlobArea(mask, width, height, x0, y0, x1, y1) {
   return blobs.length ? Math.max(...blobs.map((b) => b.area)) : 0;
 }
 
-// imageData: the full stats-card ImageData (same coordinate space as
-// `gaps`, i.e. the same upscaled canvas the OCR tokens' pixel coordinates
-// came from). gaps: parseStatsCard's second return value,
-// {key: [gapX0, gapX1, cy]}. cardHeight: the card canvas's pixel height.
-export function detectNature(imageData, gaps, cardHeight) {
+// Shared scan: returns the boosted/lowered stat full-names (or null, if no
+// chevron of that color cleared MIN_CHEVRON_AREA anywhere on the card) that
+// detectNature and detectNatureConfidence both build on.
+function scanChevrons(imageData, gaps, cardHeight) {
   const redMask = hsvMask(imageData, ...RED_RANGE);
   const blueMask = hsvMask(imageData, ...BLUE_RANGE);
 
@@ -69,9 +73,58 @@ export function detectNature(imageData, gaps, cardHeight) {
     const y1 = cy + cardHeight * 0.07;
     const redArea = largestBlobArea(redMask.mask, redMask.width, redMask.height, x0, y0, x1, y1);
     const blueArea = largestBlobArea(blueMask.mask, blueMask.width, blueMask.height, x0, y0, x1, y1);
-    if (redArea >= 3 && redArea > blueArea) boosted = STAT_FULL_NAME[statKey];
-    if (blueArea >= 3 && blueArea > redArea) lowered = STAT_FULL_NAME[statKey];
+    // Real chevron detections across a wide sample set are either 0 (no
+    // chevron in this stat's window, the overwhelmingly common case) or
+    // >=20-ish (a genuine, clearly-rendered chevron) - nothing has ever
+    // landed in between except one confirmed real miss (a genuine lowered-
+    // stat chevron measured at exactly 2px on a lower-resolution
+    // screenshot, comfortably clear of every non-chevron reading in the
+    // same sample set, which stayed at 0). MIN_AREA sits just under that,
+    // not at the old cutoff of 3, so a chevron rendered a little smaller
+    // than usual on a lower-res screenshot doesn't fall through to the
+    // "no chevron here" default when it clearly should have counted.
+    if (redArea >= MIN_CHEVRON_AREA && redArea > blueArea) boosted = STAT_FULL_NAME[statKey];
+    if (blueArea >= MIN_CHEVRON_AREA && blueArea > redArea) lowered = STAT_FULL_NAME[statKey];
+  }
+  return { boosted, lowered };
+}
+
+// imageData: the full stats-card ImageData (same coordinate space as
+// `gaps`, i.e. the same upscaled canvas the OCR tokens' pixel coordinates
+// came from). gaps: parseStatsCard's second return value,
+// {key: [gapX0, gapX1, cy]}. cardHeight: the card canvas's pixel height.
+export function detectNature(imageData, gaps, cardHeight) {
+  const { boosted, lowered } = scanChevrons(imageData, gaps, cardHeight);
+  return NATURE_MAP[`${boosted},${lowered}`] ?? "Serious";
+}
+
+// Same scan as detectNature, but also flags when the result should be
+// treated as a guess rather than a confident read - for the manual-review
+// picker (see main.mjs). A real nature chevron always comes in a matched
+// pair (one stat boosted, a different one lowered); "Serious" is genuinely
+// common (many real teams run neutral natures) and both-null is exactly
+// what that looks like, so that case is trusted outright, same as
+// detectNature. What's never a real, complete read is exactly one color
+// found and not the other - the game doesn't render a lone chevron - so
+// that's flagged as uncertain, with candidates covering every nature
+// consistent with the one half that *was* found (paired against each of
+// the other four possible stats for the missing half).
+export function detectNatureConfidence(imageData, gaps, cardHeight) {
+  const { boosted, lowered } = scanChevrons(imageData, gaps, cardHeight);
+  const nature = NATURE_MAP[`${boosted},${lowered}`] ?? "Serious";
+
+  if ((boosted === null) === (lowered === null)) {
+    return { nature, uncertain: false, candidates: [] };
   }
 
-  return NATURE_MAP[`${boosted},${lowered}`] ?? "Serious";
+  const otherNames = Object.values(STAT_FULL_NAME);
+  const candidates = boosted !== null
+    ? otherNames.filter((n) => n !== boosted).map((lo) => NATURE_MAP[`${boosted},${lo}`])
+    : otherNames.filter((n) => n !== lowered).map((bo) => NATURE_MAP[`${bo},${lowered}`]);
+
+  return {
+    nature,
+    uncertain: true,
+    candidates: candidates.map((name) => ({ name, confidence: 1 / candidates.length })),
+  };
 }

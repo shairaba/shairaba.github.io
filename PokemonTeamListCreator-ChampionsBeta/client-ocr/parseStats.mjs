@@ -2,6 +2,7 @@
 // _group_rows_with_tokens, _extract_row_info, and parse_stats_card.
 // OCR tokens here use the normalized shape from ocr.mjs's runOcr():
 // {text, confidence, x0, y0, x1, y1, cx, cy, h}.
+import { isCjk } from "./translate.mjs";
 
 export function groupDetectionsIntoLines(tokens, yTolerance = 12) {
   if (!tokens.length) return [];
@@ -118,8 +119,22 @@ function extractRowInfo(rowTokens) {
 
   let realNumeric = numericTokens;
   let labelEndX = null;
+  // A label can itself have digits fused into its own OCR box alongside a
+  // separate trailing token for the rest (observed for real: Kingambit's
+  // Attack row came back as "こうげき205" + a separate "32", rather than
+  // one "20532" run or a clean "label" + "number" pair) - the real total
+  // was 205, fused across both. The x0>=labelEndX filter below correctly
+  // keeps the label-bearing token out of realNumeric (its own x0 is always
+  // < its own x1/labelEndX), but discarding it outright loses that leading
+  // digit fragment - "32" alone then reads as the whole total instead of
+  // "205"+"32" recombined as they were on-screen. Recovered here so it can
+  // be stitched back onto whatever's left in realNumeric below.
+  let labelDigitSuffix = "";
   if (wordyTokens.length) {
     labelEndX = Math.max(...wordyTokens.map((t) => t.x1));
+    const labelToken = wordyTokens.find((t) => t.x1 === labelEndX);
+    const digitMatch = labelToken?.text.match(/(\d+)$/);
+    if (digitMatch) labelDigitSuffix = digitMatch[1];
     const filtered = numericTokens.filter((t) => t.x0 >= labelEndX);
     if (filtered.length) realNumeric = filtered;
   }
@@ -128,23 +143,54 @@ function extractRowInfo(rowTokens) {
   const totalTok = realNumeric[0];
   let total, ev, confirmed, alt = [];
 
-  if (realNumeric.length >= 2) {
+  if (labelDigitSuffix && realNumeric.length === 1) {
+    // The label token's own trailing digits plus whatever single token
+    // survived the labelEndX filter are two fragments of one fused run,
+    // not an independent total+EV pair - reassemble and split them the
+    // same way a single all-in-one fused token would be.
+    const combined = labelDigitSuffix + totalTok.text.match(/\d+/)[0];
+    const candidates = splitFusedDigits(combined);
+    ({ total, ev, confirmed } = candidates[0]);
+    alt = candidates.slice(1);
+  } else if (realNumeric.length >= 2) {
     // Two distinct tokens - the game's layout always renders total before
-    // EV left-to-right, so no fused-digit ambiguity to resolve.
-    total = parseInt(totalTok.text.match(/\d+/)[0], 10);
-    ev = parseInt(realNumeric[1].text.match(/\d+/)[0], 10);
-    confirmed = true;
+    // EV left-to-right, so no fused-digit ambiguity to resolve... in the
+    // common case. But when detection itself fragments the row oddly, the
+    // "total" token can end up being unrelated noise rather than a real
+    // total at all (observed for real: a Speed row came back as two
+    // tokens, "7" and "18432" - the second one is *already* a clean
+    // "184"+"32" fused total+EV run on its own, and "7" is noise with
+    // nothing to do with it; blindly trusting both tokens at face value
+    // read this as total=7/ev=18432, nowhere near a real level-50 stat).
+    // A total outside the plausible range is the tell that totalTok isn't
+    // trustworthy - when that happens, the second token is tried alone
+    // first (splitFusedDigits handles it exactly like the single-fused-
+    // token case below would), with the two tokens' digits concatenated
+    // together offered only as a lower-priority alternative, in case they
+    // really were meant to be read as one number split across two boxes.
+    const naiveTotal = parseInt(totalTok.text.match(/\d+/)[0], 10);
+    if (naiveTotal >= MIN_PLAUSIBLE_TOTAL && naiveTotal <= MAX_PLAUSIBLE_TOTAL) {
+      total = naiveTotal;
+      ev = parseInt(realNumeric[1].text.match(/\d+/)[0], 10);
+      confirmed = true;
+    } else {
+      const secondDigits = realNumeric[1].text.match(/\d+/)[0];
+      const combined = totalTok.text.match(/\d+/)[0] + secondDigits;
+      const candidates = [...splitFusedDigits(secondDigits), ...splitFusedDigits(combined)];
+      ({ total, ev, confirmed } = candidates[0]);
+      alt = candidates.slice(1);
+    }
   } else {
     // A single token: it may already contain a separator (e.g. an em-dash
     // in "71—1"), in which case each digit-run is unambiguous, or it may
     // be a genuinely fused run needing the plausible-range split above.
     const runs = [...totalTok.text.matchAll(/\d+/g)].map((m) => m[0]);
-    if (runs.length >= 2) {
+    if (runs.length >= 2 && parseInt(runs[0], 10) >= MIN_PLAUSIBLE_TOTAL && parseInt(runs[0], 10) <= MAX_PLAUSIBLE_TOTAL) {
       total = parseInt(runs[0], 10);
       ev = parseInt(runs[1], 10);
       confirmed = true;
     } else {
-      const candidates = splitFusedDigits(runs[0]);
+      const candidates = splitFusedDigits(runs.join(""));
       ({ total, ev, confirmed } = candidates[0]);
       alt = candidates.slice(1);
     }
@@ -175,9 +221,25 @@ function extractRowInfo(rowTokens) {
   // genuinely fused "Sp. Def 165 — 20" style token, which is mostly
   // digits - does gapLabelTokens end up empty, correctly routing to
   // parseStatsCard's borrow-from-another-row fallback instead.
-  const labelCandidates = wordyTokens.filter(
-    (t) => !/\d/.test(t.text) && (t.text.match(/\p{L}/gu) ?? []).length >= 3
-  );
+  //
+  // The >=3 floor is a Latin-script assumption that doesn't hold for CJK
+  // labels - Chinese stat labels ("攻击"/"防御"/"特攻"/"特防"/"速度") are
+  // genuinely only 2 characters each, and a fixed >=3 count silently
+  // excluded every single one, leaving every row on a real Chinese
+  // screenshot "unreliable" and empty-gapped - which (since HP is the only
+  // row detectNature can afford to skip) broke nature detection completely
+  // for that language, not just at the margins. CJK text doesn't need the
+  // same length floor: a stray icon-outline misread has never once come
+  // back as coherent multi-character CJK text anywhere in this pipeline's
+  // testing (icon noise reads as stray Latin letters, or - separately, in
+  // the moves-card noise this same distinction protects against - as a
+  // single low-confidence CJK glyph, which >=2 still excludes), so >=2 CJK
+  // characters is a safe, much lower floor than Latin needs.
+  const labelCandidates = wordyTokens.filter((t) => {
+    if (/\d/.test(t.text)) return false;
+    const letterCount = (t.text.match(/\p{L}/gu) ?? []).length;
+    return isCjk(t.text) ? letterCount >= 2 : letterCount >= 3;
+  });
   const gapLabelTokens = labelCandidates.length
     ? [labelCandidates.reduce((closest, t) => (t.x1 > closest.x1 ? t : closest))]
     : [];

@@ -1,6 +1,6 @@
 // JS port of engine.py's slugify/format_name/spell_correct plus its
 // mega-stone and Rotom-form special cases.
-import { translateToEnglish } from "./translate.mjs";
+import { translateToEnglish, translateToEnglishConfidence, translateToEnglishCandidates } from "./translate.mjs";
 
 const DISPLAY_OVERRIDES = {
   "double-edge": "Double-Edge", "x-scissor": "X-Scissor", "u-turn": "U-turn",
@@ -14,7 +14,8 @@ const DISPLAY_OVERRIDES = {
   "power-of-alchemy": "Power of Alchemy", "mind-s-eye": "Mind's Eye",
   "tablets-of-ruin": "Tablets of Ruin", "vessel-of-ruin": "Vessel of Ruin",
   "sword-of-ruin": "Sword of Ruin", "beads-of-ruin": "Beads of Ruin",
-  "king-s-rock": "King's Rock", "lucky-punch": "Lucky Punch", "ring-target": "Ring Target",
+  "king-s-rock": "King's Rock", "kings-shield": "King's Shield",
+  "lucky-punch": "Lucky Punch", "ring-target": "Ring Target",
   // Species names with punctuation OCR routinely mangles (the stylized
   // lowercase "o" in Kommo-o/Jangmo-o/Hakamo-o is a frequent misread as a
   // zero; apostrophes and colons get stripped by slugify entirely).
@@ -55,6 +56,28 @@ export function slugify(text) {
 // still work, just without base-stat cross-checking of their EVs.
 const REGION_SUFFIX = { Alolan: "Alola", Galarian: "Galar", Hisuian: "Hisui", Paldean: "Paldea" };
 
+// Shared post-processing applied to a translated "name" category result -
+// gender-suffix stripping and regional-form-suffix reshaping - factored out
+// so both spellCorrect and spellCorrectConfidence apply it identically.
+function finishNameResult(name) {
+  // A handful of species (Meowstic, Indeedee, Basculegion, Oinkologne)
+  // are stored as separate "X Male"/"X Female" entries in the resource
+  // data, but the on-screen name never shows gender - that's always a
+  // separate icon - so this suffix would never actually appear in what
+  // was OCR'd.
+  name = name.replace(/\s+(Male|Female)$/, "");
+  const regionMatch = name.match(/^(.+) (Alolan|Galarian|Hisuian|Paldean) Form$/);
+  if (regionMatch) {
+    // Built directly rather than run through the formatName/slugify call
+    // below - that call joins every hyphen-separated segment back
+    // together with spaces (right for a real multi-word name, wrong here
+    // since Showdown's own key needs the literal hyphen kept, e.g.
+    // "Ninetales-Alola" not "Ninetales Alola").
+    return `${formatName(slugify(regionMatch[1]))}-${REGION_SUFFIX[regionMatch[2]]}`;
+  }
+  return formatName(slugify(name));
+}
+
 // idToNameByLang: {name -> idToName} bundle for one category (e.g.
 // {en: pokesEn, fr: pokesFre, ...}), keyed the same as resources.py's
 // LANGUAGES codes. Looks up idToNameByLang[lang] and idToNameByLang.en.
@@ -63,29 +86,46 @@ export function spellCorrect(text, category, idToNameByLang, lang = "en") {
 
   const idToNameForLang = idToNameByLang[lang];
   const idToNameEnglish = idToNameByLang.en;
-  const english = translateToEnglish(text, idToNameForLang, idToNameEnglish);
+  const english = translateToEnglish(text, idToNameForLang, idToNameEnglish, 0.5, category);
   if (english !== null) {
-    let name = english;
-    if (category === "name") {
-      // A handful of species (Meowstic, Indeedee, Basculegion, Oinkologne)
-      // are stored as separate "X Male"/"X Female" entries in the
-      // resource data, but the on-screen name never shows gender - that's
-      // always a separate icon - so this suffix would never actually
-      // appear in what was OCR'd.
-      name = name.replace(/\s+(Male|Female)$/, "");
-      const regionMatch = name.match(/^(.+) (Alolan|Galarian|Hisuian|Paldean) Form$/);
-      if (regionMatch) {
-        // Built directly rather than run through the formatName/slugify
-        // call below - that call joins every hyphen-separated segment
-        // back together with spaces (right for a real multi-word name,
-        // wrong here since Showdown's own key needs the literal hyphen
-        // kept, e.g. "Ninetales-Alola" not "Ninetales Alola").
-        return `${formatName(slugify(regionMatch[1]))}-${REGION_SUFFIX[regionMatch[2]]}`;
-      }
-    }
-    return formatName(slugify(name));
+    return category === "name" ? finishNameResult(english) : formatName(slugify(english));
   }
   return formatName(slugify(text));
+}
+
+// Same as spellCorrect(text, "name", ...), but also returns the raw match
+// confidence from translateToEnglishConfidence - see that function's
+// docstring for why "found a match" and "this text really is the species
+// name" are different questions for nicknamed Pokemon. Only meaningful for
+// the "name" category; other categories don't need this distinction.
+export function spellCorrectNameConfidence(text, idToNameByLang, lang = "en") {
+  if (!text || !text.trim()) return [text ? text.trim() : "", 0.0];
+
+  const idToNameForLang = idToNameByLang[lang];
+  const idToNameEnglish = idToNameByLang.en;
+  const [english, confidence] = translateToEnglishConfidence(text, idToNameForLang, idToNameEnglish);
+  if (english !== null) {
+    return [finishNameResult(english), confidence];
+  }
+  return [formatName(slugify(text)), confidence];
+}
+
+// Same underlying match as spellCorrect, but returns up to `k` ranked
+// {name, confidence} candidates (post-processed the same way spellCorrect's
+// single result is - gender/region-suffix reshaping for "name", plain
+// format/slugify otherwise) instead of only the best guess - for the
+// manual-review picker (see main.mjs). Works for any category, unlike
+// spellCorrectNameConfidence which is name-specific.
+export function spellCorrectCandidates(text, category, idToNameByLang, lang = "en", k = 5) {
+  if (!text || !text.trim()) return [];
+
+  const idToNameForLang = idToNameByLang[lang];
+  const idToNameEnglish = idToNameByLang.en;
+  const raw = translateToEnglishCandidates(text, idToNameForLang, idToNameEnglish, category, k);
+  return raw.map(({ name, confidence }) => ({
+    name: category === "name" ? finishNameResult(name) : formatName(slugify(name)),
+    confidence,
+  }));
 }
 
 // Beyond the four regional adjectives above, the Pokes resource data has

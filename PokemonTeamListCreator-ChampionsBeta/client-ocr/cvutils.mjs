@@ -35,15 +35,6 @@ export function hsvMask(imageData, [hLo, sLo, vLo], [hHi, sHi, vHi]) {
   return { mask, width, height };
 }
 
-// Combines two hue ranges (for hues that wrap around 0/179, e.g. red).
-export function hsvMaskUnion(imageData, rangeA, rangeB) {
-  const a = hsvMask(imageData, ...rangeA);
-  const b = hsvMask(imageData, ...rangeB);
-  const mask = new Uint8Array(a.width * a.height);
-  for (let i = 0; i < mask.length; i++) mask[i] = a.mask[i] || b.mask[i] ? 1 : 0;
-  return { mask, width: a.width, height: a.height };
-}
-
 // Binary dilate then erode with a square kernel - same purpose as
 // cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel): bridges small gaps
 // within a region without growing its outer boundary.

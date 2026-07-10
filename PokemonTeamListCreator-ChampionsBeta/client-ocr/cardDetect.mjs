@@ -17,6 +17,13 @@ function resolveMergedCards(rawBoxes) {
       for (let i = 0; i < n; i++) {
         resolved.push({ x: b.x, y: b.y + i * pieceH, width: b.width, height: pieceH });
       }
+    } else if (ratio > 1.15) {
+      // Moderate mask bleed into the header above the card (not enough to
+      // trip the >1.6 split above, but enough to throw off the icon/name
+      // row positions downstream) - trim back to the unit height, anchored
+      // at the bottom edge since that edge is the reliable one (the bleed
+      // only ever grows the box upward, into the previous row's card).
+      resolved.push({ x: b.x, y: b.y + (b.height - unitH), width: b.width, height: unitH });
     } else {
       resolved.push(b);
     }

@@ -5,10 +5,12 @@
 import { getCardBoundingBoxes } from "./cardDetect.mjs";
 import { runOcr } from "./ocr.mjs";
 import { parseStatsCard } from "./parseStats.mjs";
-import { detectNature } from "./natureDetect.mjs";
+import { detectNatureConfidence } from "./natureDetect.mjs";
 import { computeEvsFromTotals } from "./evCalc.mjs";
 import { parseMovesCard } from "./movesCard.mjs";
 import { detectHeaderIcons, resolveAlternateForm } from "./formResolve.mjs";
+import { getLearnset, getAbilities, getSpeciesCandidates } from "./movesetMatch.mjs";
+import { getLegalItems, filterLegalItems } from "./championsItems.mjs";
 
 const SCALE = 3;
 const OVERLAP = 0.03;
@@ -70,19 +72,28 @@ export async function processImages(imgMoves, imgStats, { idToNameByLang, pokede
   }
 
   const monData = [];
+  const uncertain = [];
   for (let i = 0; i < 6; i++) {
     onProgress?.("read", i);
     const moveBox = movesBoxes[i];
     const statBox = statsBoxes[i];
 
     const moveTokens = await ocrCardHalves(imgMoves, moveBox);
-    const { name: baseName, ability, item, moves } = parseMovesCard(moveTokens, moveBox.width * SCALE, idToNameByLang, lang);
+    const { name: baseName, ability: parsedAbility, item: parsedItem, moves, uncertain: moveUncertain } =
+      await parseMovesCard(moveTokens, moveBox.width * SCALE, idToNameByLang, lang);
+    // Mutable, unlike the other destructured fields above - the "exactly
+    // one legal candidate left" auto-accept below (see the uncertain-field
+    // loop) needs to overwrite these in place rather than only affect
+    // what's shown in the review screen.
+    let ability = parsedAbility;
+    let item = parsedItem;
 
     const statCanvas = drawFullCard(imgStats, statBox);
     const statImageData = statCanvas.getContext("2d").getImageData(0, 0, statCanvas.width, statCanvas.height);
     const statTokens = await ocrCardHalves(imgStats, statBox);
     const { statRows, gaps } = parseStatsCard(statTokens, statBox.width * SCALE);
-    const nature = detectNature(statImageData, gaps, statBox.height * SCALE);
+    const { nature, uncertain: natureUncertain, candidates: natureCandidates } =
+      detectNatureConfidence(statImageData, gaps, statBox.height * SCALE);
 
     // Regional variants (Alolan/Galarian/Hisuian/Paldean) and gender-
     // stat variants (Basculegion/Indeedee/...) never show up in the
@@ -103,6 +114,97 @@ export async function processImages(imgMoves, imgStats, { idToNameByLang, pokede
       .sort((a, b) => a.x0 - b.x0);
     const icons = detectHeaderIcons(statImageData, headerTokens[0]);
     const name = resolveAlternateForm(baseName, icons, pokedex);
+
+    // Only known once the species itself is resolved (just above), which
+    // parseMovesCard - working from a single card's OCR text alone - can't
+    // do on its own; used below to keep the "move"/"ability" review picker
+    // from ever offering an option this species can't actually have (a
+    // plain OCR-text fuzzy match has no notion of which species it's even
+    // reading for, so it matches against every move/ability in the game).
+    const legalMoves = await getLearnset(name);
+    const legalAbilities = await getAbilities(name);
+
+    for (const u of moveUncertain) {
+      if (u.field === "name") {
+        // Sanity-checked the same way move/ability candidates are below -
+        // every species genuinely consistent with this card's own ability
+        // and moves (not just a top-k ranked guess), narrowing the
+        // candidate buttons and backing the manual-entry dropdown. ability/
+        // moves here are this loop's own local variables, so they already
+        // reflect any auto-accept resolution the move/ability branch below
+        // made earlier in this same pass - movesCard.mjs always pushes
+        // ability/move entries ahead of the name entry, so those are
+        // guaranteed to already have run. Unlike move/ability, this never
+        // auto-accepts even when narrowed to a single species - a "name"
+        // resolution also carries a regional/gender-form suffix (handled
+        // below, from icon pixels this check has no way to redo), so
+        // that's left for the reviewer to confirm rather than guessed at.
+        const legalSpecies = await getSpeciesCandidates(ability, moves);
+        const filteredSpecies = legalSpecies ? u.candidates.filter((c) => legalSpecies.includes(c.name)) : u.candidates;
+        // The "name" field's own value/candidates are computed inside
+        // parseMovesCard, before this card's regional-form/gender-variant
+        // suffix (just resolved above from icon pixels read off the
+        // *stats* card - parseMovesCard never sees those pixels) is known.
+        // Patched to the fully-resolved name here so a reviewer who
+        // accepts the review screen's default for an otherwise-uncertain
+        // name field doesn't silently regress a correctly-suffixed species
+        // (e.g. "Basculegion-F") back down to its suffix-less base form.
+        uncertain.push({
+          ...u, mon: i, value: name,
+          candidates: filteredSpecies.length ? filteredSpecies : u.candidates,
+          legalSpecies: legalSpecies ?? [],
+        });
+        continue;
+      }
+
+      if (u.field === "item") {
+        // Champions-legal items (see championsItems.mjs) are a curated,
+        // much narrower list than the bundled item database the initial
+        // OCR fuzzy-match ran against - that database is a generic, every-
+        // generation Pokemon items list, most of which Champions doesn't
+        // actually support holding at all.
+        const legalItems = await getLegalItems();
+        const legalCandidateNames = await filterLegalItems(u.candidates.map((c) => c.name));
+        const filtered = u.candidates.filter((c) => legalCandidateNames.includes(c.name));
+        if (filtered.length === 1) {
+          item = filtered[0].name;
+          continue;
+        }
+        uncertain.push({ ...u, mon: i, candidates: filtered.length ? filtered : u.candidates, legalItems });
+        continue;
+      }
+
+      // "move" and "ability" both get the same treatment: narrow the
+      // fuzzy-match candidate list down to what this species can actually
+      // have, falling back to the original (unfiltered) list rather than
+      // an empty one if nothing survives - a species missing from the
+      // learnset/abilities data entirely, or a genuinely miscategorized
+      // card, should still show its original guesses rather than nothing.
+      // And if that narrowing leaves exactly one legal candidate, there's
+      // nothing left to actually ask a reviewer to choose between - the
+      // OCR text was merely fuzzy, not ambiguous, once cross-checked
+      // against what the species can legally have - so this resolves it
+      // immediately instead of adding it to the review screen.
+      let legalOptions = null, mutateField = null;
+      if (u.field === "move") { legalOptions = legalMoves; mutateField = (v) => { moves[u.index] = v; }; }
+      else if (u.field === "ability") { legalOptions = legalAbilities; mutateField = (v) => { ability = v; }; }
+
+      if (mutateField) {
+        const filtered = legalOptions ? u.candidates.filter((c) => legalOptions.includes(c.name)) : u.candidates;
+        if (legalOptions && filtered.length === 1) {
+          mutateField(filtered[0].name);
+          continue;
+        }
+        uncertain.push({
+          ...u, mon: i,
+          candidates: filtered.length ? filtered : u.candidates,
+          ...(u.field === "move" ? { legalMoves: legalOptions ?? [] } : { legalAbilities: legalOptions ?? [] }),
+        });
+      } else {
+        uncertain.push({ ...u, mon: i });
+      }
+    }
+    if (natureUncertain) uncertain.push({ field: "nature", mon: i, value: nature, candidates: natureCandidates });
 
     // Prefer EVs derived from the (reliably-read) total stats over the
     // small, failure-prone EV digit read directly off the bar - see
@@ -128,7 +230,7 @@ export async function processImages(imgMoves, imgStats, { idToNameByLang, pokede
     monData.push({ name, item, ability, nature, evStr: evItems.join(" / "), moves });
   }
 
-  return monData;
+  return { monData, uncertain };
 }
 
 export function renderPokepaste(monData) {

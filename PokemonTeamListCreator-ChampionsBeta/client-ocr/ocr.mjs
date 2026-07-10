@@ -72,7 +72,7 @@ function withUniqueDimensions(canvas) {
   callCount += 1;
   const padded = document.createElement("canvas");
   padded.width = canvas.width;
-  padded.height = canvas.height + callCount;
+  padded.height = canvas.height + callCount * 16;
   padded.getContext("2d").drawImage(canvas, 0, 0);
   return padded;
 }
