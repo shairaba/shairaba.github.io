@@ -1,11 +1,30 @@
-// OCR wrapper around ppu-paddle-ocr (PP-OCRv6 medium), normalizing its
-// output into the same shape the rest of this pipeline works with: a flat
-// list of tokens with pixel-space bbox edges + center + text + confidence.
-// Browser build - loaded from CDN via the importmap in client-ocr.html so
-// this page needs no bundler.
-import { PaddleOcrService, V6_MEDIUM_MODEL } from "ppu-paddle-ocr/web";
+// OCR wrapper around ppu-paddle-ocr (PP-OCRv6 medium by default), normalizing
+// its output into the same shape the rest of this pipeline works with: a
+// flat list of tokens with pixel-space bbox edges + center + text +
+// confidence. Browser build - loaded from CDN via the importmap in
+// client-ocr.html so this page needs no bundler.
+import { PaddleOcrService, V6_MEDIUM_MODEL, V5_KOREAN_MOBILE_MODEL } from "ppu-paddle-ocr/web";
 
-let servicePromise = null;
+// V6_MEDIUM_MODEL's recognition dictionary (PaddleOCR's standard Chinese+
+// English charset) has zero Hangul characters at all - confirmed directly
+// against the bundled ppocrv6_dict.txt, which contains CJK ideographs and
+// Latin/digits/punctuation but not one of the 11,172 Hangul syllables a
+// Korean screenshot is actually made of. Every Korean glyph OCR'd through
+// that model gets forced onto the nearest-looking token in a vocabulary
+// that structurally cannot represent it - not a fixable confidence-
+// threshold or downstream-parsing issue, a real model-capability ceiling
+// (this is what a user reported as "garbage data" for Korean screenshots).
+// ppu-paddle-ocr ships a real Korean-capable preset instead
+// (V5_KOREAN_MOBILE_MODEL, whose dictionary does cover Hangul plus Latin/
+// digits), so this keeps one OCR service per model instead of one single
+// global instance, and picks between them by the card's own selected
+// language - anything other than "ko" keeps using the original CJK+Latin
+// model that's already been verified against every other supported
+// language this session.
+const MODEL_BY_LANG = { ko: V5_KOREAN_MOBILE_MODEL };
+const DEFAULT_MODEL = V6_MEDIUM_MODEL;
+
+const servicePromises = new Map();
 
 // The very first recognize() call after initialize() resolves comes back
 // with noticeably fewer detected boxes than every call after it - some
@@ -31,16 +50,17 @@ async function warmUp(service) {
   await service.recognize(canvas, { flatten: true });
 }
 
-function getService() {
-  if (!servicePromise) {
+function getService(lang) {
+  const model = MODEL_BY_LANG[lang] ?? DEFAULT_MODEL;
+  if (!servicePromises.has(model)) {
     const service = new PaddleOcrService({
-      model: V6_MEDIUM_MODEL,
+      model,
       detection: { minimumAreaThreshold: 5 },
       recognition: { strategy: "per-box" },
     });
-    servicePromise = service.initialize().then(() => warmUp(service)).then(() => service);
+    servicePromises.set(model, service.initialize().then(() => warmUp(service)).then(() => service));
   }
-  return servicePromise;
+  return servicePromises.get(model);
 }
 
 // Same two-tier confidence floor as engine.py's _drop_noise_detections:
@@ -77,8 +97,8 @@ function withUniqueDimensions(canvas) {
   return padded;
 }
 
-export async function runOcr(canvas) {
-  const service = await getService();
+export async function runOcr(canvas, lang) {
+  const service = await getService(lang);
   const result = await service.recognize(withUniqueDimensions(canvas), { flatten: true });
 
   const tokens = [];
@@ -109,9 +129,9 @@ export async function runOcr(canvas) {
 }
 
 export async function destroyOcr() {
-  if (servicePromise) {
-    const service = await servicePromise;
+  for (const promise of servicePromises.values()) {
+    const service = await promise;
     await service.destroy();
-    servicePromise = null;
   }
+  servicePromises.clear();
 }

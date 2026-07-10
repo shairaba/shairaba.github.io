@@ -8,9 +8,10 @@ import { parseStatsCard } from "./parseStats.mjs";
 import { detectNatureConfidence } from "./natureDetect.mjs";
 import { computeEvsFromTotals } from "./evCalc.mjs";
 import { parseMovesCard } from "./movesCard.mjs";
-import { detectHeaderIcons, resolveAlternateForm } from "./formResolve.mjs";
+import { detectHeaderIcons, resolveAlternateForm, detectMoveTypeIcon } from "./formResolve.mjs";
 import { getLearnset, getAbilities, getSpeciesCandidates } from "./movesetMatch.mjs";
 import { getLegalItems, filterLegalItems } from "./championsItems.mjs";
+import { getMoveType } from "./moveTypes.mjs";
 
 const SCALE = 3;
 const OVERLAP = 0.03;
@@ -42,7 +43,7 @@ function drawFullCard(img, box) {
 // so the text detector can't fuse a token spanning both stat columns -
 // see cardDetect/parseStats notes for why. Returns tokens in full-card
 // (scale=3) pixel space.
-async function ocrCardHalves(img, box) {
+async function ocrCardHalves(img, box, lang) {
   const tokens = [];
   for (const [x0frac, x1frac] of [[0, 0.5 + OVERLAP], [0.5 - OVERLAP, 1]]) {
     const cropX = box.width * x0frac;
@@ -50,7 +51,7 @@ async function ocrCardHalves(img, box) {
     const canvas = makeCanvas(cropW * SCALE, box.height * SCALE);
     const ctx = canvas.getContext("2d");
     ctx.drawImage(img, box.x + cropX, box.y, cropW, box.height, 0, 0, cropW * SCALE, box.height * SCALE);
-    const cropTokens = await runOcr(canvas);
+    const cropTokens = await runOcr(canvas, lang);
     for (const t of cropTokens) { t.x0 += cropX * SCALE; t.x1 += cropX * SCALE; t.cx += cropX * SCALE; }
     tokens.push(...cropTokens);
   }
@@ -78,7 +79,7 @@ export async function processImages(imgMoves, imgStats, { idToNameByLang, pokede
     const moveBox = movesBoxes[i];
     const statBox = statsBoxes[i];
 
-    const moveTokens = await ocrCardHalves(imgMoves, moveBox);
+    const moveTokens = await ocrCardHalves(imgMoves, moveBox, lang);
     const { name: baseName, ability: parsedAbility, item: parsedItem, moves, uncertain: moveUncertain } =
       await parseMovesCard(moveTokens, moveBox.width * SCALE, idToNameByLang, lang);
     // Mutable, unlike the other destructured fields above - the "exactly
@@ -88,9 +89,15 @@ export async function processImages(imgMoves, imgStats, { idToNameByLang, pokede
     let ability = parsedAbility;
     let item = parsedItem;
 
+    // Only needed for detectMoveTypeIcon below, but drawn unconditionally
+    // (cheap - a canvas draw, no OCR/network involved) rather than only
+    // when a move actually turns out uncertain, same as statCanvas.
+    const moveCanvas = drawFullCard(imgMoves, moveBox);
+    const moveImageData = moveCanvas.getContext("2d").getImageData(0, 0, moveCanvas.width, moveCanvas.height);
+
     const statCanvas = drawFullCard(imgStats, statBox);
     const statImageData = statCanvas.getContext("2d").getImageData(0, 0, statCanvas.width, statCanvas.height);
-    const statTokens = await ocrCardHalves(imgStats, statBox);
+    const statTokens = await ocrCardHalves(imgStats, statBox, lang);
     const { statRows, gaps } = parseStatsCard(statTokens, statBox.width * SCALE);
     const { nature, uncertain: natureUncertain, candidates: natureCandidates } =
       detectNatureConfidence(statImageData, gaps, statBox.height * SCALE);
@@ -190,8 +197,34 @@ export async function processImages(imgMoves, imgStats, { idToNameByLang, pokede
       else if (u.field === "ability") { legalOptions = legalAbilities; mutateField = (v) => { ability = v; }; }
 
       if (mutateField) {
-        const filtered = legalOptions ? u.candidates.filter((c) => legalOptions.includes(c.name)) : u.candidates;
-        if (legalOptions && filtered.length === 1) {
+        let filtered = legalOptions ? u.candidates.filter((c) => legalOptions.includes(c.name)) : u.candidates;
+        let narrowedByType = false;
+
+        // A second, independent cross-check for "move" specifically: the
+        // small type icon shown next to the move's own text on the card
+        // (the card never shows a move's type as text anywhere else). Only
+        // tried once species-legality has already left real ambiguity -
+        // no point spending a pixel search on a row that's already down to
+        // one candidate - and, like every other signal here, narrows/re-
+        // ranks rather than dictates: detectMoveTypeIcon's classification
+        // is corroborated against real screenshots but not perfectly
+        // reliable on every screenshot resolution/quality (see its own
+        // docstring), so a detected type that matches zero of the already-
+        // legal candidates is far more likely a bad pixel read than proof
+        // every candidate is wrong - falls back to the untyped list rather
+        // than ever discarding a real candidate over it.
+        if (u.field === "move" && filtered.length > 1) {
+          const detectedType = detectMoveTypeIcon(moveImageData, u);
+          if (detectedType) {
+            const typeFiltered = [];
+            for (const c of filtered) {
+              if ((await getMoveType(c.name)) === detectedType) typeFiltered.push(c);
+            }
+            if (typeFiltered.length) { filtered = typeFiltered; narrowedByType = true; }
+          }
+        }
+
+        if ((legalOptions || narrowedByType) && filtered.length === 1) {
           mutateField(filtered[0].name);
           continue;
         }
@@ -226,8 +259,24 @@ export async function processImages(imgMoves, imgStats, { idToNameByLang, pokede
     }
 
     const evItems = STAT_KEYS.filter((k) => evSource[k] > 0).map((k) => `${evSource[k]} ${k}`);
+    const evStr = evItems.join(" / ");
 
-    monData.push({ name, item, ability, nature, evStr: evItems.join(" / "), moves });
+    // Same "usually add up to 66" heuristic the console warning above
+    // already uses, now also surfaced in the manual-review popup (as a
+    // plain re-typeable value, not ranked candidates - there's no discrete
+    // set of "legal" EV spreads to offer buttons for the way there is for
+    // a move or item) instead of only a console message nobody but a
+    // developer would ever see. A real team can legitimately not spend the
+    // full budget (confirmed for real: a level-50 Gholdengo genuinely
+    // summing to 63), so this is a nudge to double-check against the
+    // screenshot, not a hard validation error - accepting the default on
+    // confirm leaves the OCR's own best guess untouched either way.
+    const evSum = STAT_KEYS.reduce((sum, k) => sum + (evSource[k] || 0), 0);
+    if (evSum !== TOTAL_EV_BUDGET) {
+      uncertain.push({ field: "evStr", mon: i, value: evStr, candidates: [] });
+    }
+
+    monData.push({ name, item, ability, nature, evStr, moves });
   }
 
   return { monData, uncertain };

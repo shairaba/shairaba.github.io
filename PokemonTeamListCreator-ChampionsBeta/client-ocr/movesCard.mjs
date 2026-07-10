@@ -142,6 +142,14 @@ export async function parseMovesCard(tokens, cardWidth, idToNameByLang, lang = "
         index: i,
         value: moveName,
         candidates: spellCorrectCandidates(l.text, "move", idToNameByLang.move, lang),
+        // This card's own pixel position for the move's type icon (see
+        // pipeline.mjs's detectMoveTypeIcon cross-check) - x0/h come along
+        // for free from groupDetectionsIntoLines now, kept here rather
+        // than returned as a whole separate array since pipeline.mjs
+        // already walks this same uncertain list for every other
+        // cross-check (species/item legality, etc). Meaningless outside
+        // that use - the review UI itself never reads these.
+        x0: l.x0, cy: l.cy, h: l.h,
       });
     }
     return moveName;

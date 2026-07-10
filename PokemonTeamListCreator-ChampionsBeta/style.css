@@ -329,6 +329,13 @@ body {
     }
 }
 
+/* The desktop no-scroll/compact layout override lives at the very end of
+   this file, not here - it re-declares several selectors (#paste, .panel,
+   #print, etc) that are also defined later in this stylesheet with equal
+   specificity, and CSS resolves same-specificity ties by source order, so
+   placing it here would just lose to those later base rules regardless of
+   the media query matching. See the bottom of the file. */
+
 .panel {
     background: var(--panel-bg);
     border: none;
@@ -577,16 +584,44 @@ body {
     transform: scale(0.97);
 }
 
-/* ---------- Manual-review panel (low-confidence OCR fields) ---------- */
+/* ---------- Manual-review popup (low-confidence OCR fields) ---------- */
 
+/* The dimmed, fixed-to-viewport overlay - shown/hidden by toggling this
+   element's own inline display (see script.js) between "none" and "" (the
+   empty string falls back to this class's own display:flex declaration,
+   which is what actually centers .review-panel below). Sits above
+   everything else on the page including the desktop no-scroll layout,
+   since position:fixed is relative to the viewport regardless of where in
+   the document it's nested. */
+.review-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(10, 8, 40, 0.6);
+}
+
+/* The actual floating card - a solid panel like the rest of the site
+   (unlike its old dashed-well look, which made sense sitting inside
+   another card but not floating on its own), capped in size with its own
+   internal scroll so a long list of uncertain fields never has to push
+   past the viewport. */
 .review-panel {
-    padding: 16px;
-    border: 1.5px dashed rgba(51, 58, 114, 0.25);
-    border-radius: var(--radius-md);
-    background: var(--panel-bg-soft);
+    background: var(--panel-bg);
+    border-radius: var(--radius-lg);
+    padding: 22px;
+    width: 100%;
+    max-width: 640px;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: var(--panel-shadow);
     display: flex;
     flex-direction: column;
     row-gap: 12px;
+    color: var(--ink);
 }
 
 .review-item {
@@ -678,9 +713,19 @@ body {
 
 /* ---------- Paste textarea ---------- */
 
+/* The actual flex:1/min-height sizing lives on .paste-wrap, not this
+   textarea directly - it needs a position:relative wrapper to anchor the
+   copy-to-clipboard button in its bottom-right corner, and that wrapper is
+   what has to be the .panel's flex child for the sizing to still work. */
+.paste-wrap {
+    position: relative;
+    flex: 1;
+    min-height: 480px;
+    display: flex;
+}
+
 #paste {
     width: 100%;
-    min-height: 480px;
     flex: 1;
     resize: vertical;
     background: var(--field-bg);
@@ -690,6 +735,35 @@ body {
     font-family: Montserrat, monospace;
     font-size: 13.5px;
     padding: 12px;
+}
+
+#copy-paste-btn {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    padding: 7px 14px;
+    background: var(--btn-bg);
+    color: var(--btn-text);
+    border: 2px solid transparent;
+    border-radius: var(--radius-btn);
+    box-shadow: 0 3px 7px rgba(51, 58, 114, 0.25);
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    font-family: inherit;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
+}
+
+#copy-paste-btn:hover {
+    background: linear-gradient(90deg, var(--btn-hover-a), var(--btn-hover-b));
+    border-color: #fff;
+    color: #234;
+    transform: translateY(-2px);
+}
+
+#copy-paste-btn:active {
+    transform: scale(0.96);
 }
 
 #paste:focus {
@@ -1009,21 +1083,194 @@ input.info:focus {
     font-weight: 600;
 }
 
+/* A page-level footer now, not a panel-internal block - sits directly on
+   the dark gradient page background rather than a light card, so (unlike
+   most of this stylesheet) it uses the "text on dark background" variables
+   (--text-dim, --accent-a) instead of --ink-dim/--link, which are
+   calibrated for the light card surfaces. */
 .tips {
     display: flex;
     flex-direction: column;
     row-gap: 8px;
+    margin-top: 20px;
     padding-top: 14px;
-    border-top: 1px solid rgba(51, 58, 114, 0.14);
+    border-top: 1px solid rgba(255, 255, 255, 0.18);
 }
 
 .tips p {
     margin: 0;
     font-size: 12px;
     line-height: 1.5;
-    color: var(--ink-dim);
+    color: var(--text-dim);
 }
 
 .tips a {
-    color: var(--link);
+    color: var(--accent-a);
+}
+
+@media (min-width: 901px) {
+    /* Laid out as a row instead of stacked, and pinned to its own natural
+       height at the bottom of the fixed-viewport column (see .page's
+       desktop rules above) - much cheaper on vertical space than three
+       stacked paragraphs, which is the whole point on a screen that isn't
+       allowed to scroll. */
+    .tips {
+        flex-direction: row;
+        column-gap: 28px;
+        flex-shrink: 0;
+        margin-top: 8px;
+        padding-top: 8px;
+    }
+
+    .tips p {
+        flex: 1;
+        min-width: 0;
+        font-size: 10.5px;
+        line-height: 1.35;
+    }
+}
+
+/* ---------- Desktop no-scroll layout (see the note near .layout's mobile
+   breakpoint for why this has to live down here) ---------- */
+
+/* Desktop only (matches the breakpoint where the two-column layout is
+   actually in effect) - locks the whole app to one viewport-height
+   "screen" instead of letting the page grow taller and scroll. The header
+   keeps its natural size and every section below is sized to actually fit
+   the remaining space rather than relying on internal scrolling - the
+   overflow-y on .panel is kept only as a safety net for unusually short
+   windows, not the expected everyday case. Left untouched below 900px,
+   where scrolling the whole page is still the right call for a single
+   stacked column. */
+@media (min-width: 901px) {
+    body {
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    .page {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        /* The general 24/24/64 padding is sized for a normally-scrolling
+           page with room to breathe past the last element - on a fixed-
+           height screen that space is budget better spent on actual
+           content, and the .tips footer's own top border already provides
+           a visual stopping point. */
+        padding: 14px 24px 8px;
+    }
+
+    .site-header {
+        flex-shrink: 0;
+        margin-bottom: 12px;
+    }
+
+    .layout {
+        flex: 1;
+        min-height: 0;
+        align-items: stretch;
+        gap: 20px;
+    }
+
+    .panel {
+        min-height: 0;
+        overflow-y: auto;
+        padding: 16px;
+        row-gap: 10px;
+    }
+
+    .site-header .logo {
+        height: 52px;
+        width: 52px;
+        padding: 8px;
+    }
+
+    .header-text h1 {
+        font-size: 20px;
+        margin-bottom: 4px;
+    }
+
+    .header-text .badge {
+        padding: 3px 11px;
+        font-size: 10.5px;
+        margin-bottom: 0;
+    }
+
+    .panel-title:not(:first-child) {
+        padding-top: 12px;
+    }
+
+    .url-import-row input[type="text"] {
+        padding: 6px 10px;
+    }
+
+    .url-import-row button {
+        padding: 6px 16px;
+    }
+
+    .screenshot-parser {
+        padding: 10px;
+        row-gap: 8px;
+    }
+
+    .screenshot-parser button {
+        padding: 7px;
+    }
+
+    /* The one deliberately-shrunk element - #area1's other content (URL
+       import, screenshot upload) stays a fixed, comfortable size, and this
+       textarea's own flex:1 (see .paste-wrap) absorbs whatever height is
+       left over instead. Since both panels are stretched to equal height
+       (.layout's align-items: stretch), that leftover amount is set by how
+       tall #area2's own comfortably-sized content needs to be - not
+       independently, so this floor only matters on unusually short
+       windows where even that isn't enough room. Only shrunk on desktop -
+       mobile has room to scroll, so its taller default is left alone. */
+    .paste-wrap {
+        min-height: 70px;
+    }
+
+    #paste {
+        padding: 8px 10px;
+    }
+
+    .field-grid {
+        gap: 12px 16px;
+    }
+
+    #data input {
+        padding: 5px 4px 6px;
+        font-size: 14px;
+    }
+
+    label.info {
+        font-size: 14px;
+        top: 7px;
+    }
+
+    .bot {
+        row-gap: 12px;
+    }
+
+    .optionsContainer {
+        padding: 6px;
+    }
+
+    .optionsContainer .option .chroma {
+        padding: 7px 5px;
+    }
+
+    .chroma span {
+        font-size: 12.5px;
+    }
+
+    .end {
+        row-gap: 6px;
+        padding-top: 0;
+    }
+
+    #print {
+        height: 42px;
+        font-size: 15px;
+    }
 }

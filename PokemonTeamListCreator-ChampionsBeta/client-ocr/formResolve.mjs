@@ -174,6 +174,134 @@ function typeMatchScore(icon, typeName) {
   return score;
 }
 
+// Same icon art/palette as the header type badges above, read here from
+// the small colored icon that sits immediately left of each move's own
+// text on the moves card - the card never shows a move's type as text
+// anywhere, only this icon, so (like the header badges) this has to look
+// at pixels. Used to cross-check the manual-review picker's move-name
+// candidates against what the card visually shows for that row, the same
+// way species-legality already cross-checks them against what the
+// resolved Pokemon can learn (see pipeline.mjs).
+//
+// Unlike resolveAlternateForm's use of typeMatchScore above (deliberately
+// only ever comparing a *known, narrow* candidate set - a species'
+// possible regional forms), this classifies against the full 18-type
+// table with no such narrowing, since a move can genuinely be any type -
+// verified against 4 real icons of 3 different types on a real screenshot,
+// but still treated as a probabilistic signal downstream (narrows/re-ranks
+// candidates, never forces an answer outright) rather than certain ground
+// truth, same as every other sanity-check signal in this pipeline.
+//
+// imageData: the moves card's own full-card ImageData (not the stats
+// card's). moveToken: {x0, cy, h} of the move's own OCR'd text, in the
+// same pixel space (h matters here, unlike detectHeaderIcons - see below).
+// Returns the best-matching type name, or null if no distinctly-colored
+// icon blob was found in the search band at all.
+export function detectMoveTypeIcon(imageData, moveToken) {
+  const { data, width, height } = imageData;
+  if (!moveToken) return null;
+  const th = moveToken.h ?? 40;
+
+  // Sized relative to the move text's own token height, not a fixed pixel
+  // count - the moves card is rendered at a fixed *upscale factor* off
+  // whatever resolution the source screenshot actually was (see
+  // pipeline.mjs's SCALE), so a window tuned in absolute pixels against
+  // one screenshot can badly misjudge a much lower- or higher-resolution
+  // one (confirmed for real: a window that correctly bounded 4 icons on a
+  // ~2260px-wide card missed entirely on a ~1210px-wide one - almost
+  // exactly half the linear resolution, and so needing almost exactly
+  // half the pixel margin). Text height scales with the same source-
+  // resolution factor the icon does, so anchoring on it generalizes
+  // across screenshots the way a fixed pixel count can't.
+  const x1 = Math.min(width, Math.ceil(moveToken.x0 - th * 0.15));
+  const x0 = Math.max(0, Math.floor(moveToken.x0 - th * 3.5));
+  const bandHalfHeight = Math.max(20, th * 0.7);
+  const y0 = Math.max(0, Math.floor(moveToken.cy - bandHalfHeight));
+  const y1 = Math.min(height, Math.ceil(moveToken.cy + bandHalfHeight));
+  const w = x1 - x0, h = y1 - y0;
+  if (w <= 0 || h <= 0) return null;
+
+  // Background color estimated as the *mode* across many points spread
+  // along this row's own cy, all the way across the card's full width -
+  // not a single fixed-offset sample point. Both single-point strategies
+  // tried before this failed for real: sampling just left of the icon can
+  // itself land on the icon's own blurred edge on a tight layout, and
+  // sampling directly above the search band can land on the header row
+  // instead of clean background for the card's very first move (there's
+  // no "row above" to land on there - only the species header, which
+  // isn't empty background at all). Background pixels vastly outnumber
+  // icon/text pixels along any one row, so the most common color sampled
+  // across the row's full width is reliably the background regardless of
+  // which row this is or what happens to sit near it - immune to any one
+  // sample point unluckily landing on a non-background element.
+  const bgCounts = new Map();
+  const bgStep = Math.max(4, Math.floor(width / 120));
+  for (let x = 0; x < width; x += bgStep) {
+    const idx = (Math.round(moveToken.cy) * width + x) * 4;
+    // Bucketed to the nearest 12 per channel so near-identical shades
+    // (this card background is a subtle repeating stripe pattern, not a
+    // flat fill) count as the same bucket instead of splitting the vote.
+    const key = `${Math.round(data[idx] / 12)},${Math.round(data[idx + 1] / 12)},${Math.round(data[idx + 2] / 12)}`;
+    const entry = bgCounts.get(key);
+    if (entry) entry.count++;
+    else bgCounts.set(key, { count: 1, rgb: [data[idx], data[idx + 1], data[idx + 2]] });
+  }
+  let bg = [200, 200, 200];
+  let bestCount = 0;
+  for (const { count, rgb } of bgCounts.values()) {
+    if (count > bestCount) { bestCount = count; bg = rgb; }
+  }
+
+  const mask = new Uint8Array(w * h);
+  const distThreshold = 45;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const idx = ((y0 + y) * width + (x0 + x)) * 4;
+      const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+      const dist = Math.sqrt((r - bg[0]) ** 2 + (g - bg[1]) ** 2 + (b - bg[2]) ** 2);
+      if (dist > distThreshold) mask[y * w + x] = 1;
+    }
+  }
+  const closed = morphClose({ mask, width: w, height: h }, 5);
+  const minBlobSize = Math.max(10, th * 0.35);
+  const blobs = connectedComponents(closed).filter((b) => b.width >= minBlobSize && b.height >= minBlobSize);
+  if (!blobs.length) return null;
+  // Closest to the text (smallest gap to totalTok's start) rather than
+  // largest by area - a wide search band can also sweep in an unrelated
+  // same-row-ish blob from a neighboring row or the header above (seen
+  // for real: the header's own type badges bleeding into the very first
+  // move row's search band), and the genuine icon is always the one
+  // immediately adjacent to its own text, not necessarily the biggest
+  // blob in the window.
+  const blob = blobs.reduce((a, b) => ((x0 + b.x + b.width) > (x0 + a.x + a.width) ? b : a));
+
+  // Ring-sample same as detectHeaderIcons - avoids the glyph's own white
+  // fill in the middle of the badge.
+  const cx = x0 + blob.x + blob.width / 2, cy = y0 + blob.y + blob.height / 2;
+  const rx = blob.width * 0.36, ry = blob.height * 0.36;
+  const samples = [];
+  for (let a = 0; a < 16; a++) {
+    const ang = (a / 16) * Math.PI * 2;
+    const px = Math.round(cx + Math.cos(ang) * rx), py = Math.round(cy + Math.sin(ang) * ry);
+    if (px < 0 || py < 0 || px >= width || py >= height) continue;
+    const idx = (py * width + px) * 4;
+    samples.push([data[idx], data[idx + 1], data[idx + 2]]);
+  }
+  if (!samples.length) return null;
+  const median = (arr) => { const s = [...arr].sort((a, b) => a - b); return s[Math.floor(s.length / 2)]; };
+  const r = median(samples.map((s) => s[0]));
+  const g = median(samples.map((s) => s[1]));
+  const bl = median(samples.map((s) => s[2]));
+  const [hue, sat, val] = rgbToHsv(r, g, bl);
+
+  let bestType = null, bestScore = -Infinity;
+  for (const type of Object.keys(TYPE_HSV)) {
+    const score = typeMatchScore({ hue, sat, val }, type);
+    if (score > bestScore) { bestScore = score; bestType = type; }
+  }
+  return bestType;
+}
+
 // Gender icon color bands - always the first icon when present (a
 // Pokemon with no gender, like Rotom, simply has no icon in this slot,
 // so type icons start at index 0 instead of 1).

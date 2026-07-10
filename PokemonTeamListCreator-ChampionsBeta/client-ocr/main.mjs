@@ -35,7 +35,7 @@ function reviewUncertainFields(monData, uncertainList) {
     for (const u of uncertainList) {
       const key = uncertainKey(u);
       const monName = monData[u.mon]?.name || `Pokemon ${u.mon + 1}`;
-      const fieldLabel = u.field === "move" ? `Move ${u.index + 1}` : u.field[0].toUpperCase() + u.field.slice(1);
+      const fieldLabel = u.field === "move" ? `Move ${u.index + 1}` : u.field === "evStr" ? "EVs" : u.field[0].toUpperCase() + u.field.slice(1);
 
       const row = document.createElement("div");
       row.className = "review-item";
@@ -57,7 +57,7 @@ function reviewUncertainFields(monData, uncertainList) {
 
       const manualInput = document.createElement("input");
       manualInput.type = "text";
-      manualInput.placeholder = "Or type it yourself...";
+      manualInput.placeholder = u.field === "evStr" ? "e.g. 4 HP / 252 Atk / 252 Spe" : "Or type it yourself...";
       manualInput.className = "review-manual-input";
 
       // Back the manual-entry input with a native dropdown of every

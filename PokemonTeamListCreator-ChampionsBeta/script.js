@@ -27,6 +27,14 @@ themeToggleBtn.addEventListener('click', () => {
     document.cookie = `theme=${next}; max-age=${60 * 60 * 24 * 365}; path=/; SameSite=Lax`;
 });
 
+const copyPasteBtn = document.getElementById('copy-paste-btn');
+copyPasteBtn.addEventListener('click', async () => {
+    await navigator.clipboard.writeText(document.getElementById('paste').value);
+    const original = copyPasteBtn.textContent;
+    copyPasteBtn.textContent = 'Copied!';
+    setTimeout(() => { copyPasteBtn.textContent = original; }, 1200);
+});
+
 const urlParams = new URLSearchParams(window.location.search);
 document.getElementById('playerName').value = urlParams.get('player');
 document.getElementById('trainerName').value = urlParams.get('trainer');
@@ -798,7 +806,7 @@ function reviewUncertainFields(monData, uncertainList) {
         for (const u of uncertainList) {
             const key = uncertainKey(u);
             const monName = monData[u.mon]?.name || `Pokemon ${u.mon + 1}`;
-            const fieldLabel = u.field === 'move' ? `Move ${u.index + 1}` : u.field[0].toUpperCase() + u.field.slice(1);
+            const fieldLabel = u.field === 'move' ? `Move ${u.index + 1}` : u.field === 'evStr' ? 'EVs' : u.field[0].toUpperCase() + u.field.slice(1);
 
             const row = document.createElement('div');
             row.className = 'review-item';
@@ -816,7 +824,7 @@ function reviewUncertainFields(monData, uncertainList) {
 
             const manualInput = document.createElement('input');
             manualInput.type = 'text';
-            manualInput.placeholder = 'Or type it yourself...';
+            manualInput.placeholder = u.field === 'evStr' ? 'e.g. 4 HP / 252 Atk / 252 Spe' : 'Or type it yourself...';
             manualInput.className = 'review-manual-input';
 
             // Back the manual-entry input with a native dropdown of every
@@ -874,7 +882,6 @@ function reviewUncertainFields(monData, uncertainList) {
         }
 
         reviewCard.style.display = '';
-        reviewCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
         reviewConfirmBtn.onclick = () => {
             reviewCard.style.display = 'none';
             resolve(selections);

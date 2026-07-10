@@ -37,7 +37,7 @@
         <img class="logo" src="logo-icon.png" alt="Team List Creator from Showdown paste">
         <div class="header-text">
             <h1>Pokémon Team List Generator</h1>
-            <p class="badge">Pokémon Champions update &middot; based on the <a target="_blank" href="https://github.com/DhSufi/Showdown-Team-List-Generator">original project by DhSufi</a></p>
+            <p class="badge">Pokémon Champions update &middot; based on the <a target="_blank" href="https://github.com/DhSufi/PokemonTeamListCreator">original project</a> by <a href="https://x.com/DhSufi">DhSufi</a></p>
         </div>
         <button id="theme-toggle" type="button" aria-label="Toggle dark mode">
             <span class="theme-switch-icon theme-switch-sun" aria-hidden="true">
@@ -99,13 +99,10 @@
                 <div id="parser-status" class="status-text"></div>
             </div>
 
-            <div class="review-panel" id="review-card" style="display:none">
-                <p class="screenshot-parser-title">Low-confidence reads <span>(please confirm)</span></p>
-                <div id="review-list"></div>
-                <button id="review-confirm" type="button">Confirm &amp; Continue</button>
+            <div class="paste-wrap">
+                <textarea id="paste" placeholder="Paste your Showdown team here..."></textarea>
+                <button id="copy-paste-btn" type="button">Copy to clipboard</button>
             </div>
-
-            <textarea id="paste" placeholder="Paste your Showdown team here..."></textarea>
         </section>
 
         <section class="panel" id="area2">
@@ -310,15 +307,23 @@
                 <h5 id="error"> </h5>
             </div>
 
-            <div class="tips">
-                <p id="tip1">Check with the event organizer if you're unsure about which lists to submit.</p>
-                <p id="tip2">All Pokémon must be listed exactly as they appear in the Battle Team, at the level they are in the game.</p>
-                <p id="tip3">This site is open source. You can check the <a target="_blank" href="https://github.com/shairaba/shairaba.github.io/tree/main/PokemonTeamListCreator-ChampionsBeta">source code</a>. No data of any kind is transferred or stored. All code is executed in your browser without any server intervention.</p>
-            </div>
-
         </section>
 
     </main>
+
+    <div id="review-card" class="review-backdrop" style="display:none">
+        <div class="review-panel">
+            <p class="screenshot-parser-title">Low-confidence reads <span>(please confirm)</span></p>
+            <div id="review-list"></div>
+            <button id="review-confirm" type="button">Confirm &amp; Continue</button>
+        </div>
+    </div>
+
+    <footer class="tips">
+        <p id="tip1">Check with the event organizer if you're unsure about which lists to submit.</p>
+        <p id="tip2">All Pokémon must be listed exactly as they appear in the Battle Team, at the level they are in the game.</p>
+        <p id="tip3">This site is open source. You can check the <a target="_blank" href="https://github.com/shairaba/shairaba.github.io/tree/main/PokemonTeamListCreator-ChampionsBeta">source code</a>. No data of any kind is transferred or stored. All code is executed in your browser without any server intervention.</p>
+    </footer>
 
 </div>
 

@@ -24,8 +24,28 @@ export function groupDetectionsIntoLines(tokens, yTolerance = 12) {
   const merged = lines.map((line) => {
     const lineSorted = [...line].sort((a, b) => a.cx - b.cx);
     const text = lineSorted.map((t) => t.text).join(" ");
-    const avgCy = line.reduce((s, t) => s + t.cy, 0) / line.length;
-    return { cy: avgCy, text };
+    // cy/x0/h all anchored on the line's own *widest* token, not an
+    // average/leftmost across every token merged into it - a stray single-
+    // glyph misread (a move/type icon read as a lone character) can land
+    // in the same line as the real text - confirmed for real: a Japanese
+    // move row merged with a stray "四" positioned to its left and a
+    // couple pixels off the real text's own cy, at confidence 0.67 (high
+    // enough to survive isStrayLoneGlyph's <0.5 filter, unlike the
+    // contamination case that filter was originally built for). Averaging
+    // cy across both tokens, or anchoring x0/h on whichever happens to sit
+    // leftmost, pulls the line's reported position measurably off the real
+    // text's own - enough, in practice, to send movesCard.mjs's move-type
+    // icon search (see formResolve.mjs's detectMoveTypeIcon) off target
+    // and land on a neighboring, wrongly-colored patch of card instead.
+    // The fuzzy text match is unaffected by this same contamination (a
+    // short stray prefix barely dents a whole-string fuzzy ratio), so this
+    // bug was invisible in the resolved move name, only in geometry
+    // nothing else here reads. The real text token is virtually always far
+    // wider than a single stray glyph, so anchoring everything on it
+    // instead is robust to this without needing to identify the glyph as
+    // noise at all.
+    const widest = lineSorted.reduce((a, t) => (t.x1 - t.x0 > a.x1 - a.x0 ? t : a));
+    return { cy: widest.cy, text, x0: widest.x0, h: widest.h };
   });
   return merged.sort((a, b) => a.cy - b.cy);
 }
