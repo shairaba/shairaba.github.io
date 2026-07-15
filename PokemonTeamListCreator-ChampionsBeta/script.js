@@ -789,6 +789,114 @@ function uncertainKey(u) {
     return `${u.mon}-${u.field}-${u.index ?? ''}`;
 }
 
+// Custom-styled replacement for a native <input list>/<datalist> combo -
+// browsers render datalist popups with their own OS-level chrome that can't
+// be skinned to match the site, so this reimplements the same "type to
+// filter a legality-checked option list" behavior as a plain positioned div.
+// Appended to <body> (not the input's own row) and positioned via
+// getBoundingClientRect() so it always floats above review-panel's own
+// overflow-y:auto instead of being clipped by it.
+function attachCombobox(input, options, onPick) {
+    if (!options?.length) return;
+
+    const listEl = document.createElement('div');
+    listEl.className = 'review-combobox-list';
+    listEl.hidden = true;
+    document.body.appendChild(listEl);
+
+    let visible = [];
+    let highlighted = -1;
+
+    function position() {
+        const r = input.getBoundingClientRect();
+        listEl.style.left = `${r.left}px`;
+        listEl.style.top = `${r.bottom + 4}px`;
+        listEl.style.width = `${r.width}px`;
+    }
+
+    function setHighlight(idx) {
+        const optionEls = listEl.querySelectorAll('.review-combobox-option');
+        optionEls.forEach((el) => el.classList.remove('highlighted'));
+        highlighted = idx;
+        if (idx >= 0 && idx < optionEls.length) {
+            optionEls[idx].classList.add('highlighted');
+            optionEls[idx].scrollIntoView({ block: 'nearest' });
+        }
+    }
+
+    function render() {
+        const q = input.value.trim().toLowerCase();
+        visible = q ? options.filter((o) => o.toLowerCase().includes(q)) : options;
+        listEl.innerHTML = '';
+        highlighted = -1;
+        if (!visible.length) {
+            const empty = document.createElement('div');
+            empty.className = 'review-combobox-empty';
+            empty.textContent = 'No matches';
+            listEl.appendChild(empty);
+            return;
+        }
+        for (const opt of visible) {
+            const optEl = document.createElement('div');
+            optEl.className = 'review-combobox-option';
+            optEl.textContent = opt;
+            // mousedown (fires before the input's own blur handler closes
+            // the list) rather than click, so a click on an option is
+            // never lost.
+            optEl.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                pick(opt);
+            });
+            listEl.appendChild(optEl);
+        }
+    }
+
+    function pick(value) {
+        input.value = value;
+        close();
+        onPick(value);
+    }
+
+    function open() {
+        render();
+        position();
+        listEl.hidden = false;
+    }
+
+    function close() {
+        listEl.hidden = true;
+    }
+
+    input.addEventListener('focus', open);
+    input.addEventListener('input', () => {
+        render();
+        position();
+        listEl.hidden = false;
+    });
+    input.addEventListener('blur', close);
+    input.addEventListener('keydown', (e) => {
+        if (listEl.hidden) return;
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setHighlight(Math.min(highlighted + 1, visible.length - 1));
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setHighlight(Math.max(highlighted - 1, 0));
+        } else if (e.key === 'Enter') {
+            if (highlighted >= 0 && visible[highlighted]) {
+                e.preventDefault();
+                pick(visible[highlighted]);
+            }
+        } else if (e.key === 'Escape') {
+            close();
+        }
+    });
+    // Scroll events don't bubble, but a capture-phase window listener still
+    // sees them fire on any scrollable ancestor (incl. review-panel itself).
+    window.addEventListener('scroll', () => { if (!listEl.hidden) position(); }, true);
+    window.addEventListener('resize', () => { if (!listEl.hidden) position(); });
+}
+
 // Same end-of-scan manual-review screen as the standalone client-ocr.html
 // build (see client-ocr/main.mjs) - reused here since this page shares the
 // same processImages/renderPokepaste pipeline. Resolves to a Map of
@@ -801,6 +909,10 @@ function reviewUncertainFields(monData, uncertainList) {
 
     return new Promise((resolve) => {
         reviewListEl.innerHTML = '';
+        // Leftover dropdown lists from a previous review round live on
+        // <body>, not inside reviewListEl, so clearing reviewListEl above
+        // doesn't remove them - do that here too.
+        document.querySelectorAll('.review-combobox-list').forEach((el) => el.remove());
         const selections = new Map(uncertainList.map((u) => [uncertainKey(u), u.value]));
 
         for (const u of uncertainList) {
@@ -827,10 +939,10 @@ function reviewUncertainFields(monData, uncertainList) {
             manualInput.placeholder = u.field === 'evStr' ? 'e.g. 4 HP / 252 Atk / 252 Spe' : 'Or type it yourself...';
             manualInput.className = 'review-manual-input';
 
-            // Back the manual-entry input with a native dropdown of every
-            // legality-checked option for this field - the move/ability
-            // this card's species can actually have, the species
-            // consistent with its own ability+moves, or the items
+            // Back the manual-entry input with a custom-styled dropdown of
+            // every legality-checked option for this field - the
+            // move/ability this card's species can actually have, the
+            // species consistent with its own ability+moves, or the items
             // Champions actually lets a Pokemon hold - same data the
             // ranked candidates above were already filtered against in
             // pipeline.mjs, just offered in full here since the manual box
@@ -842,18 +954,6 @@ function reviewUncertainFields(monData, uncertainList) {
                 u.field === 'name' ? u.legalSpecies :
                 u.field === 'item' ? u.legalItems :
                 null;
-            if (legalOptions?.length) {
-                const datalistId = `review-datalist-${key.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
-                const datalist = document.createElement('datalist');
-                datalist.id = datalistId;
-                for (const opt of legalOptions) {
-                    const optEl = document.createElement('option');
-                    optEl.value = opt;
-                    datalist.appendChild(optEl);
-                }
-                manualInput.setAttribute('list', datalistId);
-                row.appendChild(datalist);
-            }
 
             for (const c of options.slice(0, 5)) {
                 const btn = document.createElement('button');
@@ -871,12 +971,14 @@ function reviewUncertainFields(monData, uncertainList) {
             }
             row.appendChild(btnRow);
 
-            manualInput.addEventListener('input', () => {
-                if (!manualInput.value.trim()) return;
-                selections.set(key, manualInput.value.trim());
+            function chooseManualValue(value) {
+                if (!value.trim()) return;
+                selections.set(key, value.trim());
                 [...btnRow.querySelectorAll('button')].forEach((b) => b.classList.remove('selected'));
-            });
+            }
+            manualInput.addEventListener('input', () => chooseManualValue(manualInput.value));
             row.appendChild(manualInput);
+            attachCombobox(manualInput, legalOptions, chooseManualValue);
 
             reviewListEl.appendChild(row);
         }
@@ -884,6 +986,7 @@ function reviewUncertainFields(monData, uncertainList) {
         reviewCard.style.display = '';
         reviewConfirmBtn.onclick = () => {
             reviewCard.style.display = 'none';
+            document.querySelectorAll('.review-combobox-list').forEach((el) => el.remove());
             resolve(selections);
         };
     });
@@ -944,6 +1047,37 @@ async function executeUnifiedTeamScreenParsing() {
 }
 
 document.getElementById('btn-parse-screens').addEventListener('click', executeUnifiedTeamScreenParsing);
+
+// Champions represents Mega Evolution purely through the held Mega Stone
+// item, not a separate listed species - generatePdf's own Mega check
+// (search "CANNOT BE LISTED ON A TEAMSHEET") hard-blocks the whole export
+// if a "-Mega" species ever reaches it. A pasted Showdown team naturally
+// spells a Mega-holding mon as e.g. "Charizard-Mega-Y" (that's the real
+// in-battle form Showdown exports), so an imported paste would otherwise
+// always trip that block - stripping the "-Mega"/"-Mega-X"/"-Mega-Y" suffix
+// back to the base species here (leaving the stone item untouched) avoids
+// that friction at the source instead of erroring the user out later.
+// Species can appear two ways in Showdown paste text: bare at line start
+// ("Charizard-Mega-Y @ Charizardite Y") or parenthesized after a nickname
+// ("Zard (Charizard-Mega-Y) @ Charizardite Y") - both handled here.
+function stripMegaFormSuffix(pasteText) {
+    // pokepast.es (and Windows-authored pastes generally) exports CRLF line
+    // endings - JS regex "." excludes *every* line-terminator character,
+    // \r included, not just \n, so a per-line ".*" tail match silently
+    // fails to consume a line's trailing "\r" and the whole pattern never
+    // matches (confirmed for real: "Charizard-Mega-Y @ Charizardite Y  \r"
+    // came back completely untouched). Normalizing to bare "\n" upfront
+    // sidesteps that instead of trying to make every pattern below \r-safe.
+    return pasteText
+        .replace(/\r\n?/g, '\n')
+        .split('\n')
+        .map((line) => {
+            const bare = line.match(/^([\w'.:-]+?)-Mega(?:-[XY])?(\s*@.*)?$/);
+            if (bare && !line.includes('(')) return `${bare[1]}${bare[2] || ''}`;
+            return line.replace(/\(([\w'.:-]+?)-Mega(?:-[XY])?\)/, '($1)');
+        })
+        .join('\n');
+}
 
 // Import a Showdown paste from a pokepast.es or vrpastes.com link.
 // Runs entirely client-side; vrpastes.com goes through its public API with a
@@ -1043,7 +1177,7 @@ async function importFromURL() {
         }
 
         if (rawPaste) {
-            document.getElementById('paste').value = rawPaste;
+            document.getElementById('paste').value = stripMegaFormSuffix(rawPaste);
             setStatus(statusText, 'Team imported successfully.', 'success');
             urlInput.value = '';
         } else {

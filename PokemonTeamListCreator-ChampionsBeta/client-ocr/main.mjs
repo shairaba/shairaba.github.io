@@ -14,6 +14,113 @@ const reviewCard = document.getElementById("review-card");
 const reviewListEl = document.getElementById("review-list");
 const reviewConfirmBtn = document.getElementById("review-confirm");
 
+// Custom-styled replacement for a native <input list>/<datalist> combo -
+// browsers render datalist popups with their own OS-level chrome that can't
+// be skinned to match the site, so this reimplements the same "type to
+// filter a legality-checked option list" behavior as a plain positioned div.
+// Appended to <body> (not the input's own row) and positioned via
+// getBoundingClientRect() so it always floats above review-panel's own
+// overflow-y:auto instead of being clipped by it.
+function attachCombobox(input, options, onPick) {
+  if (!options?.length) return;
+
+  const listEl = document.createElement("div");
+  listEl.className = "review-combobox-list";
+  listEl.hidden = true;
+  document.body.appendChild(listEl);
+
+  let visible = [];
+  let highlighted = -1;
+
+  function position() {
+    const r = input.getBoundingClientRect();
+    listEl.style.left = `${r.left}px`;
+    listEl.style.top = `${r.bottom + 4}px`;
+    listEl.style.width = `${r.width}px`;
+  }
+
+  function setHighlight(idx) {
+    const optionEls = listEl.querySelectorAll(".review-combobox-option");
+    optionEls.forEach((el) => el.classList.remove("highlighted"));
+    highlighted = idx;
+    if (idx >= 0 && idx < optionEls.length) {
+      optionEls[idx].classList.add("highlighted");
+      optionEls[idx].scrollIntoView({ block: "nearest" });
+    }
+  }
+
+  function render() {
+    const q = input.value.trim().toLowerCase();
+    visible = q ? options.filter((o) => o.toLowerCase().includes(q)) : options;
+    listEl.innerHTML = "";
+    highlighted = -1;
+    if (!visible.length) {
+      const empty = document.createElement("div");
+      empty.className = "review-combobox-empty";
+      empty.textContent = "No matches";
+      listEl.appendChild(empty);
+      return;
+    }
+    for (const opt of visible) {
+      const optEl = document.createElement("div");
+      optEl.className = "review-combobox-option";
+      optEl.textContent = opt;
+      // mousedown (fires before the input's own blur handler closes the
+      // list) rather than click, so a click on an option is never lost.
+      optEl.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        pick(opt);
+      });
+      listEl.appendChild(optEl);
+    }
+  }
+
+  function pick(value) {
+    input.value = value;
+    close();
+    onPick(value);
+  }
+
+  function open() {
+    render();
+    position();
+    listEl.hidden = false;
+  }
+
+  function close() {
+    listEl.hidden = true;
+  }
+
+  input.addEventListener("focus", open);
+  input.addEventListener("input", () => {
+    render();
+    position();
+    listEl.hidden = false;
+  });
+  input.addEventListener("blur", close);
+  input.addEventListener("keydown", (e) => {
+    if (listEl.hidden) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlight(Math.min(highlighted + 1, visible.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlight(Math.max(highlighted - 1, 0));
+    } else if (e.key === "Enter") {
+      if (highlighted >= 0 && visible[highlighted]) {
+        e.preventDefault();
+        pick(visible[highlighted]);
+      }
+    } else if (e.key === "Escape") {
+      close();
+    }
+  });
+  // Scroll events don't bubble, but a capture-phase window listener still
+  // sees them fire on any scrollable ancestor (incl. review-panel itself).
+  window.addEventListener("scroll", () => { if (!listEl.hidden) position(); }, true);
+  window.addEventListener("resize", () => { if (!listEl.hidden) position(); });
+}
+
 // One key per uncertain-field entry (see pipeline.mjs/movesCard.mjs/
 // natureDetect.mjs) - "move" entries are the only ones that need `index`
 // to disambiguate (a card can have up to 4 uncertain moves).
@@ -30,6 +137,10 @@ function uncertainKey(u) {
 function reviewUncertainFields(monData, uncertainList) {
   return new Promise((resolve) => {
     reviewListEl.innerHTML = "";
+    // Leftover dropdown lists from a previous review round live on <body>,
+    // not inside reviewListEl, so clearing reviewListEl above doesn't
+    // remove them - do that here too.
+    document.querySelectorAll(".review-combobox-list").forEach((el) => el.remove());
     const selections = new Map(uncertainList.map((u) => [uncertainKey(u), u.value]));
 
     for (const u of uncertainList) {
@@ -60,7 +171,7 @@ function reviewUncertainFields(monData, uncertainList) {
       manualInput.placeholder = u.field === "evStr" ? "e.g. 4 HP / 252 Atk / 252 Spe" : "Or type it yourself...";
       manualInput.className = "review-manual-input";
 
-      // Back the manual-entry input with a native dropdown of every
+      // Back the manual-entry input with a custom-styled dropdown of every
       // legality-checked option for this field - the move/ability this
       // card's species can actually have, the species consistent with its
       // own ability+moves, or the items Champions actually lets a Pokemon
@@ -74,18 +185,6 @@ function reviewUncertainFields(monData, uncertainList) {
         u.field === "name" ? u.legalSpecies :
         u.field === "item" ? u.legalItems :
         null;
-      if (legalOptions?.length) {
-        const datalistId = `review-datalist-${key.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
-        const datalist = document.createElement("datalist");
-        datalist.id = datalistId;
-        for (const opt of legalOptions) {
-          const optEl = document.createElement("option");
-          optEl.value = opt;
-          datalist.appendChild(optEl);
-        }
-        manualInput.setAttribute("list", datalistId);
-        row.appendChild(datalist);
-      }
 
       for (const c of options.slice(0, 5)) {
         const btn = document.createElement("button");
@@ -103,12 +202,14 @@ function reviewUncertainFields(monData, uncertainList) {
       }
       row.appendChild(btnRow);
 
-      manualInput.addEventListener("input", () => {
-        if (!manualInput.value.trim()) return;
-        selections.set(key, manualInput.value.trim());
+      function chooseManualValue(value) {
+        if (!value.trim()) return;
+        selections.set(key, value.trim());
         [...btnRow.querySelectorAll("button")].forEach((b) => b.classList.remove("selected"));
-      });
+      }
+      manualInput.addEventListener("input", () => chooseManualValue(manualInput.value));
       row.appendChild(manualInput);
+      attachCombobox(manualInput, legalOptions, chooseManualValue);
 
       reviewListEl.appendChild(row);
     }
@@ -117,6 +218,7 @@ function reviewUncertainFields(monData, uncertainList) {
     reviewCard.scrollIntoView({ behavior: "smooth", block: "start" });
     reviewConfirmBtn.onclick = () => {
       reviewCard.style.display = "none";
+      document.querySelectorAll(".review-combobox-list").forEach((el) => el.remove());
       resolve(selections);
     };
   });

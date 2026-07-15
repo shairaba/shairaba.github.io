@@ -120,7 +120,11 @@ export async function processImages(imgMoves, imgStats, { idToNameByLang, pokede
       .filter((t) => t.cy < statImageData.height * 0.25 && t.confidence >= 0.9)
       .sort((a, b) => a.x0 - b.x0);
     const icons = detectHeaderIcons(statImageData, headerTokens[0]);
-    const name = resolveAlternateForm(baseName, icons, pokedex);
+    // Mutable, unlike every other field resolveAlternateForm's siblings
+    // read here - the "name" branch below can end up correcting this in
+    // place (see its own comment) when the raw on-screen text alone
+    // couldn't resolve a species at all.
+    let name = resolveAlternateForm(baseName, icons, pokedex);
 
     // Only known once the species itself is resolved (just above), which
     // parseMovesCard - working from a single card's OCR text alone - can't
@@ -141,13 +145,37 @@ export async function processImages(imgMoves, imgStats, { idToNameByLang, pokede
         // reflect any auto-accept resolution the move/ability branch below
         // made earlier in this same pass - movesCard.mjs always pushes
         // ability/move entries ahead of the name entry, so those are
-        // guaranteed to already have run. Unlike move/ability, this never
-        // auto-accepts even when narrowed to a single species - a "name"
-        // resolution also carries a regional/gender-form suffix (handled
-        // below, from icon pixels this check has no way to redo), so
-        // that's left for the reviewer to confirm rather than guessed at.
+        // guaranteed to already have run.
         const legalSpecies = await getSpeciesCandidates(ability, moves);
         const filteredSpecies = legalSpecies ? u.candidates.filter((c) => legalSpecies.includes(c.name)) : u.candidates;
+        // Same "narrowed to exactly one legal candidate -> nothing left to
+        // ask" treatment as move/ability/item below. The regional/gender-
+        // form suffix isn't re-validated by this narrowing - but it never
+        // was reviewable here either: gender variants are read from an
+        // unambiguous icon color, not a fuzzy classifier, and regional
+        // variants are resolved silently before this point with no review
+        // fallback of their own (and the review buttons below only ever
+        // list base species names, not suffixed forms, so a wrong suffix
+        // read was never actually catchable through them). Keeping this
+        // field in review regardless of narrowing was paying a prompt
+        // without buying any real protection against that risk.
+        if (legalSpecies && filteredSpecies.length === 1) {
+          // `name` above was resolved from the raw on-screen text alone
+          // (parseMovesCard's own internal ability+moveset fallback runs
+          // before this card's move-type-icon corrections just above ever
+          // apply, so it can still come back "" for a nicknamed/misread
+          // card even when this now-corrected moveset legality-checks out
+          // to exactly one species) - re-running the same suffix
+          // resolution against the newly-confirmed base species here
+          // corrects `name` in place, so EV lookup and monData.push below
+          // see the fix too (confirmed for real: a Korean-nicknamed
+          // Basculegion whose OCR'd name text and initial moveset read
+          // both failed independently, producing a blank species in the
+          // final paste despite this narrowing already having the right
+          // answer).
+          name = resolveAlternateForm(filteredSpecies[0].name, icons, pokedex);
+          continue;
+        }
         // The "name" field's own value/candidates are computed inside
         // parseMovesCard, before this card's regional-form/gender-variant
         // suffix (just resolved above from icon pixels read off the
@@ -156,8 +184,14 @@ export async function processImages(imgMoves, imgStats, { idToNameByLang, pokede
         // accepts the review screen's default for an otherwise-uncertain
         // name field doesn't silently regress a correctly-suffixed species
         // (e.g. "Basculegion-F") back down to its suffix-less base form.
+        // Falls back to the best surviving candidate when `name` itself is
+        // blank (the same on-screen-text failure as the auto-accept branch
+        // above, just without a single legal candidate to fully resolve
+        // it) - main.mjs never marks any button "selected" for a falsy
+        // value, so leaving this as "" would show a reviewer a field with
+        // no visible default at all, easy to miss and confirm right past.
         uncertain.push({
-          ...u, mon: i, value: name,
+          ...u, mon: i, value: name || filteredSpecies[0]?.name || u.value,
           candidates: filteredSpecies.length ? filteredSpecies : u.candidates,
           legalSpecies: legalSpecies ?? [],
         });

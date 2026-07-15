@@ -153,10 +153,25 @@ function extractRowInfo(rowTokens) {
   if (wordyTokens.length) {
     labelEndX = Math.max(...wordyTokens.map((t) => t.x1));
     const labelToken = wordyTokens.find((t) => t.x1 === labelEndX);
-    const digitMatch = labelToken?.text.match(/(\d+)$/);
-    if (digitMatch) labelDigitSuffix = digitMatch[1];
     const filtered = numericTokens.filter((t) => t.x0 >= labelEndX);
-    if (filtered.length) realNumeric = filtered;
+    // Only recover the label's own trailing digits when a genuinely
+    // separate second token survived the filter above - when nothing
+    // does, the label token is the *only* numeric token in this row (a
+    // single, fully-fused "label+total+ev" run, not a label+fragment
+    // pair), and realNumeric/totalTok below still point at that same
+    // token. Extracting its digit suffix here regardless and combining it
+    // with "whatever survived" would then concatenate that token's own
+    // digits onto itself (observed for real: Torkoal's Sp. Atk row read
+    // as one token, "とくこう15032" - "15032" stitched onto its own
+    // "15032" produced a ten-digit "1503215032" run, the source of a
+    // wildly out-of-range EV total). Leaving labelDigitSuffix empty here
+    // instead correctly falls through to the single-fused-token handling
+    // further down, which splits "15032" on its own into a sane 150/32.
+    if (filtered.length) {
+      const digitMatch = labelToken?.text.match(/(\d+)$/);
+      if (digitMatch) labelDigitSuffix = digitMatch[1];
+      realNumeric = filtered;
+    }
   }
 
   const cy = rowTokens[0].cy;
@@ -209,6 +224,26 @@ function extractRowInfo(rowTokens) {
       total = parseInt(runs[0], 10);
       ev = parseInt(runs[1], 10);
       confirmed = true;
+    } else if (runs.length >= 2) {
+      // The first digit run doesn't look like a real total (too small/
+      // large to plausibly be one) - the same "stray noise sitting before
+      // the real number" shape the two-separate-tokens branch above
+      // handles, just fused into a single OCR box with a stray whitespace
+      // instead of split across two boxes (observed for real: a Sp. Atk
+      // label+total read as one token, "특수공격 3 90" - a spurious "3"
+      // ahead of the genuine "90" total - blindly concatenating every run
+      // read "390", which has no valid EV for any real Pokemon's Sp. Atk
+      // and made evCalc.mjs's whole total-derived EV computation bail out
+      // for the rest of the card too, not just this one stat). Trying the
+      // remaining run(s) alone first, the same way the two-tokens branch
+      // already does, catches this; the full concatenation is still kept
+      // as a lower-priority alternative in case the runs really were
+      // meant to be read as one fused number.
+      const rest = runs.slice(1).join("");
+      const combined = runs.join("");
+      const candidates = [...splitFusedDigits(rest), ...splitFusedDigits(combined)];
+      ({ total, ev, confirmed } = candidates[0]);
+      alt = candidates.slice(1);
     } else {
       const candidates = splitFusedDigits(runs.join(""));
       ({ total, ev, confirmed } = candidates[0]);

@@ -685,6 +685,44 @@ body {
     font-size: 12px;
 }
 
+/* Custom-styled stand-in for a native <input list>/<datalist> popup (see
+   main.mjs's attachCombobox) - appended to <body> and positioned via JS
+   rather than nested under .review-item, so its position:fixed placement
+   floats above review-panel's own overflow-y:auto instead of being
+   clipped by it. z-index sits above .review-backdrop's 1000. */
+.review-combobox-list {
+    position: fixed;
+    z-index: 1001;
+    max-height: 220px;
+    overflow-y: auto;
+    background: var(--panel-bg-soft);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--panel-shadow);
+    padding: 4px;
+    box-sizing: border-box;
+}
+
+.review-combobox-option {
+    padding: 6px 8px;
+    font-size: 12px;
+    font-family: inherit;
+    color: var(--ink);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+}
+
+.review-combobox-option:hover,
+.review-combobox-option.highlighted {
+    background: var(--select-bg);
+    color: var(--ink);
+}
+
+.review-combobox-empty {
+    padding: 6px 8px;
+    font-size: 12px;
+    color: var(--ink-dim);
+}
+
 #review-confirm {
     width: 100%;
     padding: 10px;
