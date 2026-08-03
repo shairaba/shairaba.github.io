@@ -20,6 +20,21 @@
 
   <script src="app.js"></script>
   <script>
+    // Player exports only embed lightweight sprite info (species id/name) -
+    // the full per-mon detail (item/ability/nature/moves) lives in the
+    // tournament's own export, to avoid duplicating it across every player
+    // who played in a tournament. Fetched lazily, once, on first expand.
+    const tournamentCache = new Map();
+
+    async function loadFullTeam(entry) {
+      if (!tournamentCache.has(entry.tournament_id)) {
+        tournamentCache.set(entry.tournament_id, fetchJSON(`data/tournaments/${encodeURIComponent(entry.tournament_id)}.json`));
+      }
+      const t = await tournamentCache.get(entry.tournament_id);
+      const match = t.entries.find((e) => e.player_key === entry.player_key);
+      return match ? match.team : entry.team;
+    }
+
     (async function () {
       const key = qs("key");
       const content = document.getElementById("content");
@@ -56,21 +71,40 @@
       tbody.innerHTML = p.entries
         .map(
           (e, i) => `
-        <tr class="standings-row" data-target="row-${i}">
+        <tr class="standings-row" data-target="row-${i}" data-idx="${i}">
           <td>${esc(e.tournament_date.slice(0, 10))}</td>
           <td class="truncate"><a href="tournament.html?id=${esc(e.tournament_id)}">${esc(e.tournament_name)}</a></td>
           <td><span class="badge">${esc(formatLabel(e.tournament_format))}</span></td>
           <td>${e.placing != null ? e.placing : "-"}</td>
           <td class="record">${recordHtml(e)}</td>
-          <td class="team-cell"><div class="team-cell-inner">${spriteRowHtml(e.team)}<span class="chevron">&rsaquo;</span></div></td>
+          <td class="team-cell"><div class="team-cell-inner">${spriteRowHtml(e.team, e.tournament_game)}<span class="chevron">&rsaquo;</span></div></td>
         </tr>
         <tr class="team-row" id="row-${i}">
-          <td colspan="6">${teamGridHtml(e.team)}</td>
+          <td colspan="6" class="team-cell-content"><span class="muted">Loading team&hellip;</span></td>
         </tr>`
         )
         .join("");
 
-      wireExpandableRows(tbody);
+      tbody.querySelectorAll(".standings-row").forEach((row) => {
+        row.addEventListener("click", async (evt) => {
+          if (evt.target.closest("a")) return;
+          const entry = p.entries[Number(row.dataset.idx)];
+          const target = document.getElementById(row.dataset.target);
+          const opening = !target.classList.contains("open");
+          target.classList.toggle("open");
+          row.classList.toggle("expanded");
+          if (opening && !target.dataset.loaded) {
+            const cell = target.querySelector(".team-cell-content");
+            try {
+              const fullTeam = await loadFullTeam(entry);
+              cell.innerHTML = teamGridHtml(fullTeam, entry.tournament_game);
+              target.dataset.loaded = "1";
+            } catch (err) {
+              cell.innerHTML = '<span class="muted">Could not load team details.</span>';
+            }
+          }
+        });
+      });
     })();
   </script>
 </body>

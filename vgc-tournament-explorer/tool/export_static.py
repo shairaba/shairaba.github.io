@@ -37,9 +37,24 @@ def _entry_team(conn, tournament_id: str, player_key: str) -> list[dict]:
     return team
 
 
+def _entry_team_sprites_only(conn, tournament_id: str, player_key: str) -> list[dict]:
+    """Just enough to draw the sprite icons. Player exports use this instead
+    of the full team (item/ability/nature/moves) since that's already fully
+    present in the tournament's own export - embedding it again in every
+    player file roughly doubled total site size for no benefit (the full
+    team, on a player page, is only ever needed when that row is expanded,
+    at which point the frontend lazy-fetches the tournament file)."""
+    rows = conn.execute(
+        "SELECT slot, species_id, species_name "
+        "FROM team_pokemon WHERE tournament_id = ? AND player_key = ? ORDER BY slot",
+        (tournament_id, player_key),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
 def export_tournaments_index(conn) -> list[dict]:
     rows = conn.execute(
-        "SELECT id, name, date, format, players FROM tournaments "
+        "SELECT id, name, date, format, game, players FROM tournaments "
         "WHERE standings_fetched = 1 ORDER BY date DESC"
     ).fetchall()
     return [dict(r) for r in rows]
@@ -55,6 +70,8 @@ def export_players_index(conn) -> list[dict]:
     ).fetchall()
     players = [dict(r) for r in rows]
 
+    # Flat by format - the regulation letter alone determines the game
+    # (see formats.py), so it's unambiguous without nesting by source.
     format_rows = conn.execute(
         """
         SELECT e.player_key, t.format, COUNT(*) AS c
@@ -89,7 +106,8 @@ def export_player_detail(conn, player_key: str) -> dict:
     p = conn.execute("SELECT * FROM players WHERE player_key = ?", (player_key,)).fetchone()
     rows = conn.execute(
         """
-        SELECT e.*, t.name AS tournament_name, t.date AS tournament_date, t.format AS tournament_format
+        SELECT e.*, t.name AS tournament_name, t.date AS tournament_date,
+               t.format AS tournament_format, t.game AS tournament_game
         FROM entries e JOIN tournaments t ON t.id = e.tournament_id
         WHERE e.player_key = ? ORDER BY t.date DESC
         """,
@@ -98,7 +116,7 @@ def export_player_detail(conn, player_key: str) -> dict:
     out_entries = []
     for e in rows:
         d = dict(e)
-        d["team"] = _entry_team(conn, e["tournament_id"], player_key)
+        d["team"] = _entry_team_sprites_only(conn, e["tournament_id"], player_key)
         out_entries.append(d)
     return {**dict(p), "entries": out_entries}
 

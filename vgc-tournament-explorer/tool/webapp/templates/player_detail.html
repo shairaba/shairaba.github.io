@@ -25,13 +25,13 @@
         <td><span class="badge">{{ format_label(e.tournament_format) }}</span></td>
         <td>{{ e.placing if e.placing is not none else "-" }}</td>
         <td class="record">{{ e.wins }}-{{ e.losses }}{% if e.ties %}-{{ e.ties }}{% endif %}{% if e.drop_round %} <span class="dropped">dropped R{{ e.drop_round }}</span>{% endif %}</td>
-        <td class="team-cell"><div class="team-cell-inner">{{ macros.team_sprites(teams.get(e.tournament_id, [])) }}<span class="chevron">&rsaquo;</span></div></td>
+        <td class="team-cell"><div class="team-cell-inner">{{ macros.team_sprites(teams.get(e.tournament_id, []), e.tournament_game) }}<span class="chevron">&rsaquo;</span></div></td>
       </tr>
       <tr class="team-row" id="row-{{ loop.index }}">
         <td colspan="6">
           {% set team = teams.get(e.tournament_id) %}
           {% if team %}
-            {{ macros.team_grid(team) }}
+            {{ macros.team_grid(team, e.tournament_game) }}
           {% else %}
             <span class="muted">No team list available.</span>
           {% endif %}

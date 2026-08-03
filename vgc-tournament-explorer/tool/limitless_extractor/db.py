@@ -88,6 +88,7 @@ def upsert_tournament(conn: sqlite3.Connection, t: dict) -> None:
             name = excluded.name,
             date = excluded.date,
             format = excluded.format,
+            game = excluded.game,
             players = excluded.players,
             organizer_id = excluded.organizer_id
         """,
@@ -203,8 +204,8 @@ def save_standings(conn: sqlite3.Connection, tournament_id: str, standings: list
 
 def status_by_format(conn: sqlite3.Connection) -> list[sqlite3.Row]:
     return conn.execute(
-        "SELECT format, COUNT(*) as count FROM tournaments "
-        "WHERE standings_fetched = 1 GROUP BY format ORDER BY count DESC"
+        "SELECT game, format, COUNT(*) as count FROM tournaments "
+        "WHERE standings_fetched = 1 GROUP BY game, format ORDER BY count DESC"
     ).fetchall()
 
 

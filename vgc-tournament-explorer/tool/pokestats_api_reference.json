@@ -1,0 +1,125 @@
+{
+  "site": "https://pokestats.top/championships/",
+  "discovered_by": "Reverse-engineering the site's React frontend bundle (create-react-app, /championships/static/js/main.*.js) - inspecting network requests and grepping the minified source for API client methods. No official docs, no API key, no published rate limit.",
+  "as_of": "2026-08-03",
+  "api_base_url": "https://pokestats.top/api/championships",
+  "image_base_url": "https://pokestats.top/images",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/regs",
+      "description": "All available regulation sets, with the date range of tournaments known for each.",
+      "response_example": {
+        "code": 0,
+        "msg": "ok",
+        "data": [
+          { "reg": "Champions Reg.M-B", "min_date": "2026-06-20", "max_date": "2026-08-01" }
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/reg/{reg}",
+      "description": "List of tournaments for one regulation set. {reg} must be URL-encoded (e.g. 'Champions Reg.M-B' -> 'Champions%20Reg.M-B').",
+      "response_example": {
+        "code": 0,
+        "msg": "ok",
+        "data": [
+          {
+            "start_date": "2026-08-01",
+            "id": "vr20260801",
+            "name": "Victory Road August Challenge",
+            "players": 194,
+            "winner": "Kazuki Ogushi",
+            "winner_nat": "JP"
+          }
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/{id}/info",
+      "description": "Single tournament's basic info (superset of the /reg/{reg} list entry)."
+    },
+    {
+      "method": "GET",
+      "path": "/{id}/usage",
+      "description": "Pokemon usage stats for a tournament. Query param: placing_limit. Not used by this project - full decklists come from /standings instead.",
+      "query_params": ["placing_limit"]
+    },
+    {
+      "method": "GET",
+      "path": "/{id}/standings",
+      "description": "Full standings including decklists - the main endpoint this project uses.",
+      "response_example": {
+        "code": 0,
+        "msg": "ok",
+        "data": [
+          {
+            "placing": 1,
+            "player": "Kazuki Ogushi\n6a6d797f97a10b0019ee6705",
+            "nat": "JP",
+            "record": "12-2-0",
+            "pokemons": [
+              {
+                "pokemon": "Staraptor-Mega",
+                "item": "Staraptite",
+                "ability": "Intimidate",
+                "tera_type": "",
+                "nature": "Jolly",
+                "moves": ["Tailwind", "Protect", "Close Combat", "Dual Wingbeat"]
+              }
+            ]
+          }
+        ]
+      },
+      "field_notes": {
+        "player": "See player_field_format below - not a clean identifier.",
+        "record": "\"wins-losses-ties\" as a single string, not separate fields.",
+        "nat": "ISO alpha-2, or the literal string 'Unknown'.",
+        "tera_type": "Empty string when not set/used, not null.",
+        "drop": "Not present on this endpoint at all (only per-round, via /standings/{playerID})."
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/{id}/standings/{playerID}",
+      "description": "Per-round match data for one player: round, opponent, result, score, drop (bool, per round), and the pokemon revealed that round.",
+      "used_by_this_project": false
+    }
+  ],
+  "player_field_format": {
+    "description": "The `player` string in /standings responses is NOT a reliable structured identifier. Observed behavior, by tournament id prefix:",
+    "vr_prefixed_tournaments": "Usually \"DisplayName\\nNativeID\" (split on newline). BUT the ID half is not always a stable Battlefy ObjectId - it sometimes falls back to a raw display name/nickname (spaces, unicode, punctuation, emoji-like text all observed).",
+    "non_vr_tournaments": "No separator at all - the whole field is just the display name, with no stable ID whatsoever.",
+    "consequence": "This project always sanitizes the derived native ID to [a-zA-Z0-9_-] before using it as a DB key / filename / URL segment (see _safe_id_component in pokestats.py), and disambiguates same-tournament collisions by appending the entrant's placing.",
+    "known_quirks_observed": [
+      "vr_tr_20260711 ('The Grand Champions Festival Encore', 4253 entrants): two different entrants both resolved to the literal ID 'Jack B'.",
+      "Various tournaments: native IDs seen as raw names like 'Colin/Chloe Patterson' (contains a slash), 'kaos :D' (colon + space), 'Alex S.' etc."
+    ]
+  },
+  "sprite_url_pattern": {
+    "template": "{image_base_url}/pokemon/{imgs|thumbs}/{slug}.png",
+    "slug_rule": "name.toLowerCase().replace(/[^a-z0-9-]/g, '') - lowercase, strip everything except a-z, 0-9, and hyphen. NOTE: this is a different rule from Limitless's own sprite slugs (which insert hyphens for spaces) - the two are not interchangeable.",
+    "example": "\"Staraptor-Mega\" -> \"staraptor-mega\" -> https://pokestats.top/images/pokemon/imgs/staraptor-mega.png",
+    "why_it_matters": "Limitless's own sprite CDN (r2.limitlesstcg.net) has no Mega-Evolution sprites at all, so any Pokemon sourced from pokestats.top must use pokestats' own image host instead."
+  },
+  "reg_to_format_mapping": {
+    "description": "Maps pokestats' regulation-set names to this project's short format IDs (formats.py). The regulation letter alone determines the game/franchise - see formats.py FORMAT_TO_FRANCHISE for the authoritative mapping, which applies uniformly regardless of data source (Limitless also uses these same short IDs).",
+    "Champions Reg.M-B": "M-B",
+    "Champions Reg.M-A": "M-A",
+    "Gen9 Reg.I": "SVI",
+    "Gen9 Reg.H": "SVH",
+    "Gen9 Reg.G": "SVG",
+    "Gen9 Reg.F": "SVF"
+  },
+  "scale_as_of_2026_08_03": {
+    "total_tournaments_all_regs": 121,
+    "largest_single_tournament_players": 6100,
+    "note": "Small enough that this project's sync fetches every reg's full tournament list and any missing standings in one run - no pagination/backfill logic needed, unlike the Limitless pipeline."
+  },
+  "client_behavior": {
+    "rate_limiting": "No documented limit; this project throttles to ~1.5s between requests as a courtesy (see PokestatsClient in pokestats.py).",
+    "retries": "429 -> sleep 10s and retry; 5xx -> exponential backoff, up to 4 attempts."
+  }
+}

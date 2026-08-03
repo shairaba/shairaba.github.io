@@ -1,20 +1,20 @@
-{% macro team_sprites(team) %}
+{% macro team_sprites(team, game='limitless') %}
   <div class="sprite-row">
     {% for mon in team %}
       <span class="sprite-chip">
-        <img class="sprite" src="{{ sprite_url(mon.species_id) }}" alt="{{ mon.species_name or mon.species_id }}" title="{{ mon.species_name or mon.species_id }}" loading="lazy">
+        <img class="sprite" src="{{ sprite_url(mon.species_id, game) }}" alt="{{ mon.species_name or mon.species_id }}" title="{{ mon.species_name or mon.species_id }}" loading="lazy">
       </span>
     {% endfor %}
   </div>
 {% endmacro %}
 
-{% macro team_grid(team) %}
+{% macro team_grid(team, game='limitless') %}
   <div class="team-grid">
     {% for mon in team %}
       <div class="mon-card">
         <div class="mon-header">
           <span class="mon-sprite-chip">
-            <img class="mon-sprite" src="{{ sprite_url(mon.species_id) }}" alt="{{ mon.species_name or mon.species_id }}" loading="lazy">
+            <img class="mon-sprite" src="{{ sprite_url(mon.species_id, game) }}" alt="{{ mon.species_name or mon.species_id }}" loading="lazy">
           </span>
           <div class="mon-name">{{ mon.species_name or mon.species_id }}</div>
         </div>

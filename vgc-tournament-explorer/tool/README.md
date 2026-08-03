@@ -1,13 +1,17 @@
 # VGC Tournament Extractor (tool)
 
 Pulls completed VGC tournament results (standings + full team lists) from
-[Limitless TCG](https://play.limitlesstcg.com/tournaments/completed?game=VGC)
-into a local SQLite database. This is the data pipeline behind the published
-site at `../` (see the [top-level README](../README.md) for how that fits
-together and how the daily GitHub Action works).
+two sources into one local SQLite database:
+- [Limitless TCG](https://play.limitlesstcg.com/tournaments/completed?game=VGC) —
+  official public API, no key required. See
+  https://docs.limitlesstcg.com/developer/tournaments.
+- [pokestats.top](https://pokestats.top/championships/) (Battlefy Victory
+  Road) — undocumented API, reverse-engineered from their frontend. Full
+  details in [`pokestats_api_reference.json`](pokestats_api_reference.json).
 
-Uses Limitless's official public API (no key required) rather than scraping
-HTML — see https://docs.limitlesstcg.com/developer/tournaments.
+This is the data pipeline behind the published site at `../` (see the
+[top-level README](../README.md) for how that fits together, how the daily
+GitHub Action works, and how the two sources relate to VGC/Champions/regs).
 
 ## Setup
 
@@ -35,6 +39,11 @@ upserted by ID, and only tournaments still missing standings are fetched.
 # Fetch every regulation set instead of just the current one:
 .venv/bin/python cli.py sync run --format all --recent-days 365
 .venv/bin/python cli.py sync backfill --format all --pages 20
+
+# Fetch all pokestats.top (Pokemon Champions / Victory Road) tournaments.
+# Small dataset (~120 tournaments total across every reg) - fetches
+# everything in one run, safe to re-run any time.
+.venv/bin/python cli.py sync pokestats
 
 # See what's been fetched so far:
 .venv/bin/python cli.py sync status
@@ -71,17 +80,23 @@ it manually only if you want to preview a local change before it publishes.
 ## Data model
 
 SQLite database at `data/limitless.db` (gitignored — never committed):
-- `tournaments` — one row per tournament
-- `players` — one row per player (keyed by their stable Limitless username)
+- `tournaments` — one row per tournament. `game` holds the *source*
+  (`"limitless"` or `"pokestats"`) — purely a technical marker for sprite-CDN
+  selection, not the game/franchise (that's derived from `format` alone, see
+  `formats.py`).
+- `players` — one row per player, keyed by a source-prefixed ID
+  (`pokestats_...` vs a bare Limitless username) so the two identity spaces
+  never collide. They are NOT the same identity space — see the top-level
+  README's note on player identity.
 - `entries` — one row per (tournament, player): placing, record, deck
 - `team_pokemon` — one row per Pokémon per (tournament, player): species,
   item, ability, nature, tera type, moves
 
 ## Notes
 
-- "Regulation Set M-B" is the current VGC format as of this writing. Older
-  regulation sets have very different legal Pokémon, so team data across
-  formats isn't directly comparable — hence the format filter everywhere.
+- "Reg M-B" is the current regulation as of this writing. Older regulation
+  sets have very different legal Pokémon, so team data across formats isn't
+  directly comparable — hence the format filter everywhere.
 - Some tournaments use `CUSTOM` rules (not a standard regulation set) and
   will show up as such.
 - Not every tournament has a Pokémon submitted per player, or a team list at

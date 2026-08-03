@@ -1,23 +1,45 @@
-"""VGC format/regulation IDs, as returned by GET /api/games (id="VGC").
+"""Regulation/format IDs and which underlying game each one belongs to.
 
-Kept as a static snapshot rather than fetched live, since it changes rarely
-and every other part of the app needs it synchronously (e.g. building
-dashboard dropdowns without an extra request).
+The regulation letter alone determines the game - it's the same letter
+scheme reused across three different games' history, not three parallel
+per-game schemes:
+  - M-A, M-B            -> Pokemon Champions (Mega Evolutions)
+  - 23S1..23S3, SVE-SVI, VGC23 -> Pokemon Scarlet & Violet
+  - VGC22 (Series 12)   -> Pokemon Sword & Shield
+
+This holds regardless of which site a tournament was pulled from - the same
+regulation letter means the same ruleset whether it came from Limitless or
+pokestats.top.
 """
 
-VGC_FORMATS = {
-    "M-B": "Regulation Set M-B",
-    "M-A": "Regulation Set M-A",
-    "SVI": "Scarlet & Violet - Regulation I",
-    "SVH": "Scarlet & Violet - Regulation H",
-    "SVG": "Scarlet & Violet - Regulation G",
-    "SVF": "Scarlet & Violet - Regulation F",
-    "SVE": "Scarlet & Violet - Regulation E",
-    "VGC23": "Scarlet & Violet - Regulation D",
-    "23S3": "Scarlet & Violet - Regulation C",
-    "23S2": "Scarlet & Violet - Regulation B",
-    "23S1": "Scarlet & Violet - Regulation A",
-    "VGC22": "VGC 2022 (Series 12)",
+FORMAT_LABELS = {
+    "M-B": "Reg M-B",
+    "M-A": "Reg M-A",
+    "SVI": "Reg I",
+    "SVH": "Reg H",
+    "SVG": "Reg G",
+    "SVF": "Reg F",
+    "SVE": "Reg E",
+    "VGC23": "Reg D",
+    "23S3": "Reg C",
+    "23S2": "Reg B",
+    "23S1": "Reg A",
+    "VGC22": "Series 12",
+}
+
+FORMAT_TO_FRANCHISE = {
+    "M-B": "Pokemon Champions",
+    "M-A": "Pokemon Champions",
+    "SVI": "Scarlet & Violet",
+    "SVH": "Scarlet & Violet",
+    "SVG": "Scarlet & Violet",
+    "SVF": "Scarlet & Violet",
+    "SVE": "Scarlet & Violet",
+    "VGC23": "Scarlet & Violet",
+    "23S3": "Scarlet & Violet",
+    "23S2": "Scarlet & Violet",
+    "23S1": "Scarlet & Violet",
+    "VGC22": "Sword & Shield",
 }
 
 LATEST_FORMAT = "M-B"
@@ -26,4 +48,10 @@ LATEST_FORMAT = "M-B"
 def format_label(format_id: str | None) -> str:
     if not format_id:
         return "Unknown"
-    return VGC_FORMATS.get(format_id, format_id)
+    return FORMAT_LABELS.get(format_id, format_id)
+
+
+def franchise_label(format_id: str | None) -> str:
+    if not format_id:
+        return "Unknown"
+    return FORMAT_TO_FRANCHISE.get(format_id, format_id)

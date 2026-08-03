@@ -42,6 +42,9 @@ jobs:
       - name: Backfill older history
         run: python cli.py sync backfill --pages 15 --standings-limit 200
 
+      - name: Sync Pokemon Champions tournaments (pokestats.top / Victory Road)
+        run: python cli.py sync pokestats
+
       - name: Show sync status
         run: python cli.py sync status
 

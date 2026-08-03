@@ -40,7 +40,8 @@
         <p class="breadcrumb"><a href="tournaments.html">&larr; Tournaments</a></p>
         <h1>${esc(t.name)}</h1>
         <p class="meta">
-          ${esc(t.date.slice(0, 10))} &middot; <span class="badge">${esc(formatLabel(t.format))}</span>
+          ${esc(t.date.slice(0, 10))} &middot;
+          <span class="badge">${esc(formatLabel(t.format))}</span>
           &middot; ${t.players} players
         </p>
         <div class="table-scroll">
@@ -64,10 +65,10 @@
           <td class="truncate"><a href="player.html?key=${esc(e.player_key)}">${esc(e.player_name || e.player_key)}</a></td>
           <td>${esc(e.country || "")}</td>
           <td class="record">${recordHtml(e)}</td>
-          <td class="team-cell"><div class="team-cell-inner">${spriteRowHtml(e.team)}<span class="chevron">&rsaquo;</span></div></td>
+          <td class="team-cell"><div class="team-cell-inner">${spriteRowHtml(e.team, t.game)}<span class="chevron">&rsaquo;</span></div></td>
         </tr>
         <tr class="team-row" id="row-${i}">
-          <td colspan="5">${teamGridHtml(e.team)}</td>
+          <td colspan="5">${teamGridHtml(e.team, t.game)}</td>
         </tr>`
         )
         .join("");

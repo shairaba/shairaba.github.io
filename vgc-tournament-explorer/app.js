@@ -1,28 +1,37 @@
-const VGC_FORMATS = {
-  "M-B": "Regulation Set M-B",
-  "M-A": "Regulation Set M-A",
-  "SVI": "Scarlet & Violet - Regulation I",
-  "SVH": "Scarlet & Violet - Regulation H",
-  "SVG": "Scarlet & Violet - Regulation G",
-  "SVF": "Scarlet & Violet - Regulation F",
-  "SVE": "Scarlet & Violet - Regulation E",
-  "VGC23": "Scarlet & Violet - Regulation D",
-  "23S3": "Scarlet & Violet - Regulation C",
-  "23S2": "Scarlet & Violet - Regulation B",
-  "23S1": "Scarlet & Violet - Regulation A",
-  "VGC22": "VGC 2022 (Series 12)",
+// The regulation letter alone determines the game (Champions vs Scarlet &
+// Violet vs Sword & Shield) - same letter always means the same ruleset,
+// regardless of which site (Limitless or pokestats.top) a tournament came
+// from. See tool/limitless_extractor/formats.py for the authoritative copy.
+const FORMAT_LABELS = {
+  "M-B": "Reg M-B",
+  "M-A": "Reg M-A",
+  "SVI": "Reg I",
+  "SVH": "Reg H",
+  "SVG": "Reg G",
+  "SVF": "Reg F",
+  "SVE": "Reg E",
+  "VGC23": "Reg D",
+  "23S3": "Reg C",
+  "23S2": "Reg B",
+  "23S1": "Reg A",
+  "VGC22": "Series 12",
 };
 
-const SPRITE_BASE = "https://r2.limitlesstcg.net/pokemon/gen9";
+// Sprite CDN choice, on the other hand, IS a data-source concern:
+// Limitless's own CDN has no Mega-form sprites, so anything sourced from
+// pokestats.top (tournaments.game === "pokestats") uses their image host.
+const LIMITLESS_SPRITE_BASE = "https://r2.limitlesstcg.net/pokemon/gen9";
+const POKESTATS_SPRITE_BASE = "https://pokestats.top/images/pokemon/imgs";
 
 function formatLabel(id) {
   if (!id) return "Unknown";
-  return VGC_FORMATS[id] || id;
+  return FORMAT_LABELS[id] || id;
 }
 
-function spriteUrl(speciesId) {
+function spriteUrl(speciesId, source) {
   if (!speciesId) return "";
-  return `${SPRITE_BASE}/${speciesId}.png`;
+  const base = source === "pokestats" ? POKESTATS_SPRITE_BASE : LIMITLESS_SPRITE_BASE;
+  return `${base}/${speciesId}.png`;
 }
 
 function esc(s) {
@@ -41,17 +50,17 @@ function qs(name) {
   return new URLSearchParams(location.search).get(name);
 }
 
-function spriteRowHtml(team) {
+function spriteRowHtml(team, source) {
   const chips = (team || [])
     .map(
       (mon) =>
-        `<span class="sprite-chip"><img class="sprite" src="${esc(spriteUrl(mon.species_id))}" alt="${esc(mon.species_name || mon.species_id)}" title="${esc(mon.species_name || mon.species_id)}" loading="lazy"></span>`
+        `<span class="sprite-chip"><img class="sprite" src="${esc(spriteUrl(mon.species_id, source))}" alt="${esc(mon.species_name || mon.species_id)}" title="${esc(mon.species_name || mon.species_id)}" loading="lazy"></span>`
     )
     .join("");
   return `<div class="sprite-row">${chips}</div>`;
 }
 
-function teamGridHtml(team) {
+function teamGridHtml(team, source) {
   if (!team || !team.length) return '<span class="muted">No team list available.</span>';
   const cards = team
     .map((mon) => {
@@ -59,7 +68,7 @@ function teamGridHtml(team) {
       return `
         <div class="mon-card">
           <div class="mon-header">
-            <span class="mon-sprite-chip"><img class="mon-sprite" src="${esc(spriteUrl(mon.species_id))}" alt="${esc(mon.species_name || mon.species_id)}" loading="lazy"></span>
+            <span class="mon-sprite-chip"><img class="mon-sprite" src="${esc(spriteUrl(mon.species_id, source))}" alt="${esc(mon.species_name || mon.species_id)}" loading="lazy"></span>
             <div class="mon-name">${esc(mon.species_name || mon.species_id)}</div>
           </div>
           <div class="mon-line">

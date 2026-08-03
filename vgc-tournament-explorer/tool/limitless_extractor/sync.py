@@ -17,10 +17,12 @@ import argparse
 from datetime import datetime, timedelta, timezone
 
 from . import db
+from . import pokestats as ps
 from .api_client import RateLimitedClient
-from .formats import LATEST_FORMAT, VGC_FORMATS, format_label
+from .formats import FORMAT_LABELS, LATEST_FORMAT, format_label
 
-GAME = "VGC"
+GAME = "VGC"  # game param the Limitless API itself expects, unrelated to tournaments.game (source)
+SOURCE = "limitless"
 
 
 def _normalize_format(value: str | None) -> str | None:
@@ -61,7 +63,7 @@ def fetch_list(conn, client: RateLimitedClient, start_page: int, max_pages: int 
 
         stop = False
         for t in data:
-            db.upsert_tournament(conn, t)
+            db.upsert_tournament(conn, {**t, "game": SOURCE})
             total += 1
             if cutoff and _parse_date(t["date"]) < cutoff:
                 stop = True
@@ -121,6 +123,38 @@ def cmd_standings(args, conn, client) -> None:
     fetch_standings(conn, client, limit=args.limit)
 
 
+def cmd_pokestats(args, conn, client) -> None:
+    ps_client = ps.PokestatsClient()
+    regs = ps_client.list_regs()
+    print(f"Found {len(regs)} regulation set(s) on pokestats.top")
+    for r in regs:
+        reg = r["reg"]
+        fmt = ps.REG_TO_FORMAT.get(reg)
+        if fmt is None:
+            print(f"  {reg}: unrecognized reg, skipping")
+            continue
+        tournaments = ps_client.list_tournaments(reg)
+        for t in tournaments:
+            db.upsert_tournament(conn, ps.translate_tournament(reg, t))
+        conn.commit()
+        print(f"  {reg} ({fmt}): {len(tournaments)} tournaments")
+
+    rows = conn.execute(
+        "SELECT id FROM tournaments WHERE game = 'pokestats' AND standings_fetched = 0"
+    ).fetchall()
+    print(f"Fetching standings for {len(rows)} pokestats.top tournament(s)...")
+    for i, row in enumerate(rows, 1):
+        native_id = row["id"].removeprefix("pokestats_")
+        try:
+            raw_standings = ps_client.standings(native_id)
+        except Exception as exc:  # noqa: BLE001
+            print(f"  [{i}/{len(rows)}] {native_id} FAILED: {exc}")
+            continue
+        standings = ps.translate_standings(native_id, raw_standings)
+        db.save_standings(conn, row["id"], standings)
+        print(f"  [{i}/{len(rows)}] {native_id} players={len(standings)}")
+
+
 def cmd_status(args, conn, client) -> None:
     s = db.status(conn)
     print("Sync status")
@@ -130,17 +164,17 @@ def cmd_status(args, conn, client) -> None:
     print(f"  tournament entries:         {s['entries']}")
     print(f"  standings date range:       {s['oldest_fetched']}  ..  {s['newest_fetched']}")
     print(f"  deepest list page paged:    {s['deepest_page_paged']}")
-    print("  by format:")
+    print("  by source/format:")
     for row in db.status_by_format(conn):
         label = format_label(row["format"])
-        print(f"    {row['format'] or '(none)':10} {label:35} {row['count']}")
+        print(f"    {row['game'] or '(none)':10} {row['format'] or '(none)':10} {label:14} {row['count']}")
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Limitless TCG VGC tournament extractor")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    format_help = ("regulation set to filter by, e.g. " + ", ".join(VGC_FORMATS) +
+    format_help = ("regulation set to filter by, e.g. " + ", ".join(FORMAT_LABELS) +
                    ", or 'all' for every format. Defaults to the latest (" + LATEST_FORMAT + ").")
 
     p_run = sub.add_parser("run", help="Fetch recent tournaments and their standings (safe to re-run)")
@@ -164,6 +198,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_status = sub.add_parser("status", help="Show how much data has been fetched so far")
     p_status.set_defaults(func=cmd_status)
+
+    p_pokestats = sub.add_parser(
+        "pokestats",
+        help="Fetch Pokemon Champions tournaments from pokestats.top (Battlefy Victory Road). "
+        "Small dataset (~100 tournaments total) - fetches everything in one run, safe to re-run.",
+    )
+    p_pokestats.set_defaults(func=cmd_pokestats)
 
     return parser
 

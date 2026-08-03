@@ -8,14 +8,13 @@ from pathlib import Path
 
 from flask import Flask, abort, render_template, request
 
-from limitless_extractor.formats import VGC_FORMATS, format_label
+from limitless_extractor.formats import format_label
 from limitless_extractor.sprites import sprite_url
 
 DB_PATH = Path(__file__).resolve().parent.parent / "data" / "limitless.db"
 
 app = Flask(__name__)
 app.jinja_env.globals["format_label"] = format_label
-app.jinja_env.globals["VGC_FORMATS"] = VGC_FORMATS
 app.jinja_env.globals["sprite_url"] = sprite_url
 
 
@@ -142,7 +141,8 @@ def player_detail(player_key):
         abort(404)
     entries = conn.execute(
         """
-        SELECT e.*, t.name AS tournament_name, t.date AS tournament_date, t.format AS tournament_format
+        SELECT e.*, t.name AS tournament_name, t.date AS tournament_date,
+               t.format AS tournament_format, t.game AS tournament_game
         FROM entries e JOIN tournaments t ON t.id = e.tournament_id
         WHERE e.player_key = ? ORDER BY t.date DESC
         """,
