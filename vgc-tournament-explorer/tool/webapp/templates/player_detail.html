@@ -20,12 +20,12 @@
     <tbody>
     {% for e in entries %}
       <tr class="standings-row" data-target="row-{{ loop.index }}">
-        <td>{{ e.tournament_date[:10] }}</td>
-        <td class="truncate"><a href="/tournament/{{ e.tournament_id }}">{{ e.tournament_name }}</a></td>
-        <td><span class="badge">{{ format_label(e.tournament_format) }}</span></td>
-        <td>{{ e.placing if e.placing is not none else "-" }}</td>
-        <td class="record">{{ e.wins }}-{{ e.losses }}{% if e.ties %}-{{ e.ties }}{% endif %}{% if e.drop_round %} <span class="dropped">dropped R{{ e.drop_round }}</span>{% endif %}</td>
-        <td class="team-cell"><div class="team-cell-inner">{{ macros.team_sprites(teams.get(e.tournament_id, []), e.tournament_game) }}<span class="chevron">&rsaquo;</span></div></td>
+        <td class="cell-date">{{ e.tournament_date[:10] }}</td>
+        <td class="cell-name truncate"><a href="/tournament/{{ e.tournament_id }}">{{ e.tournament_name }}</a></td>
+        <td class="cell-format"><span class="badge">{{ format_label(e.tournament_format) }}</span></td>
+        <td class="cell-place">{{ e.placing if e.placing is not none else "-" }}</td>
+        <td class="cell-record record">{{ e.wins }}-{{ e.losses }}{% if e.ties %}-{{ e.ties }}{% endif %}{% if e.drop_round %} <span class="dropped">dropped R{{ e.drop_round }}</span>{% endif %}</td>
+        <td class="cell-team team-cell"><div class="team-cell-inner">{{ macros.team_sprites(teams.get(e.tournament_id, []), e.tournament_game) }}<span class="chevron">&rsaquo;</span></div></td>
       </tr>
       <tr class="team-row" id="row-{{ loop.index }}">
         <td colspan="6">

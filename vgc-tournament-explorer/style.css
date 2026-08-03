@@ -334,11 +334,6 @@ h2 {
   .list-table th, .list-table td { padding: 9px 10px; font-size: .82rem; }
   .table-scroll { -webkit-overflow-scrolling: touch; }
 
-  /* Inline <col> widths win over a stylesheet rule at equal specificity, so
-     these need !important to actually shrink columns on narrow screens. */
-  .col-record { width: 118px !important; }
-  .col-team { width: 190px !important; }
-
   .sprite-chip { width: 26px; height: 26px; border-radius: 6px; }
   .sprite { width: 20px; height: 20px; }
   .sprite-row { gap: 2px; }
@@ -347,4 +342,42 @@ h2 {
   .mon-sprite { width: 26px; height: 26px; }
   .team-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
   .mon-card { padding: 10px 11px; }
+
+  /* Standings tables: fixed table-cell columns can't all fit a narrow
+     screen at once (name/team text/sprites need real room), so below this
+     width they stop being a table at all and become stacked cards instead -
+     name/tournament gets the identity row, the team sprites drop to their
+     own full-width line underneath. Column widths from colgroup no longer
+     apply once table layout is abandoned here, which is intentional. */
+  .standings-table, .standings-table tbody { display: block; width: 100%; }
+  .standings-table thead { display: none; }
+  .standings-table colgroup { display: none; }
+
+  .standings-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: 8px;
+    row-gap: 6px;
+    padding: 11px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .standings-row td { display: block; padding: 0; border: none; font-size: .84rem; }
+
+  .cell-place { order: 0; flex: 0 0 auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .cell-name {
+    order: 1; flex: 1 1 auto; min-width: 60%;
+    font-weight: 700; font-size: .95rem; color: var(--text);
+  }
+  .cell-date, .cell-format, .cell-country { order: 2; flex: 0 0 auto; color: var(--muted); font-size: .78rem; }
+  .cell-record { order: 3; flex: 0 0 auto; margin-left: auto; }
+  .cell-team {
+    order: 10; flex: 1 0 100%; white-space: normal;
+    padding-top: 4px !important;
+  }
+  .team-cell-inner { justify-content: flex-start; }
+
+  .team-row { display: none; }
+  .team-row.open { display: block; }
+  .team-row td { padding: 14px 12px; }
 }

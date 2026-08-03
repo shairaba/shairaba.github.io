@@ -62,11 +62,11 @@
         .map(
           (e, i) => `
         <tr class="standings-row" data-target="row-${i}">
-          <td>${e.placing != null ? e.placing : "-"}</td>
-          <td class="truncate"><a href="player.html?key=${esc(e.player_key)}">${esc(e.player_name || e.player_key)}</a></td>
-          <td>${esc(e.country || "")}</td>
-          <td class="record">${recordHtml(e)}</td>
-          <td class="team-cell"><div class="team-cell-inner">${spriteRowHtml(e.team, t.game)}<span class="chevron">&rsaquo;</span></div></td>
+          <td class="cell-place">${e.placing != null ? e.placing : "-"}</td>
+          <td class="cell-name truncate"><a href="player.html?key=${esc(e.player_key)}">${esc(e.player_name || e.player_key)}</a></td>
+          <td class="cell-country">${esc(e.country || "")}</td>
+          <td class="cell-record record">${recordHtml(e)}</td>
+          <td class="cell-team team-cell"><div class="team-cell-inner">${spriteRowHtml(e.team, t.game)}<span class="chevron">&rsaquo;</span></div></td>
         </tr>
         <tr class="team-row" id="row-${i}">
           <td colspan="5">${teamGridHtml(e.team, t.game)}</td>

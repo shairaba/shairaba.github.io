@@ -73,12 +73,12 @@
         .map(
           (e, i) => `
         <tr class="standings-row" data-target="row-${i}" data-idx="${i}">
-          <td>${esc(e.tournament_date.slice(0, 10))}</td>
-          <td class="truncate"><a href="tournament.html?id=${esc(e.tournament_id)}">${esc(e.tournament_name)}</a></td>
-          <td><span class="badge">${esc(formatLabel(e.tournament_format))}</span></td>
-          <td>${e.placing != null ? e.placing : "-"}</td>
-          <td class="record">${recordHtml(e)}</td>
-          <td class="team-cell"><div class="team-cell-inner">${spriteRowHtml(e.team, e.tournament_game)}<span class="chevron">&rsaquo;</span></div></td>
+          <td class="cell-date">${esc(e.tournament_date.slice(0, 10))}</td>
+          <td class="cell-name truncate"><a href="tournament.html?id=${esc(e.tournament_id)}">${esc(e.tournament_name)}</a></td>
+          <td class="cell-format"><span class="badge">${esc(formatLabel(e.tournament_format))}</span></td>
+          <td class="cell-place">${e.placing != null ? e.placing : "-"}</td>
+          <td class="cell-record record">${recordHtml(e)}</td>
+          <td class="cell-team team-cell"><div class="team-cell-inner">${spriteRowHtml(e.team, e.tournament_game)}<span class="chevron">&rsaquo;</span></div></td>
         </tr>
         <tr class="team-row" id="row-${i}">
           <td colspan="6" class="team-cell-content"><span class="muted">Loading team&hellip;</span></td>
