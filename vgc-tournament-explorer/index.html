@@ -12,6 +12,7 @@
     <nav>
       <a href="tournaments.html">Tournaments</a>
       <a href="players.html">Players</a>
+      <a href="dashboard.html">Dashboard</a>
     </nav>
   </header>
   <main class="container">
@@ -23,6 +24,11 @@
       <div class="stat"><div class="stat-num" id="stat-players">&hellip;</div><div class="stat-label">players</div></div>
       <div class="stat"><div class="stat-num" id="stat-entries">&hellip;</div><div class="stat-label">entries</div></div>
     </div>
+
+    <section>
+      <h2>Recent major winners <span class="muted" style="font-weight:400;text-transform:none;letter-spacing:0;">— last 30 days, sorted by turnout</span></h2>
+      <div class="winner-grid" id="winner-grid"><p class="loading">Loading&hellip;</p></div>
+    </section>
 
     <div class="two-col">
       <section>
@@ -97,6 +103,41 @@
       if (meta && meta.generated_at) {
         const d = new Date(meta.generated_at);
         document.getElementById("generated-note").textContent = `Data last synced ${d.toLocaleString()}`;
+      }
+
+      const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const majors = tournaments
+        .filter((t) => t.date >= cutoff)
+        .sort((a, b) => b.players - a.players)
+        .slice(0, 6);
+
+      const grid = document.getElementById("winner-grid");
+      if (!majors.length) {
+        grid.innerHTML = '<p class="empty-state">No tournaments in the last 30 days.</p>';
+      } else {
+        const details = await Promise.all(
+          majors.map((t) => fetchJSON(`data/tournaments/${encodeURIComponent(t.id)}.json`).catch(() => null))
+        );
+        grid.innerHTML = majors
+          .map((t, i) => {
+            const detail = details[i];
+            const winner = detail && detail.entries.find((e) => e.placing === 1);
+            return `
+          <a class="winner-card" href="tournament.html?id=${esc(t.id)}">
+            <div class="winner-card-head">
+              <span class="badge">${esc(formatLabel(t.format))}</span>
+              <span class="muted">${esc(t.date.slice(0, 10))} &middot; ${t.players} players</span>
+            </div>
+            <div class="winner-card-title truncate">${esc(t.name)}</div>
+            ${
+              winner
+                ? `<div class="winner-card-winner"><span class="muted">Winner:</span> ${esc(winner.player_name || winner.player_key)}${winner.country ? ` (${esc(winner.country)})` : ""}</div>
+                   ${spriteRowHtml(winner.team, t.game)}`
+                : '<div class="muted">No standings available.</div>'
+            }
+          </a>`;
+          })
+          .join("");
       }
     })();
   </script>

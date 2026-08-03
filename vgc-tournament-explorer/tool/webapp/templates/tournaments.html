@@ -10,6 +10,11 @@
         <option value="{{ f }}" {% if f == fmt %}selected{% endif %}>{{ format_label(f) }}</option>
       {% endfor %}
     </select>
+    <span class="filter-label">From</span>
+    <input type="date" name="from" value="{{ date_from }}">
+    <span class="filter-label">To</span>
+    <input type="date" name="to" value="{{ date_to }}">
+    <input type="number" name="min_players" placeholder="Min players" min="0" class="num-input" value="{{ min_players or '' }}">
     <button type="submit">Filter</button>
   </form>
 

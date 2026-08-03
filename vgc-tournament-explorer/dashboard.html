@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard - VGC Explorer</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html">VGC Explorer</a>
+    <nav>
+      <a href="tournaments.html">Tournaments</a>
+      <a href="players.html">Players</a>
+      <a href="dashboard.html">Dashboard</a>
+    </nav>
+  </header>
+  <main class="container">
+    <h1>Dashboard</h1>
+    <p class="lede">Usage and results across every tracked tournament in one format.</p>
+
+    <form class="filter-bar" id="filter-form">
+      <span class="filter-label">Format</span>
+      <select id="format" class="pill-select"></select>
+    </form>
+
+    <p class="meta" id="total-note"></p>
+
+    <div class="two-col">
+      <section>
+        <h2>Most used Pok&eacute;mon</h2>
+        <div class="meter-list" id="top-pokemon"><p class="loading">Loading&hellip;</p></div>
+      </section>
+
+      <section>
+        <h2>Most common cores</h2>
+        <div class="core-list" id="top-cores"><p class="loading">Loading&hellip;</p></div>
+      </section>
+    </div>
+
+    <section>
+      <h2>Best finishes</h2>
+      <div class="table-scroll">
+      <table class="list-table">
+        <colgroup><col><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:110px"></colgroup>
+        <thead><tr><th>Player</th><th>Wins</th><th>Top 4</th><th>Top 8</th><th>Tournaments</th></tr></thead>
+        <tbody id="best-finishes"><tr><td colspan="5" class="loading">Loading&hellip;</td></tr></tbody>
+      </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    let dashboard = {};
+
+    // Dashboard aggregates can mix both sources within one format (M-B has
+    // both Limitless and pokestats tournaments), and species_id slugs are
+    // source-specific (see sprites.py) - unlike other pages, there's no
+    // single per-row source to key off here. Try Limitless's CDN first (it
+    // covers everything except Mega forms), falling back to pokestats' CDN
+    // on 404 rather than guessing.
+    function spriteChipHtml(speciesId, name) {
+      const primary = esc(spriteUrl(speciesId, "limitless"));
+      const fallback = esc(spriteUrl(speciesId, "pokestats"));
+      return `<span class="sprite-chip"><img class="sprite" src="${primary}" alt="${esc(name)}" title="${esc(name)}" loading="lazy" onerror="this.onerror=null;this.src='${fallback}';"></span>`;
+    }
+
+    function renderMeters(list, containerId) {
+      const container = document.getElementById(containerId);
+      if (!list.length) {
+        container.innerHTML = '<p class="empty-state">No data.</p>';
+        return;
+      }
+      const max = list[0].count;
+      container.innerHTML = list
+        .map(
+          (p) => `
+        <div class="meter-row">
+          ${spriteChipHtml(p.species_id, p.species_name)}
+          <div class="meter-body">
+            <div class="meter-label"><span class="truncate">${esc(p.species_name)}</span><span class="meter-value">${p.usage_pct}%</span></div>
+            <div class="meter-track"><div class="meter-fill" style="width:${(100 * p.count) / max}%"></div></div>
+          </div>
+        </div>`
+        )
+        .join("");
+    }
+
+    function renderCores(list) {
+      const container = document.getElementById("top-cores");
+      if (!list.length) {
+        container.innerHTML = '<p class="empty-state">No data.</p>';
+        return;
+      }
+      const max = list[0].count;
+      container.innerHTML = list
+        .map((c) => {
+          const [a, b] = c.species;
+          return `
+        <div class="meter-row">
+          <span class="core-sprites">
+            ${spriteChipHtml(a.species_id, a.species_name)}
+            ${spriteChipHtml(b.species_id, b.species_name)}
+          </span>
+          <div class="meter-body">
+            <div class="meter-label"><span class="truncate">${esc(a.species_name)} + ${esc(b.species_name)}</span><span class="meter-value">${c.usage_pct}%</span></div>
+            <div class="meter-track"><div class="meter-fill" style="width:${(100 * c.count) / max}%"></div></div>
+          </div>
+        </div>`;
+        })
+        .join("");
+    }
+
+    function renderFinishes(list) {
+      const tbody = document.getElementById("best-finishes");
+      if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No data.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = list
+        .map(
+          (f) => `
+        <tr>
+          <td class="truncate"><a href="player.html?key=${esc(f.player_key)}">${esc(f.name || f.player_key)}</a></td>
+          <td class="record">${f.wins}</td>
+          <td class="record">${f.top4}</td>
+          <td class="record">${f.top8}</td>
+          <td class="record">${f.tournaments}</td>
+        </tr>`
+        )
+        .join("");
+    }
+
+    function render() {
+      const fmt = document.getElementById("format").value;
+      const d = dashboard[fmt];
+      if (!d) return;
+      document.getElementById("total-note").textContent = `${d.total_teams.toLocaleString()} teams counted for ${formatLabel(fmt)}.`;
+      renderMeters(d.top_pokemon, "top-pokemon");
+      renderCores(d.top_cores);
+      renderFinishes(d.best_finishes);
+    }
+
+    (async function () {
+      dashboard = await fetchJSON("data/dashboard.json");
+      const select = document.getElementById("format");
+      const formats = Object.keys(dashboard).sort((a, b) => dashboard[b].total_teams - dashboard[a].total_teams);
+      select.innerHTML = formats.map((f) => `<option value="${esc(f)}">${esc(formatLabel(f))} (${dashboard[f].total_teams.toLocaleString()} teams)</option>`).join("");
+      if (qs("format") && dashboard[qs("format")]) select.value = qs("format");
+      select.addEventListener("change", render);
+      render();
+    })();
+  </script>
+</body>
+</html>

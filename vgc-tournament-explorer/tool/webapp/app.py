@@ -4,12 +4,20 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import sys
 from pathlib import Path
 
 from flask import Flask, abort, render_template, request
 
 from limitless_extractor.formats import format_label
 from limitless_extractor.sprites import sprite_url
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from export_static import (  # noqa: E402 - reuses the same aggregation as the static export
+    export_dashboard,
+    export_tournaments_index,
+    find_cross_source_duplicates,
+)
 
 DB_PATH = Path(__file__).resolve().parent.parent / "data" / "limitless.db"
 
@@ -74,6 +82,9 @@ def index():
 def tournaments():
     q = request.args.get("q", "").strip()
     fmt = request.args.get("format", "").strip()
+    date_from = request.args.get("from", "").strip()
+    date_to = request.args.get("to", "").strip()
+    min_players = request.args.get("min_players", "").strip()
     conn = get_db()
 
     sql = "SELECT * FROM tournaments WHERE standings_fetched = 1"
@@ -84,10 +95,22 @@ def tournaments():
     if fmt:
         sql += " AND format = ?"
         params.append(fmt)
+    if date_from:
+        sql += " AND date >= ?"
+        params.append(date_from)
+    if date_to:
+        sql += " AND date <= ?"
+        params.append(date_to + "T23:59:59.999Z")
+    if min_players.isdigit():
+        sql += " AND players >= ?"
+        params.append(int(min_players))
     sql += " ORDER BY date DESC LIMIT 300"
 
     rows = conn.execute(sql, params).fetchall()
-    return render_template("tournaments.html", rows=rows, q=q, fmt=fmt, formats=_known_formats(conn))
+    return render_template(
+        "tournaments.html", rows=rows, q=q, fmt=fmt, formats=_known_formats(conn),
+        date_from=date_from, date_to=date_to, min_players=min_players,
+    )
 
 
 @app.route("/tournament/<tid>")
@@ -153,6 +176,16 @@ def player_detail(player_key):
     ).fetchall()
     teams = _teams_by_tournament(mon_rows)
     return render_template("player_detail.html", p=p, entries=entries, teams=teams)
+
+
+@app.route("/dashboard")
+def dashboard():
+    conn = get_db()
+    exclude_ids = find_cross_source_duplicates(export_tournaments_index(conn))
+    data = export_dashboard(conn, exclude_ids)
+    formats = sorted(data.keys(), key=lambda f: -data[f]["total_teams"])
+    fmt = request.args.get("format", "").strip() or (formats[0] if formats else "")
+    return render_template("dashboard.html", data=data, formats=formats, fmt=fmt, selected=data.get(fmt))
 
 
 if __name__ == "__main__":

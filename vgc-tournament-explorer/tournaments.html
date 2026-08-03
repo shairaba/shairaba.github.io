@@ -12,6 +12,7 @@
     <nav>
       <a href="tournaments.html">Tournaments</a>
       <a href="players.html">Players</a>
+      <a href="dashboard.html">Dashboard</a>
     </nav>
   </header>
   <main class="container">
@@ -19,6 +20,11 @@
     <form class="filter-bar" id="filter-form">
       <input type="text" id="q" placeholder="Search by name...">
       <select id="format" class="pill-select"><option value="">All formats</option></select>
+      <span class="filter-label">From</span>
+      <input type="date" id="date-from">
+      <span class="filter-label">To</span>
+      <input type="date" id="date-to">
+      <input type="number" id="min-players" placeholder="Min players" min="0" class="num-input">
       <button type="submit">Filter</button>
     </form>
 
@@ -40,9 +46,16 @@
     function render() {
       const q = document.getElementById("q").value.trim().toLowerCase();
       const fmt = document.getElementById("format").value;
+      const dateFrom = document.getElementById("date-from").value;
+      const dateTo = document.getElementById("date-to").value;
+      const minPlayers = parseInt(document.getElementById("min-players").value, 10);
+
       let rows = allTournaments;
       if (q) rows = rows.filter((t) => t.name.toLowerCase().includes(q));
       if (fmt) rows = rows.filter((t) => t.format === fmt);
+      if (dateFrom) rows = rows.filter((t) => t.date.slice(0, 10) >= dateFrom);
+      if (dateTo) rows = rows.filter((t) => t.date.slice(0, 10) <= dateTo);
+      if (!isNaN(minPlayers)) rows = rows.filter((t) => t.players >= minPlayers);
 
       const shown = rows.slice(0, MAX_ROWS);
       const tbody = document.getElementById("rows");
@@ -71,6 +84,9 @@
       populateFormatSelect(document.getElementById("format"), formats, qs("format") || "");
       if (qs("format")) document.getElementById("format").value = qs("format");
       if (qs("q")) document.getElementById("q").value = qs("q");
+      if (qs("from")) document.getElementById("date-from").value = qs("from");
+      if (qs("to")) document.getElementById("date-to").value = qs("to");
+      if (qs("minPlayers")) document.getElementById("min-players").value = qs("minPlayers");
 
       document.getElementById("filter-form").addEventListener("submit", (e) => {
         e.preventDefault();

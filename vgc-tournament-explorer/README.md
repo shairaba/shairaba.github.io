@@ -6,17 +6,32 @@ Browse completed VGC tournaments from two sources - [Limitless
 TCG](https://play.limitlesstcg.com/tournaments/completed?game=VGC) and
 [pokestats.top](https://pokestats.top/championships/) (Battlefy Victory
 Road) - grouped by tournament or by player, with the full team (species,
-item, ability, nature, tera type, moves, and sprites) each player brought.
+item, ability, nature, tera type, moves, and sprites) each player brought,
+plus a dashboard of usage stats and results across the whole dataset.
+
+## Pages
+
+- **Home** — stats, recent tournaments, most active players, and a "recent
+  major winners" grid (last 30 days, sorted by turnout, each showing the
+  winner's team).
+- **Tournaments** — searchable/filterable list (name, format, date range,
+  minimum player count) linking to per-tournament standings.
+- **Players** — searchable/filterable list linking to a player's full
+  tournament history and the team they brought each time.
+- **Dashboard** — per-format: most-used Pokémon (usage %), most common
+  2-Pokémon cores, and a best-finishes leaderboard (wins / top 4 / top 8).
 
 ## How it works
 
 - `index.html`, `tournaments.html`, `tournament.html`, `players.html`,
-  `player.html`, `app.js`, `style.css` — a static, backend-free frontend.
-  Every page fetches plain JSON from `data/` client-side and renders it — no
-  server, no build step, just files GitHub Pages serves as-is.
+  `player.html`, `dashboard.html`, `app.js`, `style.css` — a static,
+  backend-free frontend. Every page fetches plain JSON from `data/`
+  client-side and renders it — no server, no build step, just files GitHub
+  Pages serves as-is.
 - `data/` — the published dataset: `tournaments.json` and `players.json`
-  (lightweight indexes powering the searchable list pages) plus one JSON
-  file per tournament (`data/tournaments/<id>.json`) and per player
+  (lightweight indexes powering the searchable list pages), `dashboard.json`
+  (per-format aggregates for the Dashboard page), plus one JSON file per
+  tournament (`data/tournaments/<id>.json`) and per player
   (`data/players/<player_key>.json`) fetched on demand for detail pages.
 - `tool/` — the Python pipeline that produces `data/`: fetches from
   Limitless's public tournament API and pokestats.top's (undocumented,
@@ -69,3 +84,10 @@ has no Mega-Evolution sprites), not something surfaced in the UI.
   moves) to avoid duplicating what's already in the tournament's own export;
   the full team is lazy-fetched from the tournament file when a row is
   expanded.
+- A handful of big crossover events (charity tournaments, majors) get
+  tracked independently by both Limitless and pokestats.top, landing as two
+  separate rows for the same real tournament. `export_static.py` detects
+  these (matching format + date + player count + name) and drops the
+  pokestats copy from published output/aggregates, preferring Limitless's
+  version. The DB itself keeps both rows untouched - this is purely an
+  export-time presentation choice.

@@ -1,3 +1,10 @@
+{% macro dashboard_sprite(species_id, name) %}
+  <span class="sprite-chip">
+    <img class="sprite" src="{{ sprite_url(species_id, 'limitless') }}" alt="{{ name }}" title="{{ name }}" loading="lazy"
+         onerror="this.onerror=null;this.src='{{ sprite_url(species_id, 'pokestats') }}';">
+  </span>
+{% endmacro %}
+
 {% macro team_sprites(team, game='limitless') %}
   <div class="sprite-row">
     {% for mon in team %}

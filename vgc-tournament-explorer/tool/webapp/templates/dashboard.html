@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% import "_macros.html" as macros %}
+{% block title %}Dashboard - VGC Extractor{% endblock %}
+{% block content %}
+  <h1>Dashboard</h1>
+  <p class="lede">Usage and results across every tracked tournament in one format.</p>
+
+  <form class="filter-bar" method="get">
+    <span class="filter-label">Format</span>
+    <select name="format" onchange="this.form.submit()">
+      {% for f in formats %}
+        <option value="{{ f }}" {% if f == fmt %}selected{% endif %}>{{ format_label(f) }} ({{ "{:,}".format(data[f].total_teams) }} teams)</option>
+      {% endfor %}
+    </select>
+  </form>
+
+  {% if selected %}
+  <p class="meta">{{ "{:,}".format(selected.total_teams) }} teams counted for {{ format_label(fmt) }}.</p>
+
+  <div class="two-col">
+    <section>
+      <h2>Most used Pok&eacute;mon</h2>
+      <div class="meter-list">
+        {% set max_count = selected.top_pokemon[0].count if selected.top_pokemon else 1 %}
+        {% for p in selected.top_pokemon %}
+        <div class="meter-row">
+          {{ macros.dashboard_sprite(p.species_id, p.species_name) }}
+          <div class="meter-body">
+            <div class="meter-label"><span class="truncate">{{ p.species_name }}</span><span class="meter-value">{{ p.usage_pct }}%</span></div>
+            <div class="meter-track"><div class="meter-fill" style="width:{{ (100 * p.count / max_count)|round(1) }}%"></div></div>
+          </div>
+        </div>
+        {% else %}
+        <p class="empty-state">No data.</p>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section>
+      <h2>Most common cores</h2>
+      <div class="core-list">
+        {% set max_core = selected.top_cores[0].count if selected.top_cores else 1 %}
+        {% for c in selected.top_cores %}
+        <div class="meter-row">
+          <span class="core-sprites">
+            {{ macros.dashboard_sprite(c.species[0].species_id, c.species[0].species_name) }}
+            {{ macros.dashboard_sprite(c.species[1].species_id, c.species[1].species_name) }}
+          </span>
+          <div class="meter-body">
+            <div class="meter-label"><span class="truncate">{{ c.species[0].species_name }} + {{ c.species[1].species_name }}</span><span class="meter-value">{{ c.usage_pct }}%</span></div>
+            <div class="meter-track"><div class="meter-fill" style="width:{{ (100 * c.count / max_core)|round(1) }}%"></div></div>
+          </div>
+        </div>
+        {% else %}
+        <p class="empty-state">No data.</p>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+
+  <section>
+    <h2>Best finishes</h2>
+    <div class="table-scroll">
+    <table class="list-table">
+      <colgroup><col><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:110px"></colgroup>
+      <thead><tr><th>Player</th><th>Wins</th><th>Top 4</th><th>Top 8</th><th>Tournaments</th></tr></thead>
+      <tbody>
+      {% for f in selected.best_finishes %}
+        <tr>
+          <td class="truncate"><a href="/player/{{ f.player_key }}">{{ f.name or f.player_key }}</a></td>
+          <td class="record">{{ f.wins }}</td>
+          <td class="record">{{ f.top4 }}</td>
+          <td class="record">{{ f.top8 }}</td>
+          <td class="record">{{ f.tournaments }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5">No data.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </section>
+  {% else %}
+  <p class="empty-state">No data yet. Run a sync first (see README).</p>
+  {% endif %}
+{% endblock %}
