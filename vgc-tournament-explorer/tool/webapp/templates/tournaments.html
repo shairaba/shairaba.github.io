@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Tournaments - VGC Extractor{% endblock %}
+{% block content %}
+  <h1>Tournaments</h1>
+  <form class="filter-bar" method="get">
+    <input type="text" name="q" placeholder="Search by name..." value="{{ q }}">
+    <select name="format">
+      <option value="">All formats</option>
+      {% for f in formats %}
+        <option value="{{ f }}" {% if f == fmt %}selected{% endif %}>{{ format_label(f) }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit">Filter</button>
+  </form>
+
+  <div class="table-scroll">
+  <table class="list-table">
+    <colgroup>
+      <col style="width:110px">
+      <col>
+      <col style="width:180px">
+      <col style="width:100px">
+    </colgroup>
+    <thead><tr><th>Date</th><th>Name</th><th>Format</th><th>Players</th></tr></thead>
+    <tbody>
+    {% for t in rows %}
+      <tr>
+        <td>{{ t.date[:10] }}</td>
+        <td class="truncate"><a href="/tournament/{{ t.id }}">{{ t.name }}</a></td>
+        <td><span class="badge">{{ format_label(t.format) }}</span></td>
+        <td>{{ t.players }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="4">No tournaments found. Run a sync first (see README).</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+{% endblock %}

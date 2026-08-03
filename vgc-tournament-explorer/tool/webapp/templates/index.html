@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}VGC Tournament Extractor{% endblock %}
+{% block content %}
+  <h1>VGC Tournament Data</h1>
+  <p class="lede">Extracted from <a href="https://play.limitlesstcg.com/tournaments/completed?game=VGC" target="_blank" rel="noopener">play.limitlesstcg.com</a>.</p>
+
+  <div class="stat-row">
+    <div class="stat"><div class="stat-num">{{ tcount }}</div><div class="stat-label">tournaments</div></div>
+    <div class="stat"><div class="stat-num">{{ pcount }}</div><div class="stat-label">players</div></div>
+    <div class="stat"><div class="stat-num">{{ ecount }}</div><div class="stat-label">entries</div></div>
+  </div>
+
+  <div class="two-col">
+    <section>
+      <h2>Recent tournaments</h2>
+      <div class="table-scroll">
+      <table class="list-table">
+        <colgroup>
+          <col style="width:92px">
+          <col>
+          <col style="width:150px">
+          <col style="width:76px">
+        </colgroup>
+        <thead><tr><th>Date</th><th>Name</th><th>Format</th><th>Players</th></tr></thead>
+        <tbody>
+        {% for t in recent %}
+          <tr>
+            <td>{{ t.date[:10] }}</td>
+            <td class="truncate"><a href="/tournament/{{ t.id }}">{{ t.name }}</a></td>
+            <td><span class="badge">{{ format_label(t.format) }}</span></td>
+            <td>{{ t.players }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      <p><a href="/tournaments">View all tournaments &rarr;</a></p>
+    </section>
+
+    <section>
+      <h2>Most active players</h2>
+      <div class="table-scroll">
+      <table class="list-table">
+        <colgroup>
+          <col>
+          <col style="width:100px">
+          <col style="width:110px">
+        </colgroup>
+        <thead><tr><th>Player</th><th>Country</th><th>Tournaments</th></tr></thead>
+        <tbody>
+        {% for p in top_players %}
+          <tr>
+            <td class="truncate"><a href="/player/{{ p.player_key }}">{{ p.name or p.player_key }}</a></td>
+            <td>{{ p.country or "" }}</td>
+            <td>{{ p.tcount }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      <p><a href="/players">View all players &rarr;</a></p>
+    </section>
+  </div>
+{% endblock %}

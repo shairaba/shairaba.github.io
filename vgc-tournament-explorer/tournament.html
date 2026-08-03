@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tournament - VGC Explorer</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html">VGC Explorer</a>
+    <nav>
+      <a href="tournaments.html">Tournaments</a>
+      <a href="players.html">Players</a>
+    </nav>
+  </header>
+  <main class="container" id="content">
+    <p class="loading">Loading&hellip;</p>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    (async function () {
+      const id = qs("id");
+      const content = document.getElementById("content");
+      if (!id) {
+        content.innerHTML = '<p class="empty-state">No tournament specified.</p>';
+        return;
+      }
+      let t;
+      try {
+        t = await fetchJSON(`data/tournaments/${encodeURIComponent(id)}.json`);
+      } catch (e) {
+        content.innerHTML = '<p class="empty-state">Tournament not found.</p>';
+        return;
+      }
+      document.title = `${t.name} - VGC Explorer`;
+
+      content.innerHTML = `
+        <p class="breadcrumb"><a href="tournaments.html">&larr; Tournaments</a></p>
+        <h1>${esc(t.name)}</h1>
+        <p class="meta">
+          ${esc(t.date.slice(0, 10))} &middot; <span class="badge">${esc(formatLabel(t.format))}</span>
+          &middot; ${t.players} players
+        </p>
+        <div class="table-scroll">
+        <table class="list-table standings-table">
+          <colgroup>
+            <col style="width:52px"><col style="width:22%"><col style="width:84px">
+            <col style="width:150px"><col style="width:280px">
+          </colgroup>
+          <thead><tr><th>#</th><th>Player</th><th>Country</th><th>Record</th><th>Team</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+        </div>
+      `;
+
+      const tbody = document.getElementById("rows");
+      tbody.innerHTML = t.entries
+        .map(
+          (e, i) => `
+        <tr class="standings-row" data-target="row-${i}">
+          <td>${e.placing != null ? e.placing : "-"}</td>
+          <td class="truncate"><a href="player.html?key=${esc(e.player_key)}">${esc(e.player_name || e.player_key)}</a></td>
+          <td>${esc(e.country || "")}</td>
+          <td class="record">${recordHtml(e)}</td>
+          <td class="team-cell"><div class="team-cell-inner">${spriteRowHtml(e.team)}<span class="chevron">&rsaquo;</span></div></td>
+        </tr>
+        <tr class="team-row" id="row-${i}">
+          <td colspan="5">${teamGridHtml(e.team)}</td>
+        </tr>`
+        )
+        .join("");
+
+      wireExpandableRows(tbody);
+    })();
+  </script>
+</body>
+</html>

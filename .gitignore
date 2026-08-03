@@ -2,3 +2,8 @@
 .DS_Store
 .DS_Store
 .DS_Store
+
+# vgc-tournament-explorer (Python tool - the published site's data/ dir IS tracked)
+vgc-tournament-explorer/tool/.venv/
+vgc-tournament-explorer/tool/data/
+vgc-tournament-explorer/tool/**/__pycache__/

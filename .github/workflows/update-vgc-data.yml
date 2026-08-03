@@ -1,0 +1,69 @@
+name: Update VGC Tournament Explorer data
+
+on:
+  schedule:
+    - cron: "23 4 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: vgc-tournament-explorer-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: vgc-tournament-explorer/tool
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Restore DB cache
+        uses: actions/cache/restore@v4
+        with:
+          path: vgc-tournament-explorer/tool/data/limitless.db
+          key: limitless-db-${{ github.run_id }}
+          restore-keys: |
+            limitless-db-
+
+      - name: Sync recent tournaments
+        run: python cli.py sync run --standings-limit 300
+
+      - name: Backfill older history
+        run: python cli.py sync backfill --pages 15 --standings-limit 200
+
+      - name: Show sync status
+        run: python cli.py sync status
+
+      - name: Save DB cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: vgc-tournament-explorer/tool/data/limitless.db
+          key: limitless-db-${{ github.run_id }}
+
+      - name: Export static JSON for the site
+        run: python export_static.py
+
+      - name: Commit and push updated data
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add vgc-tournament-explorer/data
+          if git diff --cached --quiet; then
+            echo "No data changes to commit."
+          else
+            git commit -m "Update VGC tournament data ($(date -u +%Y-%m-%d))"
+            git push
+          fi

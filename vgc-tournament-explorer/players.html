@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Players - VGC Explorer</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html">VGC Explorer</a>
+    <nav>
+      <a href="tournaments.html">Tournaments</a>
+      <a href="players.html">Players</a>
+    </nav>
+  </header>
+  <main class="container">
+    <h1>Players</h1>
+    <form class="filter-bar" id="filter-form">
+      <input type="text" id="q" placeholder="Search by name...">
+      <select id="format" class="pill-select"><option value="">All formats</option></select>
+      <button type="submit">Filter</button>
+    </form>
+
+    <div class="table-scroll">
+    <table class="list-table">
+      <colgroup><col><col style="width:120px"><col style="width:200px"></colgroup>
+      <thead><tr><th>Player</th><th>Country</th><th id="tcol-header">Tournaments</th></tr></thead>
+      <tbody id="rows"><tr><td colspan="3" class="loading">Loading&hellip;</td></tr></tbody>
+    </table>
+    </div>
+    <p class="showing-note" id="showing-note"></p>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    const MAX_ROWS = 300;
+    let allPlayers = [];
+
+    function render() {
+      const q = document.getElementById("q").value.trim().toLowerCase();
+      const fmt = document.getElementById("format").value;
+      let rows = allPlayers;
+      if (q) rows = rows.filter((p) => (p.name || p.player_key).toLowerCase().includes(q));
+
+      let withCount = rows.map((p) => ({
+        ...p,
+        displayCount: fmt ? p.formats[fmt] || 0 : p.tournament_count,
+      }));
+      if (fmt) withCount = withCount.filter((p) => p.displayCount > 0);
+      withCount.sort((a, b) => b.displayCount - a.displayCount);
+
+      document.getElementById("tcol-header").textContent = fmt ? "Tournaments (this format)" : "Tournaments";
+
+      const shown = withCount.slice(0, MAX_ROWS);
+      const tbody = document.getElementById("rows");
+      if (!shown.length) {
+        tbody.innerHTML = '<tr><td colspan="3" class="empty-state">No players found.</td></tr>';
+      } else {
+        tbody.innerHTML = shown
+          .map(
+            (p) => `
+          <tr>
+            <td class="truncate"><a href="player.html?key=${esc(p.player_key)}">${esc(p.name || p.player_key)}</a></td>
+            <td>${esc(p.country || "")}</td>
+            <td>${p.displayCount}</td>
+          </tr>`
+          )
+          .join("");
+      }
+      document.getElementById("showing-note").textContent =
+        withCount.length > MAX_ROWS ? `Showing ${MAX_ROWS} of ${withCount.length} matching players.` : "";
+    }
+
+    (async function () {
+      allPlayers = await fetchJSON("data/players.json");
+      const formatSet = new Set();
+      allPlayers.forEach((p) => Object.keys(p.formats || {}).forEach((f) => f && formatSet.add(f)));
+      populateFormatSelect(document.getElementById("format"), [...formatSet].sort(), qs("format") || "");
+      if (qs("format")) document.getElementById("format").value = qs("format");
+      if (qs("q")) document.getElementById("q").value = qs("q");
+
+      document.getElementById("filter-form").addEventListener("submit", (e) => {
+        e.preventDefault();
+        render();
+      });
+      document.getElementById("format").addEventListener("change", render);
+
+      render();
+    })();
+  </script>
+</body>
+</html>

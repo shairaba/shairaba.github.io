@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Player - VGC Explorer</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html">VGC Explorer</a>
+    <nav>
+      <a href="tournaments.html">Tournaments</a>
+      <a href="players.html">Players</a>
+    </nav>
+  </header>
+  <main class="container" id="content">
+    <p class="loading">Loading&hellip;</p>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    (async function () {
+      const key = qs("key");
+      const content = document.getElementById("content");
+      if (!key) {
+        content.innerHTML = '<p class="empty-state">No player specified.</p>';
+        return;
+      }
+      let p;
+      try {
+        p = await fetchJSON(`data/players/${encodeURIComponent(key)}.json`);
+      } catch (e) {
+        content.innerHTML = '<p class="empty-state">Player not found.</p>';
+        return;
+      }
+      document.title = `${p.name || p.player_key} - VGC Explorer`;
+
+      content.innerHTML = `
+        <p class="breadcrumb"><a href="players.html">&larr; Players</a></p>
+        <h1>${esc(p.name || p.player_key)}</h1>
+        <p class="meta">${esc(p.country || "")} &middot; ${p.entries.length} tournament(s)</p>
+        <div class="table-scroll">
+        <table class="list-table standings-table">
+          <colgroup>
+            <col style="width:96px"><col style="width:24%"><col style="width:150px">
+            <col style="width:70px"><col style="width:140px"><col style="width:280px">
+          </colgroup>
+          <thead><tr><th>Date</th><th>Tournament</th><th>Format</th><th>Placing</th><th>Record</th><th>Team</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+        </div>
+      `;
+
+      const tbody = document.getElementById("rows");
+      tbody.innerHTML = p.entries
+        .map(
+          (e, i) => `
+        <tr class="standings-row" data-target="row-${i}">
+          <td>${esc(e.tournament_date.slice(0, 10))}</td>
+          <td class="truncate"><a href="tournament.html?id=${esc(e.tournament_id)}">${esc(e.tournament_name)}</a></td>
+          <td><span class="badge">${esc(formatLabel(e.tournament_format))}</span></td>
+          <td>${e.placing != null ? e.placing : "-"}</td>
+          <td class="record">${recordHtml(e)}</td>
+          <td class="team-cell"><div class="team-cell-inner">${spriteRowHtml(e.team)}<span class="chevron">&rsaquo;</span></div></td>
+        </tr>
+        <tr class="team-row" id="row-${i}">
+          <td colspan="6">${teamGridHtml(e.team)}</td>
+        </tr>`
+        )
+        .join("");
+
+      wireExpandableRows(tbody);
+    })();
+  </script>
+</body>
+</html>

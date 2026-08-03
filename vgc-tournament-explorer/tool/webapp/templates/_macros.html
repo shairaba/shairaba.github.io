@@ -1,0 +1,37 @@
+{% macro team_sprites(team) %}
+  <div class="sprite-row">
+    {% for mon in team %}
+      <span class="sprite-chip">
+        <img class="sprite" src="{{ sprite_url(mon.species_id) }}" alt="{{ mon.species_name or mon.species_id }}" title="{{ mon.species_name or mon.species_id }}" loading="lazy">
+      </span>
+    {% endfor %}
+  </div>
+{% endmacro %}
+
+{% macro team_grid(team) %}
+  <div class="team-grid">
+    {% for mon in team %}
+      <div class="mon-card">
+        <div class="mon-header">
+          <span class="mon-sprite-chip">
+            <img class="mon-sprite" src="{{ sprite_url(mon.species_id) }}" alt="{{ mon.species_name or mon.species_id }}" loading="lazy">
+          </span>
+          <div class="mon-name">{{ mon.species_name or mon.species_id }}</div>
+        </div>
+        <div class="mon-line">
+          {% if mon.item %}<span class="mon-item">@ {{ mon.item }}</span>{% endif %}
+          {% if mon.tera %}<span class="mon-tera">Tera: {{ mon.tera }}</span>{% endif %}
+        </div>
+        <div class="mon-line mon-sub">
+          {% if mon.ability %}{{ mon.ability }}{% endif %}
+          {% if mon.nature %} &middot; {{ mon.nature }}{% endif %}
+        </div>
+        {% if mon.moves %}
+        <ul class="mon-moves">
+          {% for move in mon.moves %}<li>{{ move }}</li>{% endfor %}
+        </ul>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+{% endmacro %}

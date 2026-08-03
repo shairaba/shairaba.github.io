@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% import "_macros.html" as macros %}
+{% block title %}{{ p.name or p.player_key }} - VGC Extractor{% endblock %}
+{% block content %}
+  <p class="breadcrumb"><a href="/players">&larr; Players</a></p>
+  <h1>{{ p.name or p.player_key }}</h1>
+  <p class="meta">{{ p.country or "" }} &middot; {{ entries|length }} tournament(s)</p>
+
+  <div class="table-scroll">
+  <table class="list-table standings-table">
+    <colgroup>
+      <col style="width:96px">
+      <col style="width:24%">
+      <col style="width:150px">
+      <col style="width:70px">
+      <col style="width:140px">
+      <col style="width:280px">
+    </colgroup>
+    <thead><tr><th>Date</th><th>Tournament</th><th>Format</th><th>Placing</th><th>Record</th><th>Team</th></tr></thead>
+    <tbody>
+    {% for e in entries %}
+      <tr class="standings-row" data-target="row-{{ loop.index }}">
+        <td>{{ e.tournament_date[:10] }}</td>
+        <td class="truncate"><a href="/tournament/{{ e.tournament_id }}">{{ e.tournament_name }}</a></td>
+        <td><span class="badge">{{ format_label(e.tournament_format) }}</span></td>
+        <td>{{ e.placing if e.placing is not none else "-" }}</td>
+        <td class="record">{{ e.wins }}-{{ e.losses }}{% if e.ties %}-{{ e.ties }}{% endif %}{% if e.drop_round %} <span class="dropped">dropped R{{ e.drop_round }}</span>{% endif %}</td>
+        <td class="team-cell"><div class="team-cell-inner">{{ macros.team_sprites(teams.get(e.tournament_id, [])) }}<span class="chevron">&rsaquo;</span></div></td>
+      </tr>
+      <tr class="team-row" id="row-{{ loop.index }}">
+        <td colspan="6">
+          {% set team = teams.get(e.tournament_id) %}
+          {% if team %}
+            {{ macros.team_grid(team) }}
+          {% else %}
+            <span class="muted">No team list available.</span>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+
+  <script>
+    document.querySelectorAll('.standings-row').forEach(function (row) {
+      row.addEventListener('click', function (evt) {
+        if (evt.target.closest('a')) return;
+        var target = document.getElementById(row.dataset.target);
+        target.classList.toggle('open');
+        row.classList.toggle('expanded');
+      });
+    });
+  </script>
+{% endblock %}

@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VGC Tournament Explorer</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html">VGC Explorer</a>
+    <nav>
+      <a href="tournaments.html">Tournaments</a>
+      <a href="players.html">Players</a>
+    </nav>
+  </header>
+  <main class="container">
+    <h1>VGC Tournament Data</h1>
+    <p class="lede">Extracted from <a href="https://play.limitlesstcg.com/tournaments/completed?game=VGC" target="_blank" rel="noopener">play.limitlesstcg.com</a>.</p>
+
+    <div class="stat-row" id="stat-row">
+      <div class="stat"><div class="stat-num" id="stat-tournaments">&hellip;</div><div class="stat-label">tournaments</div></div>
+      <div class="stat"><div class="stat-num" id="stat-players">&hellip;</div><div class="stat-label">players</div></div>
+      <div class="stat"><div class="stat-num" id="stat-entries">&hellip;</div><div class="stat-label">entries</div></div>
+    </div>
+
+    <div class="two-col">
+      <section>
+        <h2>Recent tournaments</h2>
+        <div class="table-scroll">
+        <table class="list-table">
+          <colgroup><col style="width:92px"><col><col style="width:150px"><col style="width:76px"></colgroup>
+          <thead><tr><th>Date</th><th>Name</th><th>Format</th><th>Players</th></tr></thead>
+          <tbody id="recent-tournaments"><tr><td colspan="4" class="loading">Loading&hellip;</td></tr></tbody>
+        </table>
+        </div>
+        <p><a href="tournaments.html">View all tournaments &rarr;</a></p>
+      </section>
+
+      <section>
+        <h2>Most active players</h2>
+        <div class="table-scroll">
+        <table class="list-table">
+          <colgroup><col><col style="width:100px"><col style="width:110px"></colgroup>
+          <thead><tr><th>Player</th><th>Country</th><th>Tournaments</th></tr></thead>
+          <tbody id="top-players"><tr><td colspan="3" class="loading">Loading&hellip;</td></tr></tbody>
+        </table>
+        </div>
+        <p><a href="players.html">View all players &rarr;</a></p>
+      </section>
+    </div>
+
+    <p class="footnote" id="generated-note"></p>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    (async function () {
+      const [tournaments, players, meta] = await Promise.all([
+        fetchJSON("data/tournaments.json"),
+        fetchJSON("data/players.json"),
+        fetchJSON("data/meta.json").catch(() => null),
+      ]);
+
+      const entryCount = players.reduce((sum, p) => sum + p.tournament_count, 0);
+      document.getElementById("stat-tournaments").textContent = tournaments.length.toLocaleString();
+      document.getElementById("stat-players").textContent = players.length.toLocaleString();
+      document.getElementById("stat-entries").textContent = entryCount.toLocaleString();
+
+      const recentBody = document.getElementById("recent-tournaments");
+      recentBody.innerHTML = tournaments
+        .slice(0, 15)
+        .map(
+          (t) => `
+        <tr>
+          <td>${esc(t.date.slice(0, 10))}</td>
+          <td class="truncate"><a href="tournament.html?id=${esc(t.id)}">${esc(t.name)}</a></td>
+          <td><span class="badge">${esc(formatLabel(t.format))}</span></td>
+          <td>${t.players}</td>
+        </tr>`
+        )
+        .join("");
+
+      const topBody = document.getElementById("top-players");
+      topBody.innerHTML = players
+        .slice(0, 10)
+        .map(
+          (p) => `
+        <tr>
+          <td class="truncate"><a href="player.html?key=${esc(p.player_key)}">${esc(p.name || p.player_key)}</a></td>
+          <td>${esc(p.country || "")}</td>
+          <td>${p.tournament_count}</td>
+        </tr>`
+        )
+        .join("");
+
+      if (meta && meta.generated_at) {
+        const d = new Date(meta.generated_at);
+        document.getElementById("generated-note").textContent = `Data last synced ${d.toLocaleString()}`;
+      }
+    })();
+  </script>
+</body>
+</html>

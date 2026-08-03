@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% import "_macros.html" as macros %}
+{% block title %}{{ t.name }} - VGC Extractor{% endblock %}
+{% block content %}
+  <p class="breadcrumb"><a href="/tournaments">&larr; Tournaments</a></p>
+  <h1>{{ t.name }}</h1>
+  <p class="meta">
+    {{ t.date[:10] }} &middot; <span class="badge">{{ format_label(t.format) }}</span>
+    &middot; {{ t.players }} players
+  </p>
+
+  <div class="table-scroll">
+  <table class="list-table standings-table">
+    <colgroup>
+      <col style="width:52px">
+      <col style="width:22%">
+      <col style="width:84px">
+      <col style="width:150px">
+      <col style="width:280px">
+    </colgroup>
+    <thead><tr><th>#</th><th>Player</th><th>Country</th><th>Record</th><th>Team</th></tr></thead>
+    <tbody>
+    {% for e in entries %}
+      <tr class="standings-row" data-target="row-{{ loop.index }}">
+        <td>{{ e.placing if e.placing is not none else "-" }}</td>
+        <td class="truncate"><a href="/player/{{ e.player_key }}">{{ e.player_name or e.player_key }}</a></td>
+        <td>{{ e.country or "" }}</td>
+        <td class="record">{{ e.wins }}-{{ e.losses }}{% if e.ties %}-{{ e.ties }}{% endif %}{% if e.drop_round %} <span class="dropped">dropped R{{ e.drop_round }}</span>{% endif %}</td>
+        <td class="team-cell"><div class="team-cell-inner">{{ macros.team_sprites(teams.get(e.player_key, [])) }}<span class="chevron">&rsaquo;</span></div></td>
+      </tr>
+      <tr class="team-row" id="row-{{ loop.index }}">
+        <td colspan="5">
+          {% set team = teams.get(e.player_key) %}
+          {% if team %}
+            {{ macros.team_grid(team) }}
+          {% else %}
+            <span class="muted">No team list available.</span>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+
+  <script>
+    document.querySelectorAll('.standings-row').forEach(function (row) {
+      row.addEventListener('click', function (evt) {
+        if (evt.target.closest('a')) return;
+        var target = document.getElementById(row.dataset.target);
+        target.classList.toggle('open');
+        row.classList.toggle('expanded');
+      });
+    });
+  </script>
+{% endblock %}

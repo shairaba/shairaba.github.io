@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tournaments - VGC Explorer</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html">VGC Explorer</a>
+    <nav>
+      <a href="tournaments.html">Tournaments</a>
+      <a href="players.html">Players</a>
+    </nav>
+  </header>
+  <main class="container">
+    <h1>Tournaments</h1>
+    <form class="filter-bar" id="filter-form">
+      <input type="text" id="q" placeholder="Search by name...">
+      <select id="format" class="pill-select"><option value="">All formats</option></select>
+      <button type="submit">Filter</button>
+    </form>
+
+    <div class="table-scroll">
+    <table class="list-table">
+      <colgroup><col style="width:110px"><col><col style="width:180px"><col style="width:100px"></colgroup>
+      <thead><tr><th>Date</th><th>Name</th><th>Format</th><th>Players</th></tr></thead>
+      <tbody id="rows"><tr><td colspan="4" class="loading">Loading&hellip;</td></tr></tbody>
+    </table>
+    </div>
+    <p class="showing-note" id="showing-note"></p>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    const MAX_ROWS = 300;
+    let allTournaments = [];
+
+    function render() {
+      const q = document.getElementById("q").value.trim().toLowerCase();
+      const fmt = document.getElementById("format").value;
+      let rows = allTournaments;
+      if (q) rows = rows.filter((t) => t.name.toLowerCase().includes(q));
+      if (fmt) rows = rows.filter((t) => t.format === fmt);
+
+      const shown = rows.slice(0, MAX_ROWS);
+      const tbody = document.getElementById("rows");
+      if (!shown.length) {
+        tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No tournaments found.</td></tr>';
+      } else {
+        tbody.innerHTML = shown
+          .map(
+            (t) => `
+          <tr>
+            <td>${esc(t.date.slice(0, 10))}</td>
+            <td class="truncate"><a href="tournament.html?id=${esc(t.id)}">${esc(t.name)}</a></td>
+            <td><span class="badge">${esc(formatLabel(t.format))}</span></td>
+            <td>${t.players}</td>
+          </tr>`
+          )
+          .join("");
+      }
+      document.getElementById("showing-note").textContent =
+        rows.length > MAX_ROWS ? `Showing ${MAX_ROWS} of ${rows.length} matching tournaments.` : "";
+    }
+
+    (async function () {
+      allTournaments = await fetchJSON("data/tournaments.json");
+      const formats = [...new Set(allTournaments.map((t) => t.format).filter(Boolean))].sort();
+      populateFormatSelect(document.getElementById("format"), formats, qs("format") || "");
+      if (qs("format")) document.getElementById("format").value = qs("format");
+      if (qs("q")) document.getElementById("q").value = qs("q");
+
+      document.getElementById("filter-form").addEventListener("submit", (e) => {
+        e.preventDefault();
+        render();
+      });
+      document.getElementById("format").addEventListener("change", render);
+
+      render();
+    })();
+  </script>
+</body>
+</html>
