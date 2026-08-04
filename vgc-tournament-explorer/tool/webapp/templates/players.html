@@ -24,9 +24,9 @@
     <tbody>
     {% for p in rows %}
       <tr>
-        <td class="truncate"><a href="/player/{{ p.player_key }}">{{ p.name or p.player_key }}</a></td>
-        <td>{{ p.country or "" }}</td>
-        <td>{{ p.tcount }}</td>
+        <td class="cell-name truncate"><a href="/player/{{ p.player_key }}">{{ p.name or p.player_key }}</a></td>
+        <td class="cell-country">{{ p.country or "" }}</td>
+        <td class="cell-count">{{ p.tcount }}</td>
       </tr>
     {% else %}
       <tr><td colspan="3">No players found. Run a sync first (see README).</td></tr>

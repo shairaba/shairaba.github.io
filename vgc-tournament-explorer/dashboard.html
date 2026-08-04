@@ -122,11 +122,11 @@
         .map(
           (f) => `
         <tr>
-          <td class="truncate"><a href="player.html?key=${esc(f.player_key)}">${esc(f.name || f.player_key)}</a></td>
-          <td class="record">${f.wins}</td>
-          <td class="record">${f.top4}</td>
-          <td class="record">${f.top8}</td>
-          <td class="record">${f.tournaments}</td>
+          <td class="cell-name truncate"><a href="player.html?key=${esc(f.player_key)}">${esc(f.name || f.player_key)}</a></td>
+          <td class="cell-stat record"><span class="stat-label">Wins</span>${f.wins}</td>
+          <td class="cell-stat record"><span class="stat-label">Top 4</span>${f.top4}</td>
+          <td class="cell-stat record"><span class="stat-label">Top 8</span>${f.top8}</td>
+          <td class="cell-stat record"><span class="stat-label">Events</span>${f.tournaments}</td>
         </tr>`
         )
         .join("");

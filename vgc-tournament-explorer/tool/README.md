@@ -83,7 +83,9 @@ SQLite database at `data/limitless.db` (gitignored — never committed):
 - `tournaments` — one row per tournament. `game` holds the *source*
   (`"limitless"` or `"pokestats"`) — purely a technical marker for sprite-CDN
   selection, not the game/franchise (that's derived from `format` alone, see
-  `formats.py`).
+  `formats.py`). `is_in_person` flags official TPCi in-person events
+  (Regionals/Internationals/Special Events/Worlds) tracked by pokestats.top
+  alongside its online Victory Road data; always 0 for Limitless rows.
 - `players` — one row per player, keyed by a source-prefixed ID
   (`pokestats_...` vs a bare Limitless username) so the two identity spaces
   never collide. They are NOT the same identity space — see the top-level

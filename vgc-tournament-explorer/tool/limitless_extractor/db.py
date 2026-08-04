@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS tournaments (
     game TEXT,
     players INTEGER,
     organizer_id INTEGER,
+    is_in_person INTEGER NOT NULL DEFAULT 0,
     standings_fetched INTEGER NOT NULL DEFAULT 0,
     standings_fetched_at TEXT
 );
@@ -74,23 +75,35 @@ def get_connection() -> sqlite3.Connection:
     return conn
 
 
-def init_db(conn: sqlite3.Connection) -> None:
-    conn.executescript(SCHEMA)
+def _migrate(conn: sqlite3.Connection) -> None:
+    """CREATE TABLE IF NOT EXISTS won't add columns to a table that already
+    exists from before this column was introduced - handle that here."""
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(tournaments)")}
+    if "is_in_person" not in cols:
+        conn.execute("ALTER TABLE tournaments ADD COLUMN is_in_person INTEGER NOT NULL DEFAULT 0")
     conn.commit()
 
 
+def init_db(conn: sqlite3.Connection) -> None:
+    conn.executescript(SCHEMA)
+    conn.commit()
+    _migrate(conn)
+
+
 def upsert_tournament(conn: sqlite3.Connection, t: dict) -> None:
+    t = {**t, "is_in_person": t.get("is_in_person", 0)}
     conn.execute(
         """
-        INSERT INTO tournaments (id, name, date, format, game, players, organizer_id)
-        VALUES (:id, :name, :date, :format, :game, :players, :organizerId)
+        INSERT INTO tournaments (id, name, date, format, game, players, organizer_id, is_in_person)
+        VALUES (:id, :name, :date, :format, :game, :players, :organizerId, :is_in_person)
         ON CONFLICT(id) DO UPDATE SET
             name = excluded.name,
             date = excluded.date,
             format = excluded.format,
             game = excluded.game,
             players = excluded.players,
-            organizer_id = excluded.organizer_id
+            organizer_id = excluded.organizer_id,
+            is_in_person = excluded.is_in_person
         """,
         t,
     )

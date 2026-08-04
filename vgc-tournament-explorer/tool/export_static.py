@@ -94,7 +94,7 @@ def _entry_team_sprites_only(conn, tournament_id: str, player_key: str) -> list[
 
 def export_tournaments_index(conn) -> list[dict]:
     rows = conn.execute(
-        "SELECT id, name, date, format, game, players FROM tournaments "
+        "SELECT id, name, date, format, game, players, is_in_person FROM tournaments "
         "WHERE standings_fetched = 1 ORDER BY date DESC"
     ).fetchall()
     return [dict(r) for r in rows]

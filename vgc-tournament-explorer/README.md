@@ -15,7 +15,8 @@ plus a dashboard of usage stats and results across the whole dataset.
   major winners" grid (last 30 days, sorted by turnout, each showing the
   winner's team).
 - **Tournaments** — searchable/filterable list (name, format, date range,
-  minimum player count) linking to per-tournament standings.
+  minimum player count, and whether to include in-person events) linking to
+  per-tournament standings.
 - **Players** — searchable/filterable list linking to a player's full
   tournament history and the team they brought each time.
 - **Dashboard** — per-format: most-used Pokémon (usage %), most common
@@ -91,3 +92,17 @@ has no Mega-Evolution sprites), not something surfaced in the UI.
   pokestats copy from published output/aggregates, preferring Limitless's
   version. The DB itself keeps both rows untouched - this is purely an
   export-time presentation choice.
+- pokestats.top's "Championships" tracker covers both online Victory Road
+  tournaments and official in-person TPCi events (Regional/International
+  Championships, Special Events, Worlds) - `tournaments.is_in_person` flags
+  the latter (detected from pokestats' own ID scheme - see
+  `pokestats_api_reference.json`). The Tournaments page defaults to hiding
+  them (checkbox to include), and the homepage's "recent major winners"
+  always excludes them, since a single Regional/Worlds routinely outdraws
+  every online tournament combined and would otherwise dominate every
+  by-turnout ranking.
+- List tables abandon table layout entirely below 640px width in favor of
+  stacked card-rows (name/identity column gets priority, everything else
+  flows around it) - fixed table-cell columns can't all fit a real phone
+  width, and the name column loses that fight first if not handled
+  specially. Applied consistently to every list/standings table sitewide.

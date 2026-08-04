@@ -25,10 +25,10 @@
         <tbody>
         {% for t in recent %}
           <tr>
-            <td>{{ t.date[:10] }}</td>
-            <td class="truncate"><a href="/tournament/{{ t.id }}">{{ t.name }}</a></td>
-            <td><span class="badge">{{ format_label(t.format) }}</span></td>
-            <td>{{ t.players }}</td>
+            <td class="cell-date">{{ t.date[:10] }}</td>
+            <td class="cell-name truncate"><a href="/tournament/{{ t.id }}">{{ t.name }}</a></td>
+            <td class="cell-format"><span class="badge">{{ format_label(t.format) }}</span></td>
+            <td class="cell-count">{{ t.players }}</td>
           </tr>
         {% endfor %}
         </tbody>
@@ -50,9 +50,9 @@
         <tbody>
         {% for p in top_players %}
           <tr>
-            <td class="truncate"><a href="/player/{{ p.player_key }}">{{ p.name or p.player_key }}</a></td>
-            <td>{{ p.country or "" }}</td>
-            <td>{{ p.tcount }}</td>
+            <td class="cell-name truncate"><a href="/player/{{ p.player_key }}">{{ p.name or p.player_key }}</a></td>
+            <td class="cell-country">{{ p.country or "" }}</td>
+            <td class="cell-count">{{ p.tcount }}</td>
           </tr>
         {% endfor %}
         </tbody>

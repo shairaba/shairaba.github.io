@@ -62,9 +62,9 @@
           .map(
             (p) => `
           <tr>
-            <td class="truncate"><a href="player.html?key=${esc(p.player_key)}">${esc(p.name || p.player_key)}</a></td>
-            <td>${esc(p.country || "")}</td>
-            <td>${p.displayCount}</td>
+            <td class="cell-name truncate"><a href="player.html?key=${esc(p.player_key)}">${esc(p.name || p.player_key)}</a></td>
+            <td class="cell-country">${esc(p.country || "")}</td>
+            <td class="cell-count">${p.displayCount}</td>
           </tr>`
           )
           .join("");

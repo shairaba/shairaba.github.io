@@ -15,6 +15,10 @@
     <span class="filter-label">To</span>
     <input type="date" name="to" value="{{ date_to }}">
     <input type="number" name="min_players" placeholder="Min players" min="0" class="num-input" value="{{ min_players or '' }}">
+    <label class="filter-checkbox">
+      <input type="checkbox" name="in_person" value="1" {% if include_inperson %}checked{% endif %} onchange="this.form.submit()">
+      Include in-person events <span class="muted">(Regionals, Internationals, Special Events, Worlds)</span>
+    </label>
     <button type="submit">Filter</button>
   </form>
 
@@ -30,10 +34,10 @@
     <tbody>
     {% for t in rows %}
       <tr>
-        <td>{{ t.date[:10] }}</td>
-        <td class="truncate"><a href="/tournament/{{ t.id }}">{{ t.name }}</a></td>
-        <td><span class="badge">{{ format_label(t.format) }}</span></td>
-        <td>{{ t.players }}</td>
+        <td class="cell-date">{{ t.date[:10] }}</td>
+        <td class="cell-name truncate"><a href="/tournament/{{ t.id }}">{{ t.name }}</a></td>
+        <td class="cell-format"><span class="badge">{{ format_label(t.format) }}</span></td>
+        <td class="cell-count">{{ t.players }}</td>
       </tr>
     {% else %}
       <tr><td colspan="4">No tournaments found. Run a sync first (see README).</td></tr>

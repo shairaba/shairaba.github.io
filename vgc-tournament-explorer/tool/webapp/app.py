@@ -85,10 +85,13 @@ def tournaments():
     date_from = request.args.get("from", "").strip()
     date_to = request.args.get("to", "").strip()
     min_players = request.args.get("min_players", "").strip()
+    include_inperson = request.args.get("in_person") == "1"
     conn = get_db()
 
     sql = "SELECT * FROM tournaments WHERE standings_fetched = 1"
     params: list = []
+    if not include_inperson:
+        sql += " AND is_in_person = 0"
     if q:
         sql += " AND name LIKE ?"
         params.append(f"%{q}%")
@@ -109,7 +112,7 @@ def tournaments():
     rows = conn.execute(sql, params).fetchall()
     return render_template(
         "tournaments.html", rows=rows, q=q, fmt=fmt, formats=_known_formats(conn),
-        date_from=date_from, date_to=date_to, min_players=min_players,
+        date_from=date_from, date_to=date_to, min_players=min_players, include_inperson=include_inperson,
     )
 
 

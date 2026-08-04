@@ -150,6 +150,15 @@ h2 {
 .filter-bar button:hover { border-color: var(--accent); color: var(--accent); }
 .filter-label { align-self: center; color: var(--muted); font-size: .82rem; white-space: nowrap; }
 
+.filter-checkbox {
+  display: flex; align-items: center; gap: 7px;
+  color: var(--text); font-size: .86rem;
+  padding: 9px 4px;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.filter-checkbox input { width: auto; flex: none; accent-color: var(--accent); cursor: pointer; }
+
 /* Tables */
 .table-scroll { overflow-x: auto; border-radius: var(--radius); box-shadow: var(--shadow); }
 .list-table {
@@ -193,6 +202,7 @@ h2 {
 }
 
 .record { font-variant-numeric: tabular-nums; font-weight: 600; }
+.stat-label { display: none; }
 .dropped {
   display: inline-block;
   color: var(--warn);
@@ -246,7 +256,9 @@ h2 {
 .sprite { width: 26px; height: 26px; object-fit: contain; image-rendering: pixelated; }
 
 /* Expanded team grid */
-.team-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+/* Fixed 3x2 (a team is up to 6 Pokemon) rather than auto-fill, which left
+   an awkward 5-then-1 split at common container widths. */
+.team-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .mon-card {
   background: var(--panel);
   border: 1px solid var(--border);
@@ -316,20 +328,23 @@ h2 {
 
   .mon-sprite-chip { width: 34px; height: 34px; }
   .mon-sprite { width: 26px; height: 26px; }
-  .team-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .team-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .mon-card { padding: 10px 11px; }
 
-  /* Standings tables: fixed table-cell columns can't all fit a narrow
-     screen at once (name/team text/sprites need real room), so below this
-     width they stop being a table at all and become stacked cards instead -
-     name/tournament gets the identity row, the team sprites drop to their
-     own full-width line underneath. Column widths from colgroup no longer
-     apply once table layout is abandoned here, which is intentional. */
-  .standings-table, .standings-table tbody { display: block; width: 100%; }
-  .standings-table thead { display: none; }
-  .standings-table colgroup { display: none; }
+  /* Every list-table (not just standings tables with team sprites): fixed
+     table-cell columns can't all fit a narrow screen at once, and the name/
+     identity column always loses that fight first, so below this width all
+     of them stop being a table and become stacked card-rows instead - the
+     name gets top priority on its own visual weight, secondary info flows
+     around it, and (where present) team sprites drop to their own
+     full-width line underneath. Column widths from colgroup no longer apply
+     once table layout is abandoned here, which is intentional. Applied
+     consistently sitewide so every page's rows behave the same way. */
+  .list-table, .list-table tbody { display: block; width: 100%; }
+  .list-table thead { display: none; }
+  .list-table colgroup { display: none; }
 
-  .standings-row {
+  .list-table tbody tr:not(.team-row) {
     display: flex;
     flex-wrap: wrap;
     align-items: baseline;
@@ -338,7 +353,7 @@ h2 {
     padding: 11px 12px;
     border-bottom: 1px solid var(--border);
   }
-  .standings-row td { display: block; padding: 0; border: none; font-size: .84rem; }
+  .list-table tbody tr td { display: block; padding: 0; border: none; font-size: .84rem; }
 
   .cell-place { order: 0; flex: 0 0 auto; color: var(--muted); font-variant-numeric: tabular-nums; }
   .cell-name {
@@ -346,7 +361,9 @@ h2 {
     font-weight: 700; font-size: .95rem; color: var(--text);
   }
   .cell-date, .cell-format, .cell-country { order: 2; flex: 0 0 auto; color: var(--muted); font-size: .78rem; }
-  .cell-record { order: 3; flex: 0 0 auto; margin-left: auto; }
+  .cell-record, .cell-count, .cell-stat { order: 3; flex: 0 0 auto; margin-left: auto; }
+  .cell-count { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .stat-label { display: inline; color: var(--muted); font-size: .68rem; margin-right: 3px; }
   .cell-team {
     order: 10; flex: 1 0 100%; white-space: normal;
     padding-top: 4px !important;

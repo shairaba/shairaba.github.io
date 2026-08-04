@@ -26,7 +26,7 @@
     </div>
 
     <section>
-      <h2>Recent major winners <span class="muted" style="font-weight:400;text-transform:none;letter-spacing:0;">— last 30 days, sorted by turnout</span></h2>
+      <h2>Recent major winners <span class="muted" style="font-weight:400;text-transform:none;letter-spacing:0;">— last 30 days, online tournaments sorted by turnout</span></h2>
       <div class="winner-grid" id="winner-grid"><p class="loading">Loading&hellip;</p></div>
     </section>
 
@@ -79,10 +79,10 @@
         .map(
           (t) => `
         <tr>
-          <td>${esc(t.date.slice(0, 10))}</td>
-          <td class="truncate"><a href="tournament.html?id=${esc(t.id)}">${esc(t.name)}</a></td>
-          <td><span class="badge">${esc(formatLabel(t.format))}</span></td>
-          <td>${t.players}</td>
+          <td class="cell-date">${esc(t.date.slice(0, 10))}</td>
+          <td class="cell-name truncate"><a href="tournament.html?id=${esc(t.id)}">${esc(t.name)}</a></td>
+          <td class="cell-format"><span class="badge">${esc(formatLabel(t.format))}</span></td>
+          <td class="cell-count">${t.players}</td>
         </tr>`
         )
         .join("");
@@ -93,9 +93,9 @@
         .map(
           (p) => `
         <tr>
-          <td class="truncate"><a href="player.html?key=${esc(p.player_key)}">${esc(p.name || p.player_key)}</a></td>
-          <td>${esc(p.country || "")}</td>
-          <td>${p.tournament_count}</td>
+          <td class="cell-name truncate"><a href="player.html?key=${esc(p.player_key)}">${esc(p.name || p.player_key)}</a></td>
+          <td class="cell-country">${esc(p.country || "")}</td>
+          <td class="cell-count">${p.tournament_count}</td>
         </tr>`
         )
         .join("");
@@ -107,7 +107,12 @@
 
       const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
       const majors = tournaments
-        .filter((t) => t.date >= cutoff)
+        // In-person Regionals/Internationals/Worlds routinely draw 500-1500+
+        // players, dwarfing online tournaments and crowding them out of a
+        // by-turnout ranking entirely - exclude them here so online majors
+        // (which is what this whole site is otherwise about) get a chance
+        // to show up too.
+        .filter((t) => t.date >= cutoff && !t.is_in_person)
         .sort((a, b) => b.players - a.players)
         .slice(0, 6);
 

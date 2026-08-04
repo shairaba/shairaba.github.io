@@ -25,6 +25,10 @@
       <span class="filter-label">To</span>
       <input type="date" id="date-to">
       <input type="number" id="min-players" placeholder="Min players" min="0" class="num-input">
+      <label class="filter-checkbox">
+        <input type="checkbox" id="include-inperson">
+        Include in-person events <span class="muted">(Regionals, Internationals, Special Events, Worlds)</span>
+      </label>
       <button type="submit">Filter</button>
     </form>
 
@@ -49,8 +53,10 @@
       const dateFrom = document.getElementById("date-from").value;
       const dateTo = document.getElementById("date-to").value;
       const minPlayers = parseInt(document.getElementById("min-players").value, 10);
+      const includeInPerson = document.getElementById("include-inperson").checked;
 
       let rows = allTournaments;
+      if (!includeInPerson) rows = rows.filter((t) => !t.is_in_person);
       if (q) rows = rows.filter((t) => t.name.toLowerCase().includes(q));
       if (fmt) rows = rows.filter((t) => t.format === fmt);
       if (dateFrom) rows = rows.filter((t) => t.date.slice(0, 10) >= dateFrom);
@@ -66,10 +72,10 @@
           .map(
             (t) => `
           <tr>
-            <td>${esc(t.date.slice(0, 10))}</td>
-            <td class="truncate"><a href="tournament.html?id=${esc(t.id)}">${esc(t.name)}</a></td>
-            <td><span class="badge">${esc(formatLabel(t.format))}</span></td>
-            <td>${t.players}</td>
+            <td class="cell-date">${esc(t.date.slice(0, 10))}</td>
+            <td class="cell-name truncate"><a href="tournament.html?id=${esc(t.id)}">${esc(t.name)}</a></td>
+            <td class="cell-format"><span class="badge">${esc(formatLabel(t.format))}</span></td>
+            <td class="cell-count">${t.players}</td>
           </tr>`
           )
           .join("");
@@ -87,12 +93,14 @@
       if (qs("from")) document.getElementById("date-from").value = qs("from");
       if (qs("to")) document.getElementById("date-to").value = qs("to");
       if (qs("minPlayers")) document.getElementById("min-players").value = qs("minPlayers");
+      if (qs("inPerson") === "1") document.getElementById("include-inperson").checked = true;
 
       document.getElementById("filter-form").addEventListener("submit", (e) => {
         e.preventDefault();
         render();
       });
       document.getElementById("format").addEventListener("change", render);
+      document.getElementById("include-inperson").addEventListener("change", render);
 
       render();
     })();

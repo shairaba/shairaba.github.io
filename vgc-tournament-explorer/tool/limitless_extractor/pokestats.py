@@ -97,6 +97,18 @@ def player_key_prefix(native_id: str) -> str:
     return f"pokestats_{native_id}"
 
 
+def is_in_person(native_tournament_id: str) -> bool:
+    """pokestats' "Championships" tracker covers both online Victory Road
+    (Battlefy) tournaments and official in-person TPCi events (Regional/
+    International Championships, Special Events, Worlds). IDs cleanly
+    distinguish the two: online tournaments are "vr..."-prefixed, in-person
+    ones are bare zero-padded numbers like "0000190-0" - verified as a
+    perfect 1:1 split against name patterns ("Regional Championship" etc.)
+    across the full dataset, so this is the authoritative signal rather than
+    matching on the (translatable, inconsistently formatted) name."""
+    return bool(re.match(r"^\d+(-\d+)?$", native_tournament_id))
+
+
 def translate_tournament(reg: str, t: dict) -> dict | None:
     fmt = REG_TO_FORMAT.get(reg)
     if fmt is None:
@@ -109,6 +121,7 @@ def translate_tournament(reg: str, t: dict) -> dict | None:
         "game": SOURCE,
         "players": t.get("players") or 0,
         "organizerId": None,
+        "is_in_person": 1 if is_in_person(t["id"]) else 0,
     }
 
 
