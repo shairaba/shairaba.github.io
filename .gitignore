@@ -13,3 +13,4 @@ pokemon-events-italia/tool/.venv/
 pokemon-events-italia/tool/data/raw/
 pokemon-events-italia/tool/**/__pycache__/
 pokemon-events-italia/tool/.chrome-profile/
+pokemon-events-italia/tool/profile-seed/

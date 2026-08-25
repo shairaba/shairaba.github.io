@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+**/__pycache__/
+data/raw/
+
+# Deliberately NOT excluding .chrome-profile/ here (unlike the repo root
+# .gitignore, which keeps it out of git) - `apify push` reads this file to
+# decide what to upload, and the transplanted profile is the entire point
+# of this actor.

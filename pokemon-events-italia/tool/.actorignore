@@ -1,0 +1,6 @@
+# .chrome-profile/ is excluded from git (the repo's root .gitignore) since
+# it holds real session cookies, but `apify push` respects that same
+# git-ignore status by default - these negations force it to be uploaded
+# anyway, since it's the entire point of this actor.
+!.chrome-profile/
+!.chrome-profile/**

@@ -57,9 +57,19 @@ as a backup for whenever the machine happens to already be awake then
 (`StartCalendarInterval`). `auto_run.py` checks `data/events.json`'s
 `last_synced_at` and only actually invokes `cli.py run` if it's more
 than 20h stale, so logging in several times a day doesn't re-trigger the
-real-Chrome bootstrap more than once. It never auto-commits - it just
-leaves a fresh diff in `data/events.json` for you to review and commit
-by hand, same as running `cli.py run` manually. Output/errors land in
+real-Chrome bootstrap more than once. On a successful run it also commits
+and pushes `data/events.json` itself, unattended - no review step. This
+was a deliberate choice after cloud alternatives (a custom Apify actor,
+Oracle Cloud's Always Free tier) both hit real friction - Apify's shared
+IPs likely being flagged by Incapsula independently of the profile
+transplant, Oracle's signup fighting a false duplicate-account flag - so
+this fell back to the one thing already known to work reliably: this
+machine, own profile, but now fully hands-off. The commit step only ever
+touches `data/events.json` via a pathspec on `git commit` (never `git add
+-A`/`commit -a`), so it can't sweep up unrelated in-progress changes
+elsewhere in this monorepo, and `cli.py run`'s own `SuspiciousEmptyFetchError`
+already refuses to write the store at all on a fetch that looks broken -
+there's nothing bad here to accidentally publish. Output/errors land in
 `tool/data/raw/auto_run.log` (gitignored).
 
 Manage the agent with:

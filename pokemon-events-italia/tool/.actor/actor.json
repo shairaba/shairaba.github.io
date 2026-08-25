@@ -1,0 +1,11 @@
+{
+    "actorSpecification": 1,
+    "name": "pokemon-events-italia-scraper",
+    "version": "0.1",
+    "buildTag": "latest",
+    "defaultRunOptions": {
+        "build": "latest",
+        "timeoutSecs": 300,
+        "memoryMbytes": 4096
+    }
+}
