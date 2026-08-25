@@ -39,7 +39,12 @@ def save_store(path: Path, store: dict) -> None:
     fd, tmp_path = tempfile.mkstemp(dir=path.parent, prefix=".events-", suffix=".json.tmp")
     try:
         with os.fdopen(fd, "w") as f:
-            json.dump(store, f, indent=2, ensure_ascii=False, sort_keys=True)
+            # Minified, not pretty-printed: this file is fetched directly by
+            # real visitors' browsers (no separate export/build step), and
+            # at nationwide scale (thousands of events) indent=2 roughly
+            # doubles the download size for no benefit to them. sort_keys
+            # still keeps regenerated diffs reviewable.
+            json.dump(store, f, separators=(",", ":"), ensure_ascii=False, sort_keys=True)
         os.replace(tmp_path, path)
     except BaseException:
         Path(tmp_path).unlink(missing_ok=True)

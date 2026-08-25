@@ -1,36 +1,48 @@
-# Lombardia VGC Event Scraper (tool)
+# Pokemon Event Scraper (tool)
 
-Pulls upcoming Pokemon VGC (video game) league/tournament events in
-Lombardy from the official Pokemon Event Locator's internal API into
-`../data/events.json` - the file the static site at `../` reads.
+Pulls upcoming Pokemon events (Video Game/VGC, TCG, and Pokemon GO)
+nationwide across Italy from the official Pokemon Event Locator's
+internal API into `../data/events.json` - the file the static site at
+`../` reads.
 
-## Why this needs a real browser, and why it runs locally
+## Why this needs your real Chrome profile
 
 `events.pokemon.com` is protected by Imperva/Incapsula plus an
-Akamai-style bot sensor (`reese84` cookie). Static assets and the page
-itself load fine for any client, but the app's own internal API calls
-(`screenservices/*`, including the one this tool needs) get 403'd when
-the browser's fingerprint looks automated - most concretely, a
-GPU-less/headless rendering environment (confirmed by testing from a
-GitHub Actions runner: the app loaded completely, then its own first API
-call failed with `403` and a WebGL "no available adapters" warning in
-the console).
+Akamai-style bot sensor (`reese84` cookie). Getting a fully automated
+scraper working here took real live testing to nail down - the site's
+own bootstrap API call kept 403'ing regardless of headed/headless mode,
+regardless of using the real Google Chrome binary (`channel="chrome"`),
+regardless of IP (residential or a GitHub Actions datacenter runner).
 
-Two things fixed this:
-- **Headed Chromium**, not headless - `browser_client.py` launches with
-  `headless=False` by default (see `PokemonEventLocatorClient`). This is
-  why the scraper runs from your own machine (real GPU, real display)
-  rather than a CI runner.
-- The CSRF token (`X-Csrftoken` header) is read fresh from the
-  `nr2Users` cookie's `crf=` segment every run, not hardcoded - it's a
-  double-submit-cookie value the server issues per session.
+**The one thing that reliably works: driving a copy of this machine's
+own, organically-aged Chrome profile**, not a fresh automation profile -
+even with the exact same Chrome binary and headed settings. A brand-new
+profile with zero history looks synthetic to whatever heuristic is
+scoring these sessions; a real one doesn't. `chrome_profile.py` copies
+just the session-relevant files (cookies, local storage, preferences -
+not the multi-GB full profile) from `~/Library/Application
+Support/Google/Chrome/Default` into `tool/.chrome-profile/`, and
+`browser_client.py` drives that copy via
+`launch_persistent_context(channel="chrome")`.
+
+Even with a real profile, the site's session-level challenge doesn't
+pass 100% of the time - this is natural variance, not something wrong
+with the approach - so `PokemonEventLocatorClient.bootstrap()` retries
+with growing backoff (4 attempts, 8s/16s/24s) before giving up.
+
+Once bootstrapped, the actual API calls are cheap in-page `fetch()`
+calls via `page.evaluate()` (not a Playwright `APIRequestContext`, which
+doesn't share Chromium's own TLS/HTTP2 fingerprint) - confirmed live
+that the **same session can be reused for many queries** (different
+lat/long, different game filters) without re-navigating, which is why a
+full nationwide, all-games sync is a couple dozen lightweight calls
+after one bootstrap, not dozens of page loads.
 
 **This is why there's no GitHub Actions workflow scraping on a
-schedule** (unlike the sibling `vgc-tournament-explorer/`) - CI runners
-don't have a real GPU/display, and testing showed that's specifically
-what gets the app's API calls blocked. Run this manually (or via your
-own machine's local scheduler, e.g. `launchd`/`cron`) and commit the
-result when you want to refresh the published data.
+schedule** (unlike the sibling `vgc-tournament-explorer/`) - a CI runner
+has no organically-aged browser profile to copy from. Run this manually
+(or via your own machine's local scheduler, e.g. `launchd`/`cron`) and
+commit the result when you want to refresh the published data.
 
 ## Setup
 
@@ -40,52 +52,67 @@ python3 -m venv .venv
 .venv/bin/python -m playwright install chromium
 ```
 
+Requires the real Google Chrome browser installed on this machine
+(`channel="chrome"` - not the Playwright-bundled Chromium used for
+`--headless` testing).
+
 ## Commands
 
 ```bash
-# Fetch, filter to Lombardy, and upsert into ../data/events.json.
-# Safe to re-run any time - events missing from a fresh fetch are marked
-# inactive (not deleted), so history isn't lost when an event's date passes.
+# Fetch every game (vg/tcg/pgo) across nationwide anchor points, filter
+# to Italy, and upsert into ../data/events.json. Safe to re-run any time
+# - events missing from a fresh fetch are marked inactive (not deleted),
+# so history isn't lost when an event's date passes.
 .venv/bin/python cli.py run
 
-# See what's currently in the store.
+# See what's currently in the store (counts, by region, by game).
 .venv/bin/python cli.py status
 
-# Fire one raw request and dump the response to data/raw/ for manual
-# inspection, without touching the store - useful if the site's response
-# shape ever changes and `run` starts erroring.
+# Fire one raw request (single point, single game) and dump the response
+# to tool/data/raw/ for manual inspection, without touching the store -
+# useful if the site's response shape ever changes and `run` starts
+# erroring.
 .venv/bin/python cli.py inspect
+
+# Re-copy session state from the real local Chrome profile. Run this if
+# `run` starts failing to bootstrap even after its built-in retries.
+.venv/bin/python cli.py refresh-profile
 ```
 
 Useful flags on `run`:
-- `--latitude` / `--longitude` / `--range-km` - search center + radius in
-  km. Defaults to the captured Milan point (45.468503, 9.1824027) with a
-  150km radius, which covers most of Lombardy plus some of Piemonte,
-  Emilia-Romagna, Liguria, and Veneto (filtered out client-side - see
-  `filters.py`).
-- `--extra-points "lat,lon;lat,lon"` - additional search centers merged
-  in by event GUID, for covering any gap the default radius might miss
-  (e.g. Sondrio/Valtellina, near the edge of a 150km circle from Milan).
+- `--filters vg,tcg,pgo` - which games to query (default: all three).
+- `--range-km` - search radius per anchor point (default 150km).
+- `--points "lat,lon;lat,lon"` - override the built-in nationwide anchor
+  points (`sync.ITALY_SEARCH_POINTS`, one per major metro area/region)
+  with your own, for a targeted re-run instead of a full nationwide sync.
 - `--force-empty` - the `run` command refuses to proceed if a fetch comes
   back with fewer than half as many events as the store's current active
   count, since that's much more likely to mean a broken scrape (stale
   `versionInfo`, expired session, a WAF block) than a real drop in
   events. Pass this flag if a genuinely smaller result is expected.
-- `--headless` - opt into headless mode. Expected to fail with a 403 per
-  the above; exists for re-testing if the site's bot protection ever
-  changes.
+- `--headless` - opt into headless mode. Never once gotten past the
+  site's WAF in testing, regardless of profile; exists for re-testing if
+  the site's bot protection ever changes.
+
+If live automation is ever blocked again (IP reputation, a bot-detection
+change, etc.), the fallback that's actually been used to seed real data
+in this project is a browser-console script run by hand in a real
+Chrome tab - ask for one to be regenerated if needed; it mirrors
+`api.py`'s payload builder and loops the same nationwide points/games.
 
 ## Data model
 
 `../data/events.json`: `{"schema_version", "last_synced_at", "events": {<guid>: {...}}}`,
-keyed by event GUID for O(1) upsert. Each event record: `guid, display_id,
-name, activity_type (play_session|tournament), event_type_tags, series_name,
-category, products, status, start_date, registration_start,
+keyed by event GUID for O(1) upsert, minified (not pretty-printed) since
+this file is fetched directly by real visitors' browsers at nationwide
+scale. Each event record: `guid, display_id, name, activity_type
+(play_session|tournament), event_type_tags, series_name, category,
+products (vg/tcg/pgo), status, start_date, registration_start,
 registration_end, admission, details, event_website,
-third_party_registration_website, contact_email, contact_phone, venue_name,
-full_address, latitude, longitude, timezone, activity_group_name,
-activity_group_display_id, attributes, first_seen_at, last_seen_at,
-is_active`.
+third_party_registration_website, contact_email, contact_phone,
+venue_name, full_address, region, latitude, longitude, timezone,
+activity_group_name, activity_group_display_id, attributes,
+first_seen_at, last_seen_at, is_active`.
 
 Raw fields are kept close to the API's own names/values rather than
 translated into presentation strings - same convention as the sibling
@@ -94,21 +121,39 @@ formatting.
 
 ## Known quirks
 
+- **The game filter needs two fields set together.** `screenData.variables.filters`
+  alone does *not* change which game's events come back - the request
+  also needs the matching entry in
+  `LocationFilters.ProductTypes.List[].IsSelected` flipped, or the server
+  silently keeps returning whatever the template's original selection
+  was (caught live: querying "vg", "tcg", and "pgo" all returned the
+  identical count until this was fixed). `api.py::build_payload` sets
+  both.
 - **`name` is often empty.** Recurring league sessions frequently have no
   event-specific name - only the venue/store name
   (`activity_group_name`/`venue_name`). The frontend falls back through
   `name -> activity_group_name -> venue_name`.
-- **Region isn't a clean field.** There's no `state`/`region` param on the
-  API - only lat/long + range. Matching happens against each event's
-  free-text `full_address`, which comes in at least two different
-  formats:
-  - `"<street>, <city>, LOMBARDIA <postal>, IT"` - region name spelled out.
-  - `"<street>, <postal> <city> <PROVINCE_CODE>, ITALY"` - no region name,
-    just a two-letter province code (also note: country suffix varies
-    between `"IT"` and `"ITALY"`).
-  In a 322-event sample, ~15% of genuine Lombardy events (Milano, Como,
-  Bergamo, Lecco) only had the second format - matching on the region
-  name string alone silently drops them. `filters.py` checks both.
+- **There's no reliable region/state field to filter on - but the
+  country marker is reliable.** The API has no country/region param at
+  all, only lat/long + range, so nationwide coverage also reaches into
+  Switzerland/France/Germany/Austria near the borders.
+  `filters.matches_italy()` deliberately just checks whether the address
+  ends in `", IT"` or `", ITALY"` - simpler than parsing out a
+  region/province, and it turned out to be *more* reliable: verified
+  against a real nationwide sample, every genuinely foreign address ended
+  in its own country's marker, while every real Italian address ended in
+  the Italy marker even when the region/province portion was missing,
+  misspelled, or a data-quality placeholder on the source's end (literal
+  "ITALIA"/"ITALY" or "---------" where a real province should be).
+  `region_from_address()` is separate best-effort enrichment for the
+  stored `region` field (not a gate), checked three ways - spelled-out
+  region name, spelled-out province *name*, or a bare two-letter province
+  *code* - and returns `None` for the small fraction of addresses (~1.4%
+  in testing) that don't resolve any of the three. Province-name matching
+  is deliberately restricted to the address minus its first (street)
+  segment, since a blanket whole-address search would false-positive on
+  a street literally called "Via Roma" or "Corso Torino" in a town
+  nowhere near either place.
 - **`MaxRecords` isn't a hard cap** in practice - a request for 200
   returned 322 results in testing. `sync.py` defaults it generously high
   (1000) so one call covers the search radius without pagination.
@@ -116,7 +161,6 @@ formatting.
   stamps baked into `captured_request_template.json`. If the site
   redeploys, these could go stale and the request could start failing -
   if `run` starts erroring, run `inspect` and compare against a fresh
-  capture (see "Why this needs a real browser" above for how sessions are
-  bootstrapped; the live values are visible in the browser's Network tab
+  capture (the live values are visible in the browser's Network tab
   under `moduleservices/moduleversioninfo` and `moduleservices/moduleinfo`
   when browsing the site directly).

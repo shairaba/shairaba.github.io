@@ -1,7 +1,20 @@
-"""Orchestration: fetch -> normalize -> filter -> upsert -> save."""
+"""Orchestration: fetch -> normalize -> filter -> upsert -> save.
+
+Coverage is nationwide by default: a fixed set of anchor points (one per
+major metro area, roughly one per region) each searched with a 150km
+radius, which together cover all 20 Italian regions with comfortable
+overlap. Each point is queried once per game (video game / TCG / Pokemon
+GO) - all within a *single* bootstrapped browser session (one navigation,
+reused for every subsequent query), since testing confirmed the same
+session can be reused for different lat/long and different product
+filters without re-navigating. This keeps a full nationwide, all-games
+sync to a couple dozen lightweight API calls instead of dozens of full
+page loads.
+"""
 
 from __future__ import annotations
 
+import time
 from datetime import date, datetime, timezone
 from pathlib import Path
 
@@ -21,71 +34,111 @@ DEFAULT_MAX_RECORDS = 1000
 # and refuses to mass-deactivate everything without --force-empty.
 MIN_FETCH_RATIO = 0.5
 
+# Be a reasonable citizen toward the target site between queries within a
+# session - these are cheap in-page fetch() calls, not full navigations,
+# but there's no reason to hammer them back-to-back either.
+QUERY_DELAY_SECONDS = 1.5
+
+GAME_FILTERS = ["vg", "tcg", "pgo"]
+
+# One anchor point per major metro area - together these cover all 20
+# Italian regions at a 150km radius with comfortable overlap. A few
+# (Bolzano, Trieste) sit close to a border on purpose, since a smaller
+# radius from those anchors would otherwise leave a gap at the edge of the
+# country - matches_italy() filters out whatever spillover into
+# Switzerland/Austria/France/Slovenia that causes.
+ITALY_SEARCH_POINTS = [
+    ("Milano", "45.4642", "9.1900"),
+    ("Torino", "45.0703", "7.6869"),
+    ("Genova", "44.4056", "8.9463"),
+    ("Bologna", "44.4949", "11.3426"),
+    ("Venezia", "45.4408", "12.3155"),
+    ("Bolzano", "46.4983", "11.3548"),
+    ("Firenze", "43.7696", "11.2558"),
+    ("Roma", "41.9028", "12.4964"),
+    ("Napoli", "40.8518", "14.2681"),
+    ("Bari", "41.1171", "16.8719"),
+    ("Reggio Calabria", "38.1113", "15.6619"),
+    ("Palermo", "38.1157", "13.3615"),
+    ("Catania", "37.5079", "15.0830"),
+    ("Cagliari", "39.2238", "9.1217"),
+]
+
 
 class SuspiciousEmptyFetchError(RuntimeError):
     pass
 
 
-def fetch_lombardy_events(
-    search: SearchParams,
+def fetch_italy_events(
+    range_km: str,
+    start_date: str,
+    game_filters: list[str],
     max_records: int = DEFAULT_MAX_RECORDS,
     headless: bool = False,
-    extra_points: list[tuple[str, str]] | None = None,
+    search_points: list[tuple[str, str, str]] | None = None,
 ) -> list[dict]:
-    """Fetch + normalize + filter, optionally merging extra search points
-    (by GUID) to cover coverage gaps a single radius might miss."""
+    """Fetch + normalize + filter across every (point x game) combination,
+    merged by GUID. `search_points` is a list of (label, lat, lon)."""
+    points = search_points if search_points is not None else ITALY_SEARCH_POINTS
     all_normalized: dict[str, dict] = {}
 
-    search_points = [(search.latitude, search.longitude)] + (extra_points or [])
     with PokemonEventLocatorClient(headless=headless) as client:
-        for latitude, longitude in search_points:
-            point_search = SearchParams(
-                latitude=latitude,
-                longitude=longitude,
-                range_km=search.range_km,
-                start_date=search.start_date,
-                filters=search.filters,
-                locale=search.locale,
-            )
-            client.bootstrap(point_search)
-            payload = api.build_payload(point_search, max_records=max_records)
-            response = client.post_json(payload)
-            raw_events = api.parse_event_list(response)
+        first_label, first_lat, first_lon = points[0]
+        bootstrap_search = SearchParams(
+            latitude=first_lat, longitude=first_lon, range_km=range_km,
+            start_date=start_date, filters=game_filters[0],
+        )
+        print(f"Bootstrapping session at {first_label}...")
+        client.bootstrap(bootstrap_search)
+        print("Session ready.")
 
-            distinct_states = sorted({(e.get("Address") or {}).get("Full_address", "").split(",")[-1].strip() for e in raw_events})
-            print(f"  [{latitude},{longitude}] fetched {len(raw_events)} raw events. Country suffixes seen: {distinct_states}")
+        total_queries = len(points) * len(game_filters)
+        done = 0
+        for label, lat, lon in points:
+            for game in game_filters:
+                done += 1
+                search = SearchParams(latitude=lat, longitude=lon, range_km=range_km, start_date=start_date, filters=game)
+                payload = api.build_payload(search, max_records=max_records)
+                response = client.post_json(payload)
+                raw_events = api.parse_event_list(response)
 
-            for raw in raw_events:
-                normalized = api.normalize_event(raw)
-                if normalized is None:
-                    continue
-                if not filters.matches_lombardy(normalized["full_address"]):
-                    continue
-                all_normalized[normalized["guid"]] = normalized
+                kept = 0
+                for raw in raw_events:
+                    normalized = api.normalize_event(raw)
+                    if normalized is None:
+                        continue
+                    if not filters.matches_italy(normalized["full_address"]):
+                        continue
+                    all_normalized[normalized["guid"]] = normalized
+                    kept += 1
+
+                print(f"  [{done}/{total_queries}] {label} / {game}: {len(raw_events)} raw, {kept} kept")
+                if done < total_queries:
+                    time.sleep(QUERY_DELAY_SECONDS)
 
     return list(all_normalized.values())
 
 
 def cmd_run(args) -> None:
-    search = SearchParams(
-        latitude=args.latitude,
-        longitude=args.longitude,
+    game_filters = [g.strip() for g in args.filters.split(",")] if args.filters else GAME_FILTERS
+
+    search_points = None
+    if args.points:
+        search_points = []
+        for entry in args.points.split(";"):
+            lat, lon = entry.split(",")
+            search_points.append((f"{lat.strip()},{lon.strip()}", lat.strip(), lon.strip()))
+
+    print(f"Fetching events nationwide (games: {', '.join(game_filters)})...")
+    events = fetch_italy_events(
         range_km=args.range_km,
         start_date=date.today().isoformat(),
-        filters=args.filters,
+        game_filters=game_filters,
+        max_records=args.max_records,
+        headless=args.headless,
+        search_points=search_points,
     )
-    extra_points = None
-    if args.extra_points:
-        extra_points = []
-        for pair in args.extra_points.split(";"):
-            lat, lon = pair.split(",")
-            extra_points.append((lat.strip(), lon.strip()))
-
-    print("Fetching Lombardy events...")
-    events = fetch_lombardy_events(
-        search, max_records=args.max_records, headless=args.headless, extra_points=extra_points
-    )
-    print(f"Kept {len(events)} events matching Lombardy after filtering.")
+    print(f"Kept {len(events)} events after filtering to Italy.")
 
     store_path = Path(args.out)
     data = store.load_store(store_path)
@@ -122,3 +175,14 @@ def cmd_status(args) -> None:
         dates = sorted(e["start_date"] for e in active if e.get("start_date"))
         if dates:
             print(f"  date range:      {dates[0]}  ..  {dates[-1]}")
+        from collections import Counter
+
+        regions = Counter(e.get("region") or "(unknown)" for e in active)
+        print("  by region:")
+        for region, count in regions.most_common():
+            print(f"    {region:24} {count}")
+        games = Counter()
+        for e in active:
+            for p in e.get("products") or []:
+                games[p] += 1
+        print(f"  by game:         {dict(games)}")

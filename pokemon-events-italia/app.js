@@ -133,6 +133,10 @@ function formatAdmission(event) {
   return numeric ? `${numeric}€` : raw;
 }
 
+function googleMapsDirectionsUrl(event) {
+  return `https://www.google.com/maps/dir/?api=1&destination=${event.latitude},${event.longitude}`;
+}
+
 /* Shared event-card markup for both the List view and the Calendar day
    list. `showDate` prepends the date to the subtitle line (List spans many
    days; Calendar's day-strip already establishes the date, so it only

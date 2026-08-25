@@ -21,6 +21,7 @@ import copy
 import json
 from pathlib import Path
 
+from . import filters
 from .browser_client import SearchParams
 
 TEMPLATE_PATH = Path(__file__).resolve().parent / "captured_request_template.json"
@@ -42,6 +43,13 @@ def build_payload(search: SearchParams, max_records: int) -> dict:
     variables["MaxRecords"] = max_records
     variables["FilterList"]["List"] = [search.filters]
     variables["FiltersOnHold"] = search.filters
+
+    # The template's captured session had "vg" selected - `filters`/
+    # `FilterList` alone don't actually change which game's events come
+    # back unless this selection flag is updated too (confirmed live: vg/
+    # tcg/pgo all returned identical counts until this was added).
+    for product in variables["LocationFilters"]["ProductTypes"]["List"]:
+        product["IsSelected"] = product["Label"] == search.filters
 
     client_vars = payload["clientVariables"]
     client_vars["Latitude"] = search.latitude
@@ -114,6 +122,7 @@ def normalize_event(raw: dict) -> dict | None:
         "contact_phone": contact.get("Phone") or None,
         "venue_name": address.get("Name") or None,
         "full_address": address.get("Full_address") or None,
+        "region": filters.region_from_address(address.get("Full_address")),
         "latitude": latitude,
         "longitude": longitude,
         "timezone": address.get("Timezone") or None,

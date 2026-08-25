@@ -1,8 +1,9 @@
-"""Single entrypoint for the Lombardia VGC event scraper.
+"""Single entrypoint for the Italy-wide Pokemon event scraper.
 
     python cli.py inspect
     python cli.py run
     python cli.py status
+    python cli.py refresh-profile
 """
 
 from __future__ import annotations
@@ -11,14 +12,14 @@ import argparse
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-from pokemon_events.browser_client import PokemonEventLocatorClient, SearchParams
-from pokemon_events.sync import DEFAULT_MAX_RECORDS, DEFAULT_STORE_PATH, cmd_run, cmd_status
+from pokemon_events.browser_client import DEFAULT_PROFILE_DIR, PokemonEventLocatorClient, SearchParams
+from pokemon_events.sync import DEFAULT_MAX_RECORDS, DEFAULT_STORE_PATH, GAME_FILTERS, cmd_run, cmd_status
 
 RAW_DUMP_DIR = Path(__file__).resolve().parent / "data" / "raw"
 
-# The user's own captured search point (Milan) and range.
-DEFAULT_LATITUDE = "45.468503"
-DEFAULT_LONGITUDE = "9.182402699999999"
+# Milan - used only as the single-point default for `inspect`.
+DEFAULT_LATITUDE = "45.4642"
+DEFAULT_LONGITUDE = "9.1900"
 DEFAULT_RANGE_KM = "150"
 
 
@@ -30,6 +31,7 @@ def cmd_inspect(args: argparse.Namespace) -> None:
         longitude=args.longitude,
         range_km=args.range_km,
         start_date=date.today().isoformat(),
+        filters=args.game,
     )
     payload = api.build_payload(search, max_records=args.max_records)
 
@@ -51,40 +53,55 @@ def cmd_inspect(args: argparse.Namespace) -> None:
         print(f"data keys: {sorted(response['data'].keys())}")
 
 
+def cmd_refresh_profile(args: argparse.Namespace) -> None:
+    from pokemon_events import chrome_profile
+
+    profile_dir = Path(args.profile_dir)
+    print(f"Refreshing {profile_dir} from the real Chrome profile...")
+    chrome_profile.refresh_profile(profile_dir)
+    print("Done.")
+
+
 def _add_headless_flag(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--headless",
         action="store_true",
-        help="run headless instead of the default headed mode (headless gets 403'd by the site's WAF - see tool/README.md)",
+        help="run headless instead of the default headed mode (never once gotten past the site's WAF in testing - see tool/README.md)",
     )
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Lombardia VGC event scraper")
+    parser = argparse.ArgumentParser(description="Italy-wide Pokemon event scraper")
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_inspect = sub.add_parser(
         "inspect",
-        help="Fire one raw request and dump the response to tool/data/raw/ for manual inspection - no store writes",
+        help="Fire one raw request (single point, single game) and dump the response to tool/data/raw/ for manual inspection - no store writes",
     )
     p_inspect.add_argument("--latitude", default=DEFAULT_LATITUDE)
     p_inspect.add_argument("--longitude", default=DEFAULT_LONGITUDE)
     p_inspect.add_argument("--range-km", default=DEFAULT_RANGE_KM)
+    p_inspect.add_argument("--game", default="vg", choices=GAME_FILTERS)
     p_inspect.add_argument("--max-records", type=int, default=200)
     _add_headless_flag(p_inspect)
     p_inspect.set_defaults(func=cmd_inspect)
 
-    p_run = sub.add_parser("run", help="Fetch, filter to Lombardy, and upsert into the store (safe to re-run)")
-    p_run.add_argument("--latitude", default=DEFAULT_LATITUDE)
-    p_run.add_argument("--longitude", default=DEFAULT_LONGITUDE)
+    p_run = sub.add_parser(
+        "run",
+        help="Fetch every game across nationwide anchor points, filter to Italy, and upsert into the store (safe to re-run)",
+    )
     p_run.add_argument("--range-km", default=DEFAULT_RANGE_KM)
-    p_run.add_argument("--filters", default="vg", help="product type filter sent to the API, e.g. 'vg'")
+    p_run.add_argument(
+        "--filters",
+        default=None,
+        help=f"comma-separated game filters to query, e.g. 'vg,tcg,pgo'. Defaults to all: {','.join(GAME_FILTERS)}",
+    )
     p_run.add_argument("--max-records", type=int, default=DEFAULT_MAX_RECORDS)
     p_run.add_argument(
-        "--extra-points",
+        "--points",
         default=None,
-        help="extra 'lat,lon' search centers to merge in (by GUID), separated by ';' - "
-        "for covering gaps a single radius might miss, e.g. near Sondrio/Bormio",
+        help="override the built-in nationwide anchor points with 'lat,lon;lat,lon;...' - "
+        "for a targeted re-run instead of a full nationwide sync",
     )
     p_run.add_argument(
         "--force-empty",
@@ -98,6 +115,13 @@ def build_parser() -> argparse.ArgumentParser:
     p_status = sub.add_parser("status", help="Show how many events are tracked and active in the store")
     p_status.add_argument("--out", default=str(DEFAULT_STORE_PATH))
     p_status.set_defaults(func=cmd_status)
+
+    p_refresh = sub.add_parser(
+        "refresh-profile",
+        help="Re-copy session state (cookies etc.) from the real local Chrome profile - run this if `run` starts failing to bootstrap",
+    )
+    p_refresh.add_argument("--profile-dir", default=str(DEFAULT_PROFILE_DIR))
+    p_refresh.set_defaults(func=cmd_refresh_profile)
 
     return parser
 

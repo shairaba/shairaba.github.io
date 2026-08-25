@@ -65,6 +65,8 @@
       if (event.event_website) actions.push(`<a class="btn" href="${esc(event.event_website)}" target="_blank" rel="noopener">Sito dell'evento</a>`);
       if (event.third_party_registration_website)
         actions.push(`<a class="btn ${event.event_website ? "btn-secondary" : ""}" href="${esc(event.third_party_registration_website)}" target="_blank" rel="noopener">Iscriviti</a>`);
+      if (event.latitude && event.longitude)
+        actions.push(`<a class="btn btn-secondary" href="${esc(googleMapsDirectionsUrl(event))}" target="_blank" rel="noopener">Portami l&igrave;</a>`);
 
       const attributesHtml = (event.attributes || [])
         .map((a) => `<span class="badge">${esc(a)}</span>`)

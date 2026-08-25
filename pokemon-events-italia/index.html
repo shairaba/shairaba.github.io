@@ -7,6 +7,10 @@
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
+    integrity="sha256-YU3qCpj/P06tdPBJGPax0bm6Q1wltfwjsho5TR4+TYc=" crossorigin="" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"
+    integrity="sha256-YSWCMtmNZNwqex4CEw1nQhvFub2lmU7vcCKP+XVwwXA=" crossorigin="" />
 </head>
 <body>
   <header class="topbar">
@@ -36,7 +40,7 @@
       <input type="date" id="date-to">
       <label class="filter-checkbox">
         <input type="checkbox" id="include-inactive">
-        Includi eventi passati/scaduti
+        <span>Includi eventi passati/scaduti</span>
       </label>
       <button type="submit">Filtra</button>
     </form>
@@ -66,6 +70,8 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"
+    integrity="sha256-Hk4dIpcqOSb0hZjgyvFOP+cEmDXUKKNE/tT542ZbNQg=" crossorigin=""></script>
   <script src="app.js"></script>
   <script>
     let allEvents = [];
@@ -118,12 +124,19 @@
 
     function renderMap(filtered) {
       if (!map) {
-        map = L.map("map").setView([45.4642, 9.19], 8);
+        // Centered/zoomed for all of Italy, not any one region - a fixed
+        // point+zoom tuned for Lombardy alone left the rest of the country
+        // off-screen once coverage went nationwide.
+        map = L.map("map").setView([42.5, 12.5], 6);
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
           maxZoom: 19,
           attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         }).addTo(map);
-        markerLayer = L.layerGroup().addTo(map);
+        // Clustering, not a plain layer group: thousands of individual pins
+        // at nationwide scale render as unreadable overlapping clumps
+        // (verified live) - markercluster groups nearby events into a
+        // count bubble that splits apart as you zoom in.
+        markerLayer = L.markerClusterGroup({ maxClusterRadius: 50 }).addTo(map);
       }
       markerLayer.clearLayers();
       filtered.forEach((e) => {
@@ -132,7 +145,7 @@
           `<div class="popup-title">${esc(displayName(e))}</div>` +
             `<div class="popup-meta">${esc(typeMeta(e).label)} &middot; ${esc(formatDate(e))}</div>` +
             `<div class="popup-meta">${esc(placeName(e))}</div>` +
-            `<div class="popup-meta"><a href="event.html?guid=${esc(e.guid)}">Dettagli &rarr;</a></div>`
+            `<div class="popup-meta"><a href="event.html?guid=${esc(e.guid)}">Dettagli &rarr;</a> &middot; <a href="${esc(googleMapsDirectionsUrl(e))}" target="_blank" rel="noopener">Portami l&igrave;</a></div>`
         );
         marker.addTo(markerLayer);
       });
