@@ -216,7 +216,9 @@ h1 { margin: 0 0 6px; font-size: 1.4rem; letter-spacing: -.015em; }
 
 /* Type badges (used on the detail page; list/calendar cards use color + icon instead) */
 .badge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   border-radius: 999px;
   padding: 4px 11px;
   font-size: .72rem;
@@ -225,6 +227,7 @@ h1 { margin: 0 0 6px; font-size: 1.4rem; letter-spacing: -.015em; }
   background: var(--badge-bg);
   color: var(--accent);
 }
+.badge .type-icon-img { width: 16px; height: 16px; object-fit: contain; }
 .badge.type-cup { background: var(--cup-bg); color: var(--cup-color); }
 .badge.type-challenge { background: var(--challenge-bg); color: var(--challenge-color); }
 .badge.type-tournament { background: var(--tournament-bg); color: var(--tournament-color); }
@@ -261,10 +264,13 @@ h1 { margin: 0 0 6px; font-size: 1.4rem; letter-spacing: -.015em; }
   font-size: 1.15rem;
   background: var(--badge-bg);
 }
-.event-card-icon.type-cup { background: var(--cup-bg); }
-.event-card-icon.type-challenge { background: var(--challenge-bg); }
+/* Cup/Challenge show the official badge artwork instead - it already
+   carries its own red/white/black frame, so a tinted circle behind it
+   would just compete with that rather than add anything. */
+.event-card-icon.type-cup, .event-card-icon.type-challenge { background: transparent; }
 .event-card-icon.type-tournament { background: var(--tournament-bg); }
 .event-card-icon.type-league { background: var(--league-bg); }
+.event-card-icon .type-icon-img { width: 100%; height: 100%; object-fit: contain; }
 
 .event-card-body { flex: 1; min-width: 0; }
 .event-card-title-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 2px; }

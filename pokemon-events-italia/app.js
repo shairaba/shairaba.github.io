@@ -1,11 +1,18 @@
 /* Shared helpers used by both index.html and event.html. */
 
 const TYPE_META = {
-  cup: { label: "Coppa di Lega", className: "type-cup", icon: "🏆" },
-  challenge: { label: "Sfida di Lega", className: "type-challenge", icon: "⚡" },
+  cup: { label: "Coppa di Lega", className: "type-cup", iconImg: "icons/league-cup.png" },
+  challenge: { label: "Sfida di Lega", className: "type-challenge", iconImg: "icons/league-challenge.png" },
   tournament: { label: "Torneo", className: "type-tournament", icon: "🎮" },
   league: { label: "Lega", className: "type-league", icon: "👥" },
 };
+
+/* Cup/Challenge use the official badge artwork instead of an emoji -
+   iconImg takes priority over the plain-text icon when both could apply. */
+function typeIconHtml(meta) {
+  if (meta.iconImg) return `<img src="${esc(meta.iconImg)}" alt="" class="type-icon-img">`;
+  return meta.icon || "";
+}
 
 const GAME_META = {
   vg: { label: "VG", className: "game-pill-vg" },
@@ -161,7 +168,7 @@ function eventCardHtml(event, { showDate = true } = {}) {
   const inactiveClass = event.is_active === false ? " event-card-inactive" : "";
   return `
     <div class="event-card${inactiveClass}" data-guid="${esc(event.guid)}" role="button" tabindex="0">
-      <div class="event-card-icon ${meta.className}">${meta.icon}</div>
+      <div class="event-card-icon ${meta.className}">${typeIconHtml(meta)}</div>
       <div class="event-card-body">
         <div class="event-card-title-row">
           <div class="event-card-title ${meta.className}">${esc(displayName(event))}</div>

@@ -77,7 +77,7 @@
         ${event.is_active === false ? '<div class="inactive-note">Questo evento non risulta pi&ugrave; attivo nel localizzatore ufficiale (probabilmente la data &egrave; passata).</div>' : ""}
 
         <div class="detail-badges">
-          <span class="badge ${meta.className}">${meta.icon} ${esc(meta.label)}</span>
+          <span class="badge ${meta.className}">${typeIconHtml(meta)} ${esc(meta.label)}</span>
           ${gamePillsHtml(event.products)}
         </div>
         <h1 class="detail-title">${esc(displayName(event))}</h1>
