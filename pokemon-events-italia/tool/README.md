@@ -40,9 +40,39 @@ after one bootstrap, not dozens of page loads.
 
 **This is why there's no GitHub Actions workflow scraping on a
 schedule** (unlike the sibling `vgc-tournament-explorer/`) - a CI runner
-has no organically-aged browser profile to copy from. Run this manually
-(or via your own machine's local scheduler, e.g. `launchd`/`cron`) and
-commit the result when you want to refresh the published data.
+has no organically-aged browser profile to copy from, and this was
+confirmed live (403s regardless of headed/headless, real Chrome binary,
+or IP - residential or GitHub Actions datacenter). A self-hosted Actions
+runner doesn't help either: it would need to be *this* machine anyway,
+running whenever the schedule fires, which is the same constraint as
+running locally in the first place.
+
+### Local auto-run (`auto_run.py` + `launchd`)
+
+Since this machine isn't reliably on/awake at a fixed hour, scraping is
+triggered by *login* instead of a fixed clock time -
+`~/Library/LaunchAgents/com.shairaba.pokemon-events-italia-autorun.plist`
+runs `auto_run.py` on every login (`RunAtLoad`) plus once daily at 10:00
+as a backup for whenever the machine happens to already be awake then
+(`StartCalendarInterval`). `auto_run.py` checks `data/events.json`'s
+`last_synced_at` and only actually invokes `cli.py run` if it's more
+than 20h stale, so logging in several times a day doesn't re-trigger the
+real-Chrome bootstrap more than once. It never auto-commits - it just
+leaves a fresh diff in `data/events.json` for you to review and commit
+by hand, same as running `cli.py run` manually. Output/errors land in
+`tool/data/raw/auto_run.log` (gitignored).
+
+Manage the agent with:
+```bash
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.shairaba.pokemon-events-italia-autorun.plist  # load
+launchctl bootout gui/$(id -u)/com.shairaba.pokemon-events-italia-autorun                                  # unload
+launchctl list com.shairaba.pokemon-events-italia-autorun                                                  # check status/last exit code
+```
+
+If the machine is fully shut down (not just asleep) at login time, this
+still won't fire until the next login - there's no software-only way to
+make macOS power itself on for this. You can still always run `cli.py
+run` by hand any time, as before.
 
 ## Setup
 
