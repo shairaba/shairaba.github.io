@@ -386,15 +386,24 @@ h1 { margin: 0 0 6px; font-size: 1.4rem; letter-spacing: -.015em; }
   margin-bottom: 16px;
 }
 
-.detail-meta-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; }
+/* minmax lower bound tuned so all 6 possible fields (data, 2x iscrizioni,
+   costo, email, telefono) fit on one row at this card's typical width -
+   150px only fit 5, orphaning the 6th onto its own row with the grid's
+   other 4 column tracks left empty beside it (auto-fill keeps a fixed
+   track count across all rows, it doesn't shrink a sparse row). */
+.detail-meta-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(115px, 1fr)); gap: 16px; }
 .detail-meta-label { font-size: .68rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 3px; }
-.detail-meta-value { font-size: .92rem; }
+/* overflow-wrap so long unbroken values (an email address has no spaces
+   to break at) wrap inside their own narrow grid column instead of
+   overflowing into the next one - real bug hit when the column minmax
+   was narrowed to fit 6 fields on one row (see .detail-meta-grid). */
+.detail-meta-value { font-size: .92rem; overflow-wrap: break-word; }
 
 .detail-section-title { font-size: .78rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 700; margin: 0 0 10px; }
 .detail-description { white-space: pre-line; line-height: 1.6; font-size: .92rem; }
 .detail-address { line-height: 1.5; }
 
-.detail-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+.detail-actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 4px 0 16px; }
 .detail-actions a.btn {
   display: inline-block;
   background: var(--accent);
