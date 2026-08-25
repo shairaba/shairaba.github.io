@@ -51,7 +51,6 @@
       const meta = typeMeta(event);
       document.title = `${displayName(event)} - Eventi Pokémon Italia`;
 
-      const productLabels = productBadges(event.products);
       const metaGrid = [
         metaItem("Data e ora", formatDate(event)),
         metaItem("Iscrizioni da", event.registration_start ? formatDate({ ...event, start_date: event.registration_start }) : ""),
@@ -79,7 +78,7 @@
 
         <div class="detail-badges">
           <span class="badge ${meta.className}">${meta.icon} ${esc(meta.label)}</span>
-          ${productLabels.map((p) => `<span class="badge">${esc(p)}</span>`).join("")}
+          ${gamePillsHtml(event.products)}
         </div>
         <h1 class="detail-title">${esc(displayName(event))}</h1>
         ${placeName(event) && placeName(event) !== displayName(event) ? `<p class="detail-subtitle">${esc(placeName(event))}</p>` : ""}

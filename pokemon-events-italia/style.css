@@ -22,6 +22,10 @@
   --tournament-bg: var(--badge-bg);
   --league-color: #8f83b3;
   --league-bg: var(--panel-2);
+
+  --vg-color: #f04545;
+  --tcg-color: #4599ff;
+  --pgo-color: #3ecf6e;
 }
 
 @media (prefers-color-scheme: light) {
@@ -44,6 +48,10 @@
     --challenge-color: #c22e83;
     --challenge-bg: rgba(194, 46, 131, .1);
     --league-color: #7a6f96;
+
+    --vg-color: #d62b2b;
+    --tcg-color: #1d6fe0;
+    --pgo-color: #17914a;
   }
 }
 
@@ -166,6 +174,46 @@ h1 { margin: 0 0 6px; font-size: 1.4rem; letter-spacing: -.015em; }
 .filter-checkbox-group .filter-checkbox { flex: 0 0 auto; padding: 9px 4px 9px 0; }
 .filter-checkbox-group .filter-checkbox span { flex: 0 0 auto; }
 
+/* Game toggles: a real checkbox input, visually hidden, with the label
+   styled as a chip button - dim/muted border+text when unchecked, a
+   bright colored border with a glow and full-brightness text when
+   checked. One color per game (kept as a --toggle-color custom property
+   so the on/off rule below is written once, not three times). */
+.game-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  padding: 8px 16px;
+  border-radius: 14px;
+  border: 2px solid color-mix(in srgb, var(--toggle-color) 35%, var(--border));
+  background: var(--panel-2);
+  color: color-mix(in srgb, var(--toggle-color) 40%, var(--muted));
+  font-weight: 700;
+  font-size: .82rem;
+  cursor: pointer;
+  transition: border-color .15s ease, color .15s ease, box-shadow .15s ease, background-color .15s ease;
+}
+/* .filter-bar .game-toggle input (not just .game-toggle input): the mobile
+   `.filter-bar input { width: 100% }` override further down has equal
+   selector specificity and appears later in the file, so on source order
+   alone it would win and un-hide this input - bumping specificity here
+   avoids relitigating the same bug fixed earlier for .filter-checkbox. */
+.filter-bar .game-toggle input { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
+.game-toggle span { pointer-events: none; }
+.game-toggle:has(input:checked) {
+  border-color: var(--toggle-color);
+  color: var(--text);
+  background: color-mix(in srgb, var(--toggle-color) 16%, var(--panel-2));
+  box-shadow: 0 0 0 1px var(--toggle-color), 0 0 14px color-mix(in srgb, var(--toggle-color) 50%, transparent);
+  font-weight: 800;
+}
+
+.game-toggle-vg { --toggle-color: var(--vg-color); }
+.game-toggle-tcg { --toggle-color: var(--tcg-color); }
+.game-toggle-pgo { --toggle-color: var(--pgo-color); }
+
 /* Type badges (used on the detail page; list/calendar cards use color + icon instead) */
 .badge {
   display: inline-block;
@@ -236,6 +284,20 @@ h1 { margin: 0 0 6px; font-size: 1.4rem; letter-spacing: -.015em; }
   white-space: nowrap;
 }
 .event-card-subtitle { color: var(--muted); font-size: .8rem; }
+
+.event-card-games { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+.game-pill {
+  font-size: .64rem;
+  font-weight: 800;
+  letter-spacing: .02em;
+  padding: 1px 8px;
+  border-radius: 999px;
+  line-height: 1.5;
+}
+.game-pill-vg { background: color-mix(in srgb, var(--vg-color) 18%, transparent); color: var(--vg-color); }
+.game-pill-tcg { background: color-mix(in srgb, var(--tcg-color) 18%, transparent); color: var(--tcg-color); }
+.game-pill-pgo { background: color-mix(in srgb, var(--pgo-color) 18%, transparent); color: var(--pgo-color); }
+
 .event-card-address {
   color: var(--muted-2);
   font-size: .74rem;

@@ -7,6 +7,19 @@ const TYPE_META = {
   league: { label: "Lega", className: "type-league", icon: "👥" },
 };
 
+const GAME_META = {
+  vg: { label: "VG", className: "game-pill-vg" },
+  tcg: { label: "GCC", className: "game-pill-tcg" },
+  pgo: { label: "GO", className: "game-pill-pgo" },
+};
+
+function gamePillsHtml(products) {
+  return (products || [])
+    .filter((p) => GAME_META[p])
+    .map((p) => `<span class="game-pill ${GAME_META[p].className}">${GAME_META[p].label}</span>`)
+    .join("");
+}
+
 function esc(s) {
   const div = document.createElement("div");
   div.textContent = s == null ? "" : String(s);
@@ -118,11 +131,6 @@ async function loadEvents() {
   return Object.values(data.events || {});
 }
 
-function productBadges(products) {
-  const LABELS = { vg: "Video Game", tcg: "GCC", pgo: "GO" };
-  return (products || []).map((p) => LABELS[p] || p);
-}
-
 /* Admission comes through inconsistently formatted ("10", "10 €", "10€",
    or absent for most recurring free league nights) - normalize to a single
    "N€" shape rather than assert "free" when it's simply unspecified. */
@@ -160,6 +168,7 @@ function eventCardHtml(event, { showDate = true } = {}) {
           ${cost ? `<div class="event-card-cost">${esc(cost)}</div>` : ""}
         </div>
         <div class="event-card-subtitle">${esc(subtitleParts.join(" · "))}</div>
+        <div class="event-card-games">${gamePillsHtml(event.products)}</div>
         ${event.full_address ? `<div class="event-card-address">${esc(event.full_address)}</div>` : ""}
       </div>
     </div>`;
