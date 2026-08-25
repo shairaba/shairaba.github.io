@@ -8,7 +8,8 @@ vgc-tournament-explorer/tool/.venv/
 vgc-tournament-explorer/tool/data/
 vgc-tournament-explorer/tool/**/__pycache__/
 
-# lombardia-events (Python tool - the published site's data/events.json IS tracked)
-lombardia-events/tool/.venv/
-lombardia-events/tool/data/raw/
-lombardia-events/tool/**/__pycache__/
+# pokemon-events-italia (Python tool - the published site's data/events.json IS tracked)
+pokemon-events-italia/tool/.venv/
+pokemon-events-italia/tool/data/raw/
+pokemon-events-italia/tool/**/__pycache__/
+pokemon-events-italia/tool/.chrome-profile/

@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dettagli evento - Eventi Pokémon Italia</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html">Eventi Pokémon Italia</a>
+  </header>
+  <main class="container" id="main-content">
+    <p class="loading">Caricamento&hellip;</p>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="app.js"></script>
+  <script>
+    function metaItem(label, value) {
+      if (!value) return "";
+      return `<div><div class="detail-meta-label">${esc(label)}</div><div class="detail-meta-value">${esc(value)}</div></div>`;
+    }
+
+    (async function main() {
+      const main = document.getElementById("main-content");
+      const guid = qs("guid");
+      if (!guid) {
+        main.innerHTML = '<p class="empty-state">Evento non specificato.</p>';
+        return;
+      }
+
+      let events;
+      try {
+        events = await loadEvents();
+      } catch (err) {
+        main.innerHTML = '<p class="empty-state">Impossibile caricare i dati degli eventi.</p>';
+        console.error(err);
+        return;
+      }
+
+      const event = events.find((e) => e.guid === guid);
+      if (!event) {
+        main.innerHTML = '<p class="empty-state">Evento non trovato.</p>';
+        return;
+      }
+
+      const meta = typeMeta(event);
+      document.title = `${displayName(event)} - Eventi Pokémon Italia`;
+
+      const productLabels = productBadges(event.products);
+      const metaGrid = [
+        metaItem("Data e ora", formatDate(event)),
+        metaItem("Iscrizioni da", event.registration_start ? formatDate({ ...event, start_date: event.registration_start }) : ""),
+        metaItem("Iscrizioni fino a", event.registration_end ? formatDate({ ...event, start_date: event.registration_end }) : ""),
+        metaItem("Costo", event.admission),
+        metaItem("Email", event.contact_email),
+        metaItem("Telefono", event.contact_phone),
+      ].filter(Boolean).join("");
+
+      const actions = [];
+      if (event.event_website) actions.push(`<a class="btn" href="${esc(event.event_website)}" target="_blank" rel="noopener">Sito dell'evento</a>`);
+      if (event.third_party_registration_website)
+        actions.push(`<a class="btn ${event.event_website ? "btn-secondary" : ""}" href="${esc(event.third_party_registration_website)}" target="_blank" rel="noopener">Iscriviti</a>`);
+
+      const attributesHtml = (event.attributes || [])
+        .map((a) => `<span class="badge">${esc(a)}</span>`)
+        .join("");
+
+      main.innerHTML = `
+        <a class="back-link" href="index.html">&larr; Torna all'elenco</a>
+
+        ${event.is_active === false ? '<div class="inactive-note">Questo evento non risulta pi&ugrave; attivo nel localizzatore ufficiale (probabilmente la data &egrave; passata).</div>' : ""}
+
+        <div class="detail-badges">
+          <span class="badge ${meta.className}">${meta.icon} ${esc(meta.label)}</span>
+          ${productLabels.map((p) => `<span class="badge">${esc(p)}</span>`).join("")}
+        </div>
+        <h1 class="detail-title">${esc(displayName(event))}</h1>
+        ${placeName(event) && placeName(event) !== displayName(event) ? `<p class="detail-subtitle">${esc(placeName(event))}</p>` : ""}
+
+        ${metaGrid ? `<div class="detail-card"><div class="detail-meta-grid">${metaGrid}</div></div>` : ""}
+
+        ${actions.length ? `<div class="detail-actions">${actions.join("")}</div>` : ""}
+
+        ${event.full_address ? `
+        <div class="detail-card">
+          <div class="detail-section-title">Indirizzo</div>
+          <div class="detail-address">${esc(event.full_address)}</div>
+          <div id="detail-map"></div>
+        </div>` : ""}
+
+        ${event.details ? `
+        <div class="detail-card">
+          <div class="detail-section-title">Descrizione</div>
+          <div class="detail-description">${esc(event.details)}</div>
+        </div>` : ""}
+
+        ${attributesHtml ? `
+        <div class="detail-card">
+          <div class="detail-section-title">Caratteristiche</div>
+          <div class="detail-attributes">${attributesHtml}</div>
+        </div>` : ""}
+      `;
+
+      if (event.full_address && event.latitude && event.longitude) {
+        const map = L.map("detail-map", { zoomControl: false, dragging: false, scrollWheelZoom: false, touchZoom: false })
+          .setView([event.latitude, event.longitude], 15);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 19,
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        }).addTo(map);
+        L.marker([event.latitude, event.longitude]).addTo(map);
+      }
+    })();
+  </script>
+</body>
+</html>
