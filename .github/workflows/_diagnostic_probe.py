@@ -25,9 +25,14 @@ def main() -> None:
         requests = []
         page.on("request", lambda r: requests.append(r.url))
         page.goto(URL, wait_until="domcontentloaded", timeout=45000)
-        for i in range(8):
-            page.mouse.move(200 + i * 30, 300 + i * 15, steps=5)
+        nr2users_at = None
+        for i in range(45):
+            page.mouse.move(200 + (i % 10) * 30, 300 + (i % 10) * 15, steps=5)
             time.sleep(1)
+            names = {c["name"] for c in context.cookies()}
+            if "nr2Users" in names and nr2users_at is None:
+                nr2users_at = i + 1
+                break
 
         cookie_names = sorted(c["name"] for c in context.cookies())
         reached_real_app = any("OutSystems" in u or "moduleservices" in u for u in requests)
@@ -35,6 +40,7 @@ def main() -> None:
         print("=== RESULT ===")
         print(f"reached_real_app: {reached_real_app}")
         print(f"nr2Users present: {'nr2Users' in cookie_names}")
+        print(f"nr2Users appeared at: {nr2users_at}s")
         print(f"cookies: {cookie_names}")
         print("=== REQUESTS (up to 20) ===")
         for u in requests[:20]:
