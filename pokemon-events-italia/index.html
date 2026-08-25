@@ -3,7 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Eventi Pokémon Italia</title>
+  <title>Pok&eacute;mon Event Locator but better</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
@@ -14,65 +17,67 @@
 </head>
 <body>
   <header class="topbar">
-    <span class="brand">Eventi Pokémon Italia</span>
-    <div class="view-toggle">
-      <button id="view-list-btn" class="toggle-btn active" type="button">Elenco</button>
-      <button id="view-calendar-btn" class="toggle-btn" type="button">Calendario</button>
-      <button id="view-map-btn" class="toggle-btn" type="button">Mappa</button>
+    <span class="brand">Pok&eacute;mon Event Locator but better</span>
+    <div class="topbar-controls">
+      <div class="lang-toggle">
+        <button class="lang-btn" data-lang="it" type="button">IT</button>
+        <button class="lang-btn" data-lang="en" type="button">EN</button>
+      </div>
+      <div class="view-toggle">
+        <button id="view-list-btn" class="toggle-btn active" type="button" data-i18n="viewList">Elenco</button>
+        <button id="view-calendar-btn" class="toggle-btn" type="button" data-i18n="viewCalendar">Calendario</button>
+        <button id="view-map-btn" class="toggle-btn" type="button" data-i18n="viewMap">Mappa</button>
+      </div>
     </div>
   </header>
   <main class="container">
-    <h1>Prossimi eventi Pok&eacute;mon in Italia</h1>
+    <h1 data-i18n="heading">Prossimi eventi Pok&eacute;mon in Italia</h1>
     <p class="lede meta" id="meta-note">Caricamento&hellip;</p>
 
     <form class="filter-bar" id="filter-form">
-      <input type="text" id="q" placeholder="Cerca per nome, negozio, citt&agrave;...">
+      <input type="text" id="q" data-i18n-placeholder="searchPlaceholder" placeholder="Cerca per nome, negozio, citt&agrave;...">
       <select id="type" class="pill-select">
-        <option value="">Tutti i tipi</option>
-        <option value="cup">Coppa di Lega</option>
-        <option value="challenge">Sfida di Lega</option>
-        <option value="tournament">Torneo</option>
-        <option value="league">Lega</option>
+        <option value="" data-i18n="allTypes">Tutti i tipi</option>
+        <option value="cup" data-i18n="typeCup">Coppa di Lega</option>
+        <option value="challenge" data-i18n="typeChallenge">Sfida di Lega</option>
+        <option value="tournament" data-i18n="typeTournament">Torneo</option>
+        <option value="league" data-i18n="typeLeague">Lega</option>
       </select>
       <select id="region" class="pill-select">
-        <option value="">Tutte le regioni</option>
+        <option value="" data-i18n="allRegions">Tutte le regioni</option>
       </select>
-      <span class="filter-label">Da</span>
+      <span class="filter-label" data-i18n="from">Da</span>
       <input type="date" id="date-from">
-      <span class="filter-label">A</span>
+      <span class="filter-label" data-i18n="to">A</span>
       <input type="date" id="date-to">
       <div class="filter-checkbox-group">
-        <span class="filter-label">Giochi</span>
+        <span class="filter-label" data-i18n="games">Giochi</span>
         <label class="game-toggle game-toggle-vg">
           <input type="checkbox" id="game-vg" checked>
-          <span>Video Game</span>
+          <span data-i18n="gameVg">Video Game</span>
         </label>
         <label class="game-toggle game-toggle-tcg">
           <input type="checkbox" id="game-tcg" checked>
-          <span>GCC</span>
+          <span data-i18n="gameTcg">GCC</span>
         </label>
         <label class="game-toggle game-toggle-pgo">
           <input type="checkbox" id="game-pgo" checked>
-          <span>GO</span>
+          <span data-i18n="gamePgo">GO</span>
         </label>
       </div>
-      <label class="filter-checkbox">
-        <input type="checkbox" id="include-inactive">
-        <span>Includi eventi passati/scaduti</span>
-      </label>
-      <button type="submit">Filtra</button>
+      <button type="submit" data-i18n="filterBtn">Filtra</button>
     </form>
 
     <div id="list-view">
-      <div class="event-list" id="rows"><p class="loading">Caricamento&hellip;</p></div>
+      <div class="event-list" id="rows"><p class="loading" data-i18n="loading">Caricamento&hellip;</p></div>
       <p class="showing-note" id="showing-note"></p>
     </div>
 
     <div id="calendar-view" style="display:none">
       <div class="cal-nav">
-        <button id="cal-prev-month" class="cal-nav-btn" type="button" aria-label="Mese precedente">&lsaquo;</button>
+        <button id="cal-prev-month" class="cal-nav-btn" type="button" data-i18n-aria-label="prevMonth" aria-label="Mese precedente">&lsaquo;</button>
         <div class="cal-month-label" id="cal-month-label"></div>
-        <button id="cal-next-month" class="cal-nav-btn" type="button" aria-label="Mese successivo">&rsaquo;</button>
+        <button id="cal-next-month" class="cal-nav-btn" type="button" data-i18n-aria-label="nextMonth" aria-label="Mese successivo">&rsaquo;</button>
       </div>
       <div class="cal-daystrip" id="cal-daystrip"></div>
       <div class="cal-day-heading" id="cal-day-heading"></div>
@@ -83,7 +88,7 @@
       <div id="map"></div>
     </div>
 
-    <p class="footnote">Dati raccolti dal localizzatore eventi ufficiale Pok&eacute;mon. Non affiliato a The Pok&eacute;mon Company International.</p>
+    <p class="footnote" data-i18n="footnote">Dati raccolti dal localizzatore eventi ufficiale Pok&eacute;mon. Non affiliato a The Pok&eacute;mon Company International.</p>
   </main>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
@@ -104,13 +109,15 @@
         games,
         dateFrom: document.getElementById("date-from").value,
         dateTo: document.getElementById("date-to").value,
-        includeInactive: document.getElementById("include-inactive").checked,
       };
     }
 
     function applyFilters(events, filterState) {
-      let rows = events;
-      if (!filterState.includeInactive) rows = rows.filter((e) => e.is_active);
+      const todayKey = localDateKey({ start_date: new Date().toISOString() });
+      let rows = events.filter((e) => {
+        const key = localDateKey(e);
+        return key && key >= todayKey;
+      });
       if (filterState.q) {
         const q = filterState.q.toLowerCase();
         rows = rows.filter((e) =>
@@ -134,13 +141,13 @@
       const container = document.getElementById("rows");
       const shown = filtered.slice(0, MAX_ROWS);
       if (!shown.length) {
-        container.innerHTML = '<p class="empty-state">Nessun evento trovato.</p>';
+        container.innerHTML = `<p class="empty-state">${esc(t("noEventsFound"))}</p>`;
       } else {
         container.innerHTML = shown.map((e) => eventCardHtml(e, { showDate: true })).join("");
         wireEventCardClicks(container);
       }
       document.getElementById("showing-note").textContent =
-        filtered.length > MAX_ROWS ? `Mostrati ${MAX_ROWS} di ${filtered.length} eventi corrispondenti.` : "";
+        filtered.length > MAX_ROWS ? t("showingNote", MAX_ROWS, filtered.length) : "";
     }
 
     let map = null;
@@ -169,7 +176,7 @@
           `<div class="popup-title">${esc(displayName(e))}</div>` +
             `<div class="popup-meta">${esc(typeMeta(e).label)} &middot; ${esc(formatDate(e))}</div>` +
             `<div class="popup-meta">${esc(placeName(e))}</div>` +
-            `<div class="popup-meta"><a href="event.html?guid=${esc(e.guid)}">Dettagli &rarr;</a> &middot; <a href="${esc(googleMapsDirectionsUrl(e))}" target="_blank" rel="noopener">Portami l&igrave;</a></div>`
+            `<div class="popup-meta"><a href="event.html?guid=${esc(e.guid)}">${esc(t("detailsArrow"))}</a> &middot; <a href="${esc(googleMapsDirectionsUrl(e))}" target="_blank" rel="noopener">${esc(t("takeMeThere"))}</a></div>`
         );
         marker.addTo(markerLayer);
       });
@@ -231,11 +238,11 @@
 
       const dayEvents = (byDay[calSelectedKey] || []).slice().sort((a, b) => (a.start_date || "").localeCompare(b.start_date || ""));
       document.getElementById("cal-day-heading").innerHTML =
-        `${esc(formatDayHeading(calSelectedKey))} <span class="count">${dayEvents.length} eventi</span>`;
+        `${esc(formatDayHeading(calSelectedKey))} <span class="count">${esc(t("eventsCount", dayEvents.length))}</span>`;
 
       const eventsContainer = document.getElementById("cal-events");
       if (!dayEvents.length) {
-        eventsContainer.innerHTML = '<p class="empty-state">Nessun evento questo giorno.</p>';
+        eventsContainer.innerHTML = `<p class="empty-state">${esc(t("noEventsDay"))}</p>`;
       } else {
         eventsContainer.innerHTML = dayEvents.map((e) => eventCardHtml(e, { showDate: false })).join("");
         wireEventCardClicks(eventsContainer);
@@ -248,7 +255,6 @@
     function initCalendarDefaults(events) {
       const todayKey = localDateKey({ start_date: new Date().toISOString() });
       const upcoming = events
-        .filter((e) => e.is_active)
         .map((e) => localDateKey(e))
         .filter(Boolean)
         .sort()
@@ -304,11 +310,25 @@
       renderCalendar(applyFilters(allEvents, currentFilterState()));
     });
 
+    function updateMetaNote() {
+      const todayKey = localDateKey({ start_date: new Date().toISOString() });
+      const upcomingCount = allEvents.filter((e) => {
+        const key = localDateKey(e);
+        return key && key >= todayKey;
+      }).length;
+      document.getElementById("meta-note").textContent = t("metaCount", upcomingCount);
+    }
+
     (async function main() {
+      initLangToggle(() => {
+        updateMetaNote();
+        render();
+      });
+
       try {
         allEvents = await loadEvents();
       } catch (err) {
-        document.getElementById("rows").innerHTML = '<p class="empty-state">Impossibile caricare i dati degli eventi.</p>';
+        document.getElementById("rows").innerHTML = `<p class="empty-state">${esc(t("loadError"))}</p>`;
         console.error(err);
         return;
       }
@@ -336,11 +356,9 @@
       });
       document.getElementById("type").addEventListener("change", render);
       regionSelect.addEventListener("change", render);
-      document.getElementById("include-inactive").addEventListener("change", render);
       ["vg", "tcg", "pgo"].forEach((g) => document.getElementById(`game-${g}`).addEventListener("change", render));
 
-      const activeCount = allEvents.filter((e) => e.is_active).length;
-      document.getElementById("meta-note").textContent = `${activeCount} eventi attivi in Italia.`;
+      updateMetaNote();
 
       render();
     })();

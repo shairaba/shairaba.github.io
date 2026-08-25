@@ -1,10 +1,175 @@
-/* Shared helpers used by both index.html and event.html. */
+/* Shared helpers used by both index.html and event.html.
+
+   i18n: only the UI chrome is translated (labels, buttons, section
+   titles). Event content itself - names, descriptions, addresses - comes
+   straight from the scraped source data, which is inherently Italian
+   (written by Italian store owners for an Italian audience), and is
+   deliberately left as-is rather than mistranslated. */
+
+const TRANSLATIONS = {
+  it: {
+    locale: "it-IT",
+    brand: "Pokémon Event Locator but better",
+    heading: "Prossimi eventi Pokémon in Italia",
+    metaCount: (n) => `${n} eventi attivi in Italia.`,
+    searchPlaceholder: "Cerca per nome, negozio, città...",
+    allTypes: "Tutti i tipi",
+    typeCup: "Coppa di Lega",
+    typeChallenge: "Sfida di Lega",
+    typeTournament: "Torneo",
+    typeLeague: "Lega",
+    allRegions: "Tutte le regioni",
+    from: "Da",
+    to: "A",
+    games: "Giochi",
+    gameVg: "Video Game",
+    gameTcg: "GCC",
+    gamePgo: "GO",
+    filterBtn: "Filtra",
+    viewList: "Elenco",
+    viewCalendar: "Calendario",
+    viewMap: "Mappa",
+    prevMonth: "Mese precedente",
+    nextMonth: "Mese successivo",
+    noEventsFound: "Nessun evento trovato.",
+    noEventsDay: "Nessun evento questo giorno.",
+    showingNote: (shown, total) => `Mostrati ${shown} di ${total} eventi corrispondenti.`,
+    eventsCount: (n) => `${n} eventi`,
+    footnote: "Dati raccolti dal localizzatore eventi ufficiale Pokémon. Non affiliato a The Pokémon Company International.",
+    backToList: "← Torna all'elenco",
+    detailsArrow: "Dettagli →",
+    takeMeThere: "Portami lì",
+    eventWebsite: "Sito dell'evento",
+    signUp: "Iscriviti",
+    address: "Indirizzo",
+    description: "Descrizione",
+    characteristics: "Caratteristiche",
+    dateTime: "Data e ora",
+    regFrom: "Iscrizioni da",
+    regTo: "Iscrizioni fino a",
+    cost: "Costo",
+    email: "Email",
+    phone: "Telefono",
+    inactiveNote: "Questo evento non risulta più attivo nel localizzatore ufficiale (probabilmente la data è passata).",
+    loading: "Caricamento…",
+    loadError: "Impossibile caricare i dati degli eventi.",
+    noEventSpecified: "Evento non specificato.",
+    eventNotFound: "Evento non trovato.",
+    noEventName: "Evento senza nome",
+  },
+  en: {
+    locale: "en-US",
+    brand: "Pokémon Event Locator but better",
+    heading: "Upcoming Pokémon events in Italy",
+    metaCount: (n) => `${n} active events in Italy.`,
+    searchPlaceholder: "Search by name, store, city...",
+    allTypes: "All types",
+    typeCup: "League Cup",
+    typeChallenge: "League Challenge",
+    typeTournament: "Tournament",
+    typeLeague: "League",
+    allRegions: "All regions",
+    from: "From",
+    to: "To",
+    games: "Games",
+    gameVg: "Video Game",
+    gameTcg: "TCG",
+    gamePgo: "GO",
+    filterBtn: "Filter",
+    viewList: "List",
+    viewCalendar: "Calendar",
+    viewMap: "Map",
+    prevMonth: "Previous month",
+    nextMonth: "Next month",
+    noEventsFound: "No events found.",
+    noEventsDay: "No events this day.",
+    showingNote: (shown, total) => `Showing ${shown} of ${total} matching events.`,
+    eventsCount: (n) => `${n} events`,
+    footnote: "Data collected from the official Pokémon event locator. Not affiliated with The Pokémon Company International.",
+    backToList: "← Back to list",
+    detailsArrow: "Details →",
+    takeMeThere: "Take me there",
+    eventWebsite: "Event website",
+    signUp: "Sign up",
+    address: "Address",
+    description: "Description",
+    characteristics: "Attributes",
+    dateTime: "Date and time",
+    regFrom: "Registration from",
+    regTo: "Registration until",
+    cost: "Cost",
+    email: "Email",
+    phone: "Phone",
+    inactiveNote: "This event no longer shows as active on the official locator (the date has likely passed).",
+    loading: "Loading…",
+    loadError: "Could not load event data.",
+    noEventSpecified: "No event specified.",
+    eventNotFound: "Event not found.",
+    noEventName: "Unnamed event",
+  },
+};
+
+const LANG_STORAGE_KEY = "lang";
+
+function getLang() {
+  const stored = localStorage.getItem(LANG_STORAGE_KEY);
+  return stored && TRANSLATIONS[stored] ? stored : "it";
+}
+
+function setLang(lang) {
+  if (!TRANSLATIONS[lang]) return;
+  localStorage.setItem(LANG_STORAGE_KEY, lang);
+}
+
+function t(key, ...args) {
+  const entry = TRANSLATIONS[getLang()][key];
+  return typeof entry === "function" ? entry(...args) : entry;
+}
+
+function currentLocale() {
+  return TRANSLATIONS[getLang()].locale;
+}
+
+/* Walks the DOM applying the current language to every element tagged
+   with data-i18n (textContent), data-i18n-placeholder, or
+   data-i18n-aria-label - static markup only. Dynamic JS-rendered content
+   (cards, calendar, popups) reads t() directly at render time instead. */
+function applyTranslations(root = document) {
+  root.querySelectorAll("[data-i18n]").forEach((el) => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  root.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+    el.placeholder = t(el.dataset.i18nPlaceholder);
+  });
+  root.querySelectorAll("[data-i18n-aria-label]").forEach((el) => {
+    el.setAttribute("aria-label", t(el.dataset.i18nAriaLabel));
+  });
+  document.documentElement.lang = getLang();
+  document.querySelectorAll(".lang-btn").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.lang === getLang());
+  });
+}
+
+/* Wires the IT/EN toggle present in both pages' topbar. `onChange` runs
+   after the language switches and static markup is retranslated, so each
+   page can re-render its own dynamic content (cards, calendar, detail). */
+function initLangToggle(onChange) {
+  applyTranslations();
+  document.querySelectorAll(".lang-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (btn.dataset.lang === getLang()) return;
+      setLang(btn.dataset.lang);
+      applyTranslations();
+      if (onChange) onChange();
+    });
+  });
+}
 
 const TYPE_META = {
-  cup: { label: "Coppa di Lega", className: "type-cup", iconImg: "icons/league-cup.png" },
-  challenge: { label: "Sfida di Lega", className: "type-challenge", iconImg: "icons/league-challenge.png" },
-  tournament: { label: "Torneo", className: "type-tournament", icon: "🎮" },
-  league: { label: "Lega", className: "type-league", icon: "👥" },
+  cup: { labelKey: "typeCup", className: "type-cup", iconImg: "icons/league-cup.png" },
+  challenge: { labelKey: "typeChallenge", className: "type-challenge", iconImg: "icons/league-challenge.png" },
+  tournament: { labelKey: "typeTournament", className: "type-tournament", icon: "🎮" },
+  league: { labelKey: "typeLeague", className: "type-league", icon: "👥" },
 };
 
 /* Cup/Challenge use the official badge artwork instead of an emoji -
@@ -15,15 +180,15 @@ function typeIconHtml(meta) {
 }
 
 const GAME_META = {
-  vg: { label: "VG", className: "game-pill-vg" },
-  tcg: { label: "GCC", className: "game-pill-tcg" },
-  pgo: { label: "GO", className: "game-pill-pgo" },
+  vg: { labelKey: "gameVg", className: "game-pill-vg" },
+  tcg: { labelKey: "gameTcg", className: "game-pill-tcg" },
+  pgo: { labelKey: "gamePgo", className: "game-pill-pgo" },
 };
 
 function gamePillsHtml(products) {
   return (products || [])
     .filter((p) => GAME_META[p])
-    .map((p) => `<span class="game-pill ${GAME_META[p].className}">${GAME_META[p].label}</span>`)
+    .map((p) => `<span class="game-pill ${GAME_META[p].className}">${t(GAME_META[p].labelKey)}</span>`)
     .join("");
 }
 
@@ -58,11 +223,12 @@ function eventTypeKey(event) {
 }
 
 function typeMeta(event) {
-  return TYPE_META[eventTypeKey(event)];
+  const meta = TYPE_META[eventTypeKey(event)];
+  return { ...meta, label: t(meta.labelKey) };
 }
 
 function displayName(event) {
-  return event.name || event.activity_group_name || event.venue_name || "Evento senza nome";
+  return event.name || event.activity_group_name || event.venue_name || t("noEventName");
 }
 
 function placeName(event) {
@@ -73,8 +239,9 @@ function formatDate(event, opts) {
   if (!event.start_date) return "";
   const d = new Date(event.start_date);
   if (isNaN(d)) return event.start_date;
+  const locale = currentLocale();
   try {
-    return new Intl.DateTimeFormat("it-IT", {
+    return new Intl.DateTimeFormat(locale, {
       day: "numeric",
       month: "short",
       year: "numeric",
@@ -84,7 +251,7 @@ function formatDate(event, opts) {
       ...opts,
     }).format(d);
   } catch {
-    return d.toLocaleString("it-IT");
+    return d.toLocaleString(locale);
   }
 }
 
@@ -93,7 +260,7 @@ function formatTime(event) {
   const d = new Date(event.start_date);
   if (isNaN(d)) return "";
   try {
-    return new Intl.DateTimeFormat("it-IT", {
+    return new Intl.DateTimeFormat(currentLocale(), {
       hour: "2-digit",
       minute: "2-digit",
       timeZone: event.timezone || "Europe/Rome",
@@ -124,7 +291,7 @@ function localDateKey(event) {
 
 function formatDayHeading(dateKey) {
   const d = new Date(`${dateKey}T12:00:00`);
-  const formatted = new Intl.DateTimeFormat("it-IT", {
+  const formatted = new Intl.DateTimeFormat(currentLocale(), {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -211,11 +378,11 @@ function dateKeyFor(year, month, day) {
 
 function monthLabel(year, month) {
   const d = new Date(year, month, 1);
-  const label = new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" }).format(d);
+  const label = new Intl.DateTimeFormat(currentLocale(), { month: "long", year: "numeric" }).format(d);
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
 function dayOfWeekAbbrev(year, month, day) {
   const d = new Date(year, month, day);
-  return new Intl.DateTimeFormat("it-IT", { weekday: "short" }).format(d).replace(".", "");
+  return new Intl.DateTimeFormat(currentLocale(), { weekday: "short" }).format(d).replace(".", "");
 }
