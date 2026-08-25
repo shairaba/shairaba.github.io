@@ -47,6 +47,48 @@ runner doesn't help either: it would need to be *this* machine anyway,
 running whenever the schedule fires, which is the same constraint as
 running locally in the first place.
 
+### Alternative: driving your real Chrome directly (`browser_console_run.py`)
+
+`cli.py run` drives a *copy* of your Chrome profile through Playwright.
+There's a second, independent mechanism that instead drives your actual,
+already-running Chrome - no copy, no Playwright, no CDP (recent Chrome
+versions block `--remote-debugging-port` from actually opening against
+the default profile, specifically to prevent external tools from
+attaching to a user's real authenticated session - confirmed live,
+not a bug to route around).
+
+The real mechanism: Chrome has a long-standing AppleScript command,
+`execute <tab> javascript "<script>"`, unrelated to and not blocked by
+the CDP restriction above. It runs arbitrary JS in a real tab exactly as
+if you'd pasted it into DevTools - which is exactly what this replaces:
+`console_script.js` is the original browser-console fallback script,
+unmodified, now triggered by `run_console_script.applescript` instead of
+a person pasting it by hand. It downloads `nationwide_response.json` via
+a same-page Blob/anchor click, same as it always did; `browser_console_run.py`
+watches `~/Downloads` for that file, archives it to `tool/data/raw/`, and
+feeds it through `console_ingest.py` - the same normalize/filter/upsert/save
+logic `cli.py run` uses, so both ingestion paths converge on an identical
+store. It finishes by calling `auto_run.commit_and_push()`, same as the
+Playwright path.
+
+One-time setup required: Chrome's menu bar -> **View > Developer > Allow
+JavaScript from Apple Events** (off by default - this is what actually
+gates the `execute javascript` command; without it the AppleScript fails
+with a permission error).
+
+```bash
+tool/.venv/bin/python browser_console_run.py
+```
+
+Not yet wired into the `launchd` auto-run - it uses a fundamentally
+different mechanism from `cli.py run` (your live session instead of a
+copy) and hasn't had a live end-to-end test yet, so `auto_run.py` still
+calls the Playwright path for now. Worth switching to if it proves more
+reliable, since it sidesteps every failure mode Playwright automation
+hits on this site (profile authenticity, CDP restrictions, and any
+behavioral scoring on freshly-bootstrapped sessions) by just being your
+browser, doing what you'd do by hand.
+
 ### Local auto-run (`auto_run.py` + `launchd`)
 
 Since this machine isn't reliably on/awake at a fixed hour, scraping is
