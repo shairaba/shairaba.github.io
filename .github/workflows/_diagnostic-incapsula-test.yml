@@ -1,0 +1,28 @@
+name: Diagnostic - Incapsula reachability test (throwaway)
+
+on:
+  push:
+    branches:
+      - test/incapsula-diagnostic
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Playwright
+        run: pip install playwright
+
+      - name: Install Chromium + OS deps
+        run: python -m playwright install --with-deps chromium
+
+      - name: Install Xvfb
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+
+      - name: Probe events.pokemon.com (headed via Xvfb)
+        run: xvfb-run --auto-servernum python .github/workflows/_diagnostic_probe.py
