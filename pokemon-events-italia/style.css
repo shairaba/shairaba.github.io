@@ -155,6 +155,17 @@ h1 { margin: 0 0 6px; font-size: 1.4rem; letter-spacing: -.015em; }
 .filter-checkbox input { width: auto; flex: none; accent-color: var(--accent); cursor: pointer; }
 .filter-checkbox span { min-width: 0; flex: 1 1 auto; }
 
+.filter-checkbox-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  flex: 1 1 100%;
+  min-width: 0;
+}
+.filter-checkbox-group .filter-checkbox { flex: 0 0 auto; padding: 9px 4px 9px 0; }
+.filter-checkbox-group .filter-checkbox span { flex: 0 0 auto; }
+
 /* Type badges (used on the detail page; list/calendar cards use color + icon instead) */
 .badge {
   display: inline-block;

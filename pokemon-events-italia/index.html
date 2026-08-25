@@ -34,10 +34,28 @@
         <option value="tournament">Torneo</option>
         <option value="league">Lega</option>
       </select>
+      <select id="region" class="pill-select">
+        <option value="">Tutte le regioni</option>
+      </select>
       <span class="filter-label">Da</span>
       <input type="date" id="date-from">
       <span class="filter-label">A</span>
       <input type="date" id="date-to">
+      <div class="filter-checkbox-group">
+        <span class="filter-label">Giochi</span>
+        <label class="filter-checkbox">
+          <input type="checkbox" id="game-vg" checked>
+          <span>Video Game</span>
+        </label>
+        <label class="filter-checkbox">
+          <input type="checkbox" id="game-tcg" checked>
+          <span>GCC</span>
+        </label>
+        <label class="filter-checkbox">
+          <input type="checkbox" id="game-pgo" checked>
+          <span>GO</span>
+        </label>
+      </div>
       <label class="filter-checkbox">
         <input type="checkbox" id="include-inactive">
         <span>Includi eventi passati/scaduti</span>
@@ -78,9 +96,12 @@
     let calYear, calMonth, calSelectedKey;
 
     function currentFilterState() {
+      const games = ["vg", "tcg", "pgo"].filter((g) => document.getElementById(`game-${g}`).checked);
       return {
         q: document.getElementById("q").value.trim(),
         type: document.getElementById("type").value,
+        region: document.getElementById("region").value,
+        games,
         dateFrom: document.getElementById("date-from").value,
         dateTo: document.getElementById("date-to").value,
         includeInactive: document.getElementById("include-inactive").checked,
@@ -99,6 +120,9 @@
         );
       }
       if (filterState.type) rows = rows.filter((e) => eventTypeKey(e) === filterState.type);
+      if (filterState.region) rows = rows.filter((e) => e.region === filterState.region);
+      if (filterState.games && filterState.games.length < 3)
+        rows = rows.filter((e) => (e.products || []).some((p) => filterState.games.includes(p)));
       if (filterState.dateFrom) rows = rows.filter((e) => e.start_date && e.start_date.slice(0, 10) >= filterState.dateFrom);
       if (filterState.dateTo) rows = rows.filter((e) => e.start_date && e.start_date.slice(0, 10) <= filterState.dateTo);
       return rows.slice().sort((a, b) => (a.start_date || "").localeCompare(b.start_date || ""));
@@ -291,15 +315,29 @@
 
       initCalendarDefaults(allEvents);
 
+      const regionSelect = document.getElementById("region");
+      const regions = [...new Set(allEvents.map((e) => e.region).filter(Boolean))].sort((a, b) =>
+        a.localeCompare(b, "it")
+      );
+      regions.forEach((r) => {
+        const opt = document.createElement("option");
+        opt.value = r;
+        opt.textContent = r.charAt(0) + r.slice(1).toLowerCase();
+        regionSelect.appendChild(opt);
+      });
+
       if (qs("q")) document.getElementById("q").value = qs("q");
       if (qs("type")) document.getElementById("type").value = qs("type");
+      if (qs("region")) regionSelect.value = qs("region");
 
       document.getElementById("filter-form").addEventListener("submit", (e) => {
         e.preventDefault();
         render();
       });
       document.getElementById("type").addEventListener("change", render);
+      regionSelect.addEventListener("change", render);
       document.getElementById("include-inactive").addEventListener("change", render);
+      ["vg", "tcg", "pgo"].forEach((g) => document.getElementById(`game-${g}`).addEventListener("change", render));
 
       const activeCount = allEvents.filter((e) => e.is_active).length;
       document.getElementById("meta-note").textContent = `${activeCount} eventi attivi in Italia.`;
