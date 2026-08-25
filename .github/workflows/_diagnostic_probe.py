@@ -24,27 +24,61 @@ def main() -> None:
         page = context.new_page()
         requests = []
         page.on("request", lambda r: requests.append(r.url))
+        console_msgs = []
+        page.on("console", lambda m: console_msgs.append(f"[{m.type}] {m.text}"))
+        page.on("pageerror", lambda e: console_msgs.append(f"[pageerror] {e}"))
+        set_cookie_responses = []
+
+        def on_response(r):
+            try:
+                headers = r.headers
+                if "set-cookie" in headers:
+                    set_cookie_responses.append((r.url, headers["set-cookie"][:200]))
+            except Exception:
+                pass
+
+        page.on("response", on_response)
+
         page.goto(URL, wait_until="domcontentloaded", timeout=45000)
-        nr2users_at = None
-        for i in range(45):
+        for i in range(30):
             page.mouse.move(200 + (i % 10) * 30, 300 + (i % 10) * 15, steps=5)
             time.sleep(1)
-            names = {c["name"] for c in context.cookies()}
-            if "nr2Users" in names and nr2users_at is None:
-                nr2users_at = i + 1
-                break
 
         cookie_names = sorted(c["name"] for c in context.cookies())
         reached_real_app = any("OutSystems" in u or "moduleservices" in u for u in requests)
 
+        js_cookie = page.evaluate("document.cookie")
+        local_storage = page.evaluate(
+            "JSON.stringify(Object.fromEntries(Object.entries(localStorage)))"
+        )
+        session_storage = page.evaluate(
+            "JSON.stringify(Object.fromEntries(Object.entries(sessionStorage)))"
+        )
+
         print("=== RESULT ===")
         print(f"reached_real_app: {reached_real_app}")
-        print(f"nr2Users present: {'nr2Users' in cookie_names}")
-        print(f"nr2Users appeared at: {nr2users_at}s")
-        print(f"cookies: {cookie_names}")
-        print("=== REQUESTS (up to 20) ===")
-        for u in requests[:20]:
-            print(u[:180])
+        print(f"nr2Users present (context.cookies): {'nr2Users' in cookie_names}")
+        print(f"cookies (context.cookies): {cookie_names}")
+        print(f"document.cookie (from page JS): {js_cookie}")
+        print(f"localStorage: {local_storage[:2000]}")
+        print(f"sessionStorage: {session_storage[:2000]}")
+
+        print("=== SET-COOKIE RESPONSE HEADERS ===")
+        for url, sc in set_cookie_responses:
+            print(f"{url[:120]} -> {sc}")
+
+        maps_related = [u for u in requests if "maps.google" in u or "googleapis" in u]
+        print(f"=== MAPS/GOOGLEAPIS REQUESTS ({len(maps_related)}) ===")
+        for u in maps_related:
+            print(u[:200])
+
+        print(f"=== ALL REQUESTS ({len(requests)}) ===")
+        for u in requests:
+            print(u[:200])
+
+        print(f"=== CONSOLE/PAGEERROR MESSAGES ({len(console_msgs)}) ===")
+        for m in console_msgs[:60]:
+            print(m[:300])
 
         browser.close()
 
