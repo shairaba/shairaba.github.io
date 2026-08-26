@@ -28,6 +28,7 @@ const TRANSLATIONS = {
     gamePgo: "GO",
     filterBtn: "Filtra",
     resetFilters: "Azzera filtri",
+    backToTop: "Torna in cima",
     viewList: "Elenco",
     viewCalendar: "Calendario",
     viewMap: "Mappa",
@@ -87,6 +88,7 @@ const TRANSLATIONS = {
     gamePgo: "GO",
     filterBtn: "Filter",
     resetFilters: "Reset filters",
+    backToTop: "Back to top",
     viewList: "List",
     viewCalendar: "Calendar",
     viewMap: "Map",
@@ -211,10 +213,26 @@ function initCookieConsent() {
   const banner = document.getElementById("cookie-banner");
   if (!banner || localStorage.getItem(COOKIE_CONSENT_KEY) === "1") return;
   banner.style.display = "";
+  // Nudges the back-to-top button up while the banner occupies the same
+  // bottom-right corner (see .back-to-top / body.has-cookie-banner in
+  // style.css) - only matters for the brief window before it's dismissed.
+  document.body.classList.add("has-cookie-banner");
   document.getElementById("cookie-accept").addEventListener("click", () => {
     localStorage.setItem(COOKIE_CONSENT_KEY, "1");
     banner.style.display = "none";
+    document.body.classList.remove("has-cookie-banner");
   });
+}
+
+/* Floating bottom-right button, hidden until the page is scrolled down a
+   bit, that smooth-scrolls back to the top. Present on all three pages. */
+function initBackToTop() {
+  const btn = document.getElementById("back-to-top");
+  if (!btn) return;
+  const toggle = () => btn.classList.toggle("visible", window.scrollY > 400);
+  window.addEventListener("scroll", toggle, { passive: true });
+  toggle();
+  btn.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
 }
 
 /* Proper display casing for the 20 Italian regions - the stored `region`
