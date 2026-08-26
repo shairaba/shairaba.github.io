@@ -4,9 +4,21 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Pok&eacute;mon Event Locator but better</title>
+  <!-- Applied before the stylesheet/first paint, from a saved cookie (or the
+       OS preference on a first visit) - so a returning dark-mode user never
+       sees a flash of the light theme while the page loads. The toggle
+       button's own click handler (app.js) keeps this in sync afterward and
+       re-saves the cookie. -->
+  <script>
+  (function () {
+    var m = document.cookie.match(/(?:^|; )theme=(dark|light)/);
+    var theme = m ? m[1] : (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", theme);
+  })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
@@ -17,7 +29,13 @@
 </head>
 <body>
   <header class="topbar">
-    <span class="brand">Pok&eacute;mon Event Locator but better</span>
+    <div class="brand-group">
+      <img class="logo" src="logo.svg" alt="Pok&eacute;mon Event Locator but better">
+      <div class="brand-text">
+        <span class="brand">Pok&eacute;mon Event Locator but better</span>
+        <span class="brand-tagline" data-i18n="brandTagline">Eventi VGC, GCC e GO in Italia</span>
+      </div>
+    </div>
     <div class="topbar-controls">
       <div class="lang-toggle">
         <button class="lang-btn" data-lang="it" type="button">IT</button>
@@ -28,6 +46,20 @@
         <button id="view-calendar-btn" class="toggle-btn" type="button" data-i18n="viewCalendar">Calendario</button>
         <button id="view-map-btn" class="toggle-btn" type="button" data-i18n="viewMap">Mappa</button>
       </div>
+      <button id="theme-toggle" type="button" aria-label="Toggle dark mode">
+        <span class="theme-switch-icon theme-switch-sun" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+          </svg>
+        </span>
+        <span class="theme-switch-icon theme-switch-moon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+            <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 1 0 10.5 10.5z"></path>
+          </svg>
+        </span>
+        <span class="theme-switch-knob"></span>
+      </button>
     </div>
   </header>
   <main class="container">
@@ -74,12 +106,18 @@
     </div>
 
     <div id="calendar-view" style="display:none">
+      <div class="view-toggle cal-mode-toggle" id="cal-mode-toggle">
+        <button type="button" class="toggle-btn cal-mode-btn active" data-cal-mode="strip" data-i18n="calViewStrip">Giorni</button>
+        <button type="button" class="toggle-btn cal-mode-btn" data-cal-mode="month" data-i18n="calViewMonth">Mese</button>
+      </div>
       <div class="cal-nav">
         <button id="cal-prev-month" class="cal-nav-btn" type="button" data-i18n-aria-label="prevMonth" aria-label="Mese precedente">&lsaquo;</button>
         <div class="cal-month-label" id="cal-month-label"></div>
         <button id="cal-next-month" class="cal-nav-btn" type="button" data-i18n-aria-label="nextMonth" aria-label="Mese successivo">&rsaquo;</button>
       </div>
       <div class="cal-daystrip" id="cal-daystrip"></div>
+      <div class="cal-weekdays" id="cal-weekdays" style="display:none"></div>
+      <div class="cal-month-grid" id="cal-month-grid" style="display:none"></div>
       <div class="cal-day-heading" id="cal-day-heading"></div>
       <div class="event-list" id="cal-events"></div>
     </div>
@@ -91,6 +129,11 @@
     <p class="footnote" data-i18n="footnote">Dati raccolti dal localizzatore eventi ufficiale Pok&eacute;mon. Non affiliato a The Pok&eacute;mon Company International.</p>
   </main>
 
+  <div id="cookie-banner" class="cookie-banner" style="display:none">
+    <p data-i18n="cookieNotice">Questo sito salva solo le tue preferenze di tema e lingua sul tuo dispositivo (un cookie tecnico e il local storage del browser). Nessun dato viene inviato a terzi o usato per tracciamento.</p>
+    <button id="cookie-accept" type="button" data-i18n="cookieAccept">Ho capito</button>
+  </div>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"
@@ -99,6 +142,7 @@
   <script>
     let allEvents = [];
     let calYear, calMonth, calSelectedKey;
+    let calMode = localStorage.getItem("calMode") === "month" ? "month" : "strip";
 
     function currentFilterState() {
       const games = ["vg", "tcg", "pgo"].filter((g) => document.getElementById(`game-${g}`).checked);
@@ -193,18 +237,23 @@
       return map;
     }
 
-    function renderCalendar(filtered) {
-      const byDay = eventsByDayKey(filtered);
+    /* One dot per game present that day (red=VG, blue=TCG, green=GO) rather
+       than a single generic "has events" dot, so the calendar itself shows
+       which games are running without opening the day. */
+    function dayGamesDotsHtml(dayEvents) {
+      const games = ["vg", "tcg", "pgo"].filter((g) =>
+        (dayEvents || []).some((e) => (e.products || []).includes(g))
+      );
+      if (!games.length) return "";
+      return `<span class="dots">${games.map((g) => `<span class="dot dot-${g}"></span>`).join("")}</span>`;
+    }
 
-      document.getElementById("cal-month-label").textContent = monthLabel(calYear, calMonth);
-
+    function renderCalDayStrip(byDay, todayKey) {
       const strip = document.getElementById("cal-daystrip");
-      const todayKey = localDateKey({ start_date: new Date().toISOString() });
       const total = daysInMonth(calYear, calMonth);
       let chipsHtml = "";
       for (let day = 1; day <= total; day++) {
         const key = dateKeyFor(calYear, calMonth, day);
-        const hasEvents = !!byDay[key];
         const classes = ["cal-day-chip"];
         if (key === calSelectedKey) classes.push("selected");
         if (key === todayKey) classes.push("today");
@@ -212,7 +261,7 @@
           <button type="button" class="${classes.join(" ")}" data-key="${key}">
             <span class="num">${day}</span>
             <span class="dow">${esc(dayOfWeekAbbrev(calYear, calMonth, day))}</span>
-            ${hasEvents ? '<span class="dot"></span>' : ""}
+            ${dayGamesDotsHtml(byDay[key])}
           </button>`;
       }
       strip.innerHTML = chipsHtml;
@@ -224,6 +273,71 @@
           if (selected) selected.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
         });
       });
+    }
+
+    /* Weekday header for the month grid - locale-dependent labels only, not
+       tied to the displayed month, so any Monday works as the reference
+       date (2024-01-01 was a Monday). Recomputed on every render since the
+       locale can change via the IT/EN toggle. */
+    function renderCalWeekdayHeader() {
+      const el = document.getElementById("cal-weekdays");
+      let html = "";
+      for (let i = 0; i < 7; i++) html += `<span>${esc(dayOfWeekAbbrev(2024, 0, 1 + i))}</span>`;
+      el.innerHTML = html;
+    }
+
+    /* Full month grid (Google Calendar style) - leading/trailing cells spill
+       into the adjacent month (dimmed, still clickable) so every row is a
+       complete week; clicking one of those navigates the grid to that month. */
+    function renderCalMonthGrid(byDay, todayKey) {
+      renderCalWeekdayHeader();
+      const grid = document.getElementById("cal-month-grid");
+      const firstJsDow = new Date(calYear, calMonth, 1).getDay(); // 0=Sun..6=Sat
+      const leading = (firstJsDow + 6) % 7; // Monday-start offset
+      const total = daysInMonth(calYear, calMonth);
+      const cellCount = Math.ceil((leading + total) / 7) * 7;
+      let html = "";
+      for (let i = 0; i < cellCount; i++) {
+        const dayNum = i - leading + 1;
+        const cellDate = new Date(calYear, calMonth, dayNum);
+        const key = dateKeyFor(cellDate.getFullYear(), cellDate.getMonth(), cellDate.getDate());
+        const classes = ["cal-grid-cell"];
+        if (dayNum < 1 || dayNum > total) classes.push("cal-grid-cell-outside");
+        if (key === calSelectedKey) classes.push("selected");
+        if (key === todayKey) classes.push("today");
+        html += `
+          <button type="button" class="${classes.join(" ")}" data-key="${key}">
+            <span class="num">${cellDate.getDate()}</span>
+            ${dayGamesDotsHtml(byDay[key])}
+          </button>`;
+      }
+      grid.innerHTML = html;
+      grid.querySelectorAll(".cal-grid-cell").forEach((cell) => {
+        cell.addEventListener("click", () => {
+          calSelectedKey = cell.dataset.key;
+          const [y, m] = calSelectedKey.split("-").map(Number);
+          calYear = y;
+          calMonth = m - 1;
+          renderCalendar(applyFilters(allEvents, currentFilterState()));
+        });
+      });
+    }
+
+    function renderCalendar(filtered) {
+      const byDay = eventsByDayKey(filtered);
+      const todayKey = localDateKey({ start_date: new Date().toISOString() });
+
+      document.getElementById("cal-month-label").textContent = monthLabel(calYear, calMonth);
+
+      const strip = document.getElementById("cal-daystrip");
+      const weekdays = document.getElementById("cal-weekdays");
+      const grid = document.getElementById("cal-month-grid");
+      strip.style.display = calMode === "month" ? "none" : "";
+      weekdays.style.display = calMode === "month" ? "" : "none";
+      grid.style.display = calMode === "month" ? "" : "none";
+
+      if (calMode === "month") renderCalMonthGrid(byDay, todayKey);
+      else renderCalDayStrip(byDay, todayKey);
 
       if (!calSelectedKey || !calSelectedKey.startsWith(`${calYear}-${String(calMonth + 1).padStart(2, "0")}`)) {
         // Landed on a different month - default to the first day with events, else the 1st.
@@ -231,9 +345,12 @@
           .filter((k) => k.startsWith(`${calYear}-${String(calMonth + 1).padStart(2, "0")}`))
           .sort()[0];
         calSelectedKey = firstWithEvents || dateKeyFor(calYear, calMonth, 1);
-        strip.querySelectorAll(".cal-day-chip").forEach((chip) => {
-          chip.classList.toggle("selected", chip.dataset.key === calSelectedKey);
-        });
+        if (calMode === "month") renderCalMonthGrid(byDay, todayKey);
+        else {
+          strip.querySelectorAll(".cal-day-chip").forEach((chip) => {
+            chip.classList.toggle("selected", chip.dataset.key === calSelectedKey);
+          });
+        }
       }
 
       const dayEvents = (byDay[calSelectedKey] || []).slice().sort((a, b) => (a.start_date || "").localeCompare(b.start_date || ""));
@@ -248,8 +365,10 @@
         wireEventCardClicks(eventsContainer);
       }
 
-      const selectedChip = strip.querySelector(".cal-day-chip.selected");
-      if (selectedChip) selectedChip.scrollIntoView({ inline: "center", block: "nearest" });
+      if (calMode === "strip") {
+        const selectedChip = strip.querySelector(".cal-day-chip.selected");
+        if (selectedChip) selectedChip.scrollIntoView({ inline: "center", block: "nearest" });
+      }
     }
 
     function initCalendarDefaults(events) {
@@ -310,6 +429,16 @@
       renderCalendar(applyFilters(allEvents, currentFilterState()));
     });
 
+    document.querySelectorAll(".cal-mode-btn").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.calMode === calMode);
+      btn.addEventListener("click", () => {
+        calMode = btn.dataset.calMode;
+        localStorage.setItem("calMode", calMode);
+        document.querySelectorAll(".cal-mode-btn").forEach((b) => b.classList.toggle("active", b.dataset.calMode === calMode));
+        renderCalendar(applyFilters(allEvents, currentFilterState()));
+      });
+    });
+
     function updateMetaNote() {
       const todayKey = localDateKey({ start_date: new Date().toISOString() });
       const upcomingCount = allEvents.filter((e) => {
@@ -320,6 +449,8 @@
     }
 
     (async function main() {
+      initThemeToggle();
+      initCookieConsent();
       initLangToggle(() => {
         updateMetaNote();
         render();

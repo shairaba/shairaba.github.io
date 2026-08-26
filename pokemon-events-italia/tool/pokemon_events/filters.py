@@ -175,12 +175,17 @@ def region_from_address(full_address: str | None) -> str | None:
     fine and expected."""
     if not full_address:
         return None
-    addr = full_address.upper().strip()
+
+    # Matched only against the address *minus its first (street) segment*,
+    # same as the province-name check below it - a region name can appear in
+    # a street name too (e.g. "144 CORSO LOMBARDIA, TORINO, PIEMONTE 10149,
+    # IT", a Turin store on a street named after Lombardia), so searching
+    # the full address here caused real mis-tagging before this was fixed.
+    rest = _without_street_segment(full_address)
     for region in ALL_REGION_NAMES:
-        if region in addr:
+        if region in rest:
             return region
 
-    rest = _without_street_segment(full_address)
     for province_name, region in PROVINCE_NAME_TO_REGION.items():
         if province_name in rest:
             return region

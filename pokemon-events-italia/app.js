@@ -10,6 +10,7 @@ const TRANSLATIONS = {
   it: {
     locale: "it-IT",
     brand: "Pokémon Event Locator but better",
+    brandTagline: "Eventi VGC, GCC e GO in Italia",
     heading: "Prossimi eventi Pokémon in Italia",
     metaCount: (n) => `${n} eventi attivi in Italia.`,
     searchPlaceholder: "Cerca per nome, negozio, città...",
@@ -29,6 +30,8 @@ const TRANSLATIONS = {
     viewList: "Elenco",
     viewCalendar: "Calendario",
     viewMap: "Mappa",
+    calViewStrip: "Giorni",
+    calViewMonth: "Mese",
     prevMonth: "Mese precedente",
     nextMonth: "Mese successivo",
     noEventsFound: "Nessun evento trovato.",
@@ -56,10 +59,16 @@ const TRANSLATIONS = {
     noEventSpecified: "Evento non specificato.",
     eventNotFound: "Evento non trovato.",
     noEventName: "Evento senza nome",
+    cookieNotice: "Questo sito salva solo le tue preferenze di tema e lingua sul tuo dispositivo (un cookie tecnico e il local storage del browser). Nessun dato viene inviato a terzi o usato per tracciamento.",
+    cookieAccept: "Ho capito",
+    venueUpcomingCount: (n) => `${n} eventi in programma qui.`,
+    venueNotFound: "Negozio non trovato.",
+    viewVenueEvents: "Vedi tutti gli eventi di questo negozio",
   },
   en: {
     locale: "en-US",
     brand: "Pokémon Event Locator but better",
+    brandTagline: "VGC, TCG and GO events in Italy",
     heading: "Upcoming Pokémon events in Italy",
     metaCount: (n) => `${n} active events in Italy.`,
     searchPlaceholder: "Search by name, store, city...",
@@ -79,6 +88,8 @@ const TRANSLATIONS = {
     viewList: "List",
     viewCalendar: "Calendar",
     viewMap: "Map",
+    calViewStrip: "Days",
+    calViewMonth: "Month",
     prevMonth: "Previous month",
     nextMonth: "Next month",
     noEventsFound: "No events found.",
@@ -106,6 +117,11 @@ const TRANSLATIONS = {
     noEventSpecified: "No event specified.",
     eventNotFound: "Event not found.",
     noEventName: "Unnamed event",
+    cookieNotice: "This site only stores your theme and language preference on your device (a technical cookie and browser local storage). No data is sent to third parties or used for tracking.",
+    cookieAccept: "Got it",
+    venueUpcomingCount: (n) => `${n} upcoming events here.`,
+    venueNotFound: "Store not found.",
+    viewVenueEvents: "See all events at this store",
   },
 };
 
@@ -165,11 +181,45 @@ function initLangToggle(onChange) {
   });
 }
 
+/* Light/dark toggle, present in both pages' topbar. The initial theme is
+   already applied to <html> by an inline blocking script in each page's
+   <head> (reads the same cookie, before first paint) - this only needs to
+   flip that attribute and re-save the cookie on click; the switch's
+   sun/moon icons and knob position are driven entirely by CSS off the
+   [data-theme] attribute. */
+function initThemeToggle() {
+  const btn = document.getElementById("theme-toggle");
+  if (!btn) return;
+  btn.addEventListener("click", () => {
+    const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    document.cookie = `theme=${next}; max-age=${60 * 60 * 24 * 365}; path=/; SameSite=Lax`;
+  });
+}
+
+const COOKIE_CONSENT_KEY = "cookieConsent";
+
+/* Minimal GDPR-style notice: this site only sets a `theme` cookie and two
+   localStorage keys (lang, calMode) for its own preferences - no analytics,
+   no third-party tracking - but ePrivacy still calls for informing visitors
+   before/while that storage happens. Shown once; "Got it" just records
+   acknowledgement so it doesn't reappear, it doesn't gate the preferences
+   themselves (they're strictly functional, not used for tracking). */
+function initCookieConsent() {
+  const banner = document.getElementById("cookie-banner");
+  if (!banner || localStorage.getItem(COOKIE_CONSENT_KEY) === "1") return;
+  banner.style.display = "";
+  document.getElementById("cookie-accept").addEventListener("click", () => {
+    localStorage.setItem(COOKIE_CONSENT_KEY, "1");
+    banner.style.display = "none";
+  });
+}
+
 const TYPE_META = {
   cup: { labelKey: "typeCup", className: "type-cup", iconImg: "icons/league-cup.png" },
   challenge: { labelKey: "typeChallenge", className: "type-challenge", iconImg: "icons/league-challenge.png" },
-  tournament: { labelKey: "typeTournament", className: "type-tournament", icon: "🎮" },
-  league: { labelKey: "typeLeague", className: "type-league", icon: "👥" },
+  tournament: { labelKey: "typeTournament", className: "type-tournament", iconImg: "icons/default-badge.png" },
+  league: { labelKey: "typeLeague", className: "type-league", iconImg: "icons/default-badge.png" },
 };
 
 /* Cup/Challenge use the official badge artwork instead of an emoji -

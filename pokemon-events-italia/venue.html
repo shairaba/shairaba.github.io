@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pok&eacute;mon Event Locator but better</title>
+  <!-- Applied before the stylesheet/first paint, from a saved cookie (or the
+       OS preference on a first visit) - so a returning dark-mode user never
+       sees a flash of the light theme while the page loads. The toggle
+       button's own click handler (app.js) keeps this in sync afterward and
+       re-saves the cookie. -->
+  <script>
+  (function () {
+    var m = document.cookie.match(/(?:^|; )theme=(dark|light)/);
+    var theme = m ? m[1] : (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", theme);
+  })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand-group" href="index.html">
+      <img class="logo" src="logo.svg" alt="Pok&eacute;mon Event Locator but better">
+      <div class="brand-text">
+        <span class="brand">Pok&eacute;mon Event Locator but better</span>
+        <span class="brand-tagline" data-i18n="brandTagline">Eventi VGC, GCC e GO in Italia</span>
+      </div>
+    </a>
+    <div class="topbar-controls">
+      <div class="lang-toggle">
+        <button class="lang-btn" data-lang="it" type="button">IT</button>
+        <button class="lang-btn" data-lang="en" type="button">EN</button>
+      </div>
+      <button id="theme-toggle" type="button" aria-label="Toggle dark mode">
+        <span class="theme-switch-icon theme-switch-sun" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+          </svg>
+        </span>
+        <span class="theme-switch-icon theme-switch-moon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+            <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 1 0 10.5 10.5z"></path>
+          </svg>
+        </span>
+        <span class="theme-switch-knob"></span>
+      </button>
+    </div>
+  </header>
+  <main class="container" id="main-content">
+    <p class="loading" data-i18n="loading">Caricamento&hellip;</p>
+  </main>
+
+  <div id="cookie-banner" class="cookie-banner" style="display:none">
+    <p data-i18n="cookieNotice">Questo sito salva solo le tue preferenze di tema e lingua sul tuo dispositivo (un cookie tecnico e il local storage del browser). Nessun dato viene inviato a terzi o usato per tracciamento.</p>
+    <button id="cookie-accept" type="button" data-i18n="cookieAccept">Ho capito</button>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="app.js"></script>
+  <script>
+    let venueEvents = [];
+    let currentVenue = null;
+
+    function currentFilterState() {
+      const games = ["vg", "tcg", "pgo"].filter((g) => document.getElementById(`game-${g}`).checked);
+      return { type: document.getElementById("type").value, games };
+    }
+
+    /* Same upcoming-only convention as the list/calendar views - a venue
+       page is meant to answer "what's coming up here", not serve as a full
+       history of every event the store has ever run. */
+    function applyVenueFilters(events, filterState) {
+      const todayKey = localDateKey({ start_date: new Date().toISOString() });
+      let rows = events.filter((e) => {
+        const key = localDateKey(e);
+        return key && key >= todayKey;
+      });
+      if (filterState.type) rows = rows.filter((e) => eventTypeKey(e) === filterState.type);
+      if (filterState.games && filterState.games.length < 3)
+        rows = rows.filter((e) => (e.products || []).some((p) => filterState.games.includes(p)));
+      return rows.slice().sort((a, b) => (a.start_date || "").localeCompare(b.start_date || ""));
+    }
+
+    function render() {
+      const filtered = applyVenueFilters(venueEvents, currentFilterState());
+      const container = document.getElementById("rows");
+      if (!filtered.length) {
+        container.innerHTML = `<p class="empty-state">${esc(t("noEventsFound"))}</p>`;
+      } else {
+        container.innerHTML = filtered.map((e) => eventCardHtml(e, { showDate: true })).join("");
+        wireEventCardClicks(container);
+      }
+      document.getElementById("venue-count").textContent = t("venueUpcomingCount", filtered.length);
+    }
+
+    function renderVenuePage() {
+      const main = document.getElementById("main-content");
+      document.title = `${currentVenue.name} - ${t("brand")}`;
+
+      main.innerHTML = `
+        <a class="back-link" href="index.html">${esc(t("backToList"))}</a>
+        <h1 class="detail-title">${esc(currentVenue.name)}</h1>
+        ${currentVenue.address ? `<p class="detail-subtitle">${esc(currentVenue.address)}</p>` : ""}
+        ${currentVenue.latitude && currentVenue.longitude ? `<div id="venue-map"></div>` : ""}
+
+        <div class="filter-bar venue-filter-bar" id="filter-form">
+          <select id="type" class="pill-select">
+            <option value="" data-i18n="allTypes">Tutti i tipi</option>
+            <option value="cup" data-i18n="typeCup">Coppa di Lega</option>
+            <option value="challenge" data-i18n="typeChallenge">Sfida di Lega</option>
+            <option value="tournament" data-i18n="typeTournament">Torneo</option>
+            <option value="league" data-i18n="typeLeague">Lega</option>
+          </select>
+          <div class="filter-checkbox-group">
+            <span class="filter-label" data-i18n="games">Giochi</span>
+            <label class="game-toggle game-toggle-vg">
+              <input type="checkbox" id="game-vg" checked>
+              <span data-i18n="gameVg">Video Game</span>
+            </label>
+            <label class="game-toggle game-toggle-tcg">
+              <input type="checkbox" id="game-tcg" checked>
+              <span data-i18n="gameTcg">GCC</span>
+            </label>
+            <label class="game-toggle game-toggle-pgo">
+              <input type="checkbox" id="game-pgo" checked>
+              <span data-i18n="gamePgo">GO</span>
+            </label>
+          </div>
+        </div>
+
+        <p class="showing-note" id="venue-count"></p>
+        <div class="event-list" id="rows"></div>
+      `;
+      applyTranslations(main);
+
+      if (currentVenue.latitude && currentVenue.longitude) {
+        const map = L.map("venue-map", { zoomControl: false, dragging: false, scrollWheelZoom: false, touchZoom: false })
+          .setView([currentVenue.latitude, currentVenue.longitude], 15);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 19,
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        }).addTo(map);
+        L.marker([currentVenue.latitude, currentVenue.longitude]).addTo(map);
+      }
+
+      document.getElementById("type").addEventListener("change", render);
+      ["vg", "tcg", "pgo"].forEach((g) => document.getElementById(`game-${g}`).addEventListener("change", render));
+
+      render();
+    }
+
+    (async function main() {
+      initThemeToggle();
+      initCookieConsent();
+      initLangToggle(() => currentVenue && renderVenuePage());
+
+      const main = document.getElementById("main-content");
+      const vid = qs("vid");
+      if (!vid) {
+        main.innerHTML = `<p class="empty-state">${esc(t("venueNotFound"))}</p>`;
+        return;
+      }
+
+      let events;
+      try {
+        events = await loadEvents();
+      } catch (err) {
+        main.innerHTML = `<p class="empty-state">${esc(t("loadError"))}</p>`;
+        console.error(err);
+        return;
+      }
+
+      venueEvents = events.filter((e) => e.activity_group_display_id === vid);
+      if (!venueEvents.length) {
+        main.innerHTML = `<p class="empty-state">${esc(t("venueNotFound"))}</p>`;
+        return;
+      }
+
+      const sample = venueEvents[0];
+      currentVenue = {
+        name: sample.activity_group_name || sample.venue_name || t("venueNotFound"),
+        address: sample.full_address || "",
+        latitude: sample.latitude,
+        longitude: sample.longitude,
+      };
+
+      renderVenuePage();
+    })();
+  </script>
+</body>
+</html>
