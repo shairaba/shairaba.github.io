@@ -19,6 +19,12 @@
   --ink: #333a72;
   --ink-dim: #6b6f9c;
 
+  /* The fee pill deliberately wears the OTHER mode's colors (dark mode's
+     panel-2/ink here, and light mode's below) so it always pops as a
+     little inverted accent against its own card instead of blending in. */
+  --cost-bg: #241e3a;
+  --cost-text: #ece9fb;
+
   --accent: #4a4fc9;
   --accent-strong: #363aa0;
   --badge-bg: #ece8fa;
@@ -68,6 +74,9 @@
   --ink: #ece9fb;
   --ink-dim: #a6a3d4;
 
+  --cost-bg: #e9e6f8;
+  --cost-text: #333a72;
+
   --accent: #9d6bff;
   --accent-strong: #c4a6ff;
   --badge-bg: #2a2244;
@@ -104,17 +113,35 @@ html { background: var(--bg-b); }
 body {
   margin: 0;
   font-family: 'Montserrat', sans-serif;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The gradient+lattice backdrop lives on a fixed full-viewport layer behind
+   the content, NOT directly on body's own (scrollable) background. Two
+   reasons:
+   - `background-attachment: fixed` reliably flashes/blanks the background
+     during momentum scrolling and overscroll bounce on mobile Safari/Chrome
+     (confirmed live) - an actual `position: fixed` element doesn't hit that
+     bug, it's a different mechanism entirely.
+   - A background painted directly on body stretches across body's FULL
+     scrollable height, not one screen's worth - on a long event list
+     (hundreds of cards) that smears one diagonal gradient across many
+     screens' worth of height, so the color you see depends on how far
+     you've scrolled and how tall that particular page/view happens to be
+     (confirmed live: looked like it was "changing color randomly"). Fixed
+     to the viewport, it's always the same gradient regardless of scroll
+     position or page length. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
   background:
     repeating-linear-gradient(135deg, rgba(255, 255, 255, .05) 0 2px, transparent 2px 46px),
     repeating-linear-gradient(45deg, rgba(255, 255, 255, .05) 0 2px, transparent 2px 46px),
     linear-gradient(160deg, var(--bg-a), var(--bg-b) 65%);
-  /* NOT background-attachment: fixed - reliably causes the background to
-     flash/blank out during momentum scrolling and overscroll bounce on
-     mobile Safari/Chrome (confirmed live: reported as "background is not
-     correct" while scrolling on a phone). The fixed-backdrop parallax look
-     it gave on desktop isn't worth that. */
-  color: var(--text);
-  -webkit-font-smoothing: antialiased;
 }
 
 a { color: var(--accent); text-decoration: none; }
@@ -459,8 +486,8 @@ h1 {
   flex: 0 0 auto;
   font-weight: 800;
   font-size: .82rem;
-  color: var(--ink);
-  background: var(--panel-2);
+  color: var(--cost-text);
+  background: var(--cost-bg);
   padding: 3px 9px;
   border-radius: 999px;
   white-space: nowrap;

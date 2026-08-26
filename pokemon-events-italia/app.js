@@ -215,6 +215,38 @@ function initCookieConsent() {
   });
 }
 
+/* Proper display casing for the 20 Italian regions - the stored `region`
+   field is always plain uppercase (see tool/pokemon_events/filters.py), and
+   a generic "capitalize the first letter, lowercase the rest" doesn't work
+   for multi-word/hyphenated names (would give "Emilia-romagna",
+   "Trentino-alto adige", "Valle d'aosta" instead of the correct casing). */
+const REGION_LABELS = {
+  "PIEMONTE": "Piemonte",
+  "VALLE D'AOSTA": "Valle d'Aosta",
+  "LOMBARDIA": "Lombardia",
+  "TRENTINO-ALTO ADIGE": "Trentino-Alto Adige",
+  "VENETO": "Veneto",
+  "FRIULI-VENEZIA GIULIA": "Friuli-Venezia Giulia",
+  "LIGURIA": "Liguria",
+  "EMILIA-ROMAGNA": "Emilia-Romagna",
+  "TOSCANA": "Toscana",
+  "UMBRIA": "Umbria",
+  "MARCHE": "Marche",
+  "LAZIO": "Lazio",
+  "ABRUZZO": "Abruzzo",
+  "MOLISE": "Molise",
+  "CAMPANIA": "Campania",
+  "PUGLIA": "Puglia",
+  "BASILICATA": "Basilicata",
+  "CALABRIA": "Calabria",
+  "SICILIA": "Sicilia",
+  "SARDEGNA": "Sardegna",
+};
+
+function regionLabel(region) {
+  return REGION_LABELS[region] || (region.charAt(0) + region.slice(1).toLowerCase());
+}
+
 const TYPE_META = {
   cup: { labelKey: "typeCup", className: "type-cup", iconImg: "icons/league-cup.png" },
   challenge: { labelKey: "typeChallenge", className: "type-challenge", iconImg: "icons/league-challenge.png" },
