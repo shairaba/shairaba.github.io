@@ -95,6 +95,12 @@
    element pushing the page wider than the viewport. */
 html, body { max-width: 100%; }
 
+/* Fallback color behind body's own background - mobile browsers can reveal
+   a sliver beneath it during elastic overscroll bounce (rubber-banding past
+   the top/bottom of the page), which without this shows through as the
+   browser's default white instead of the page's own dark backdrop. */
+html { background: var(--bg-b); }
+
 body {
   margin: 0;
   font-family: 'Montserrat', sans-serif;
@@ -102,7 +108,11 @@ body {
     repeating-linear-gradient(135deg, rgba(255, 255, 255, .05) 0 2px, transparent 2px 46px),
     repeating-linear-gradient(45deg, rgba(255, 255, 255, .05) 0 2px, transparent 2px 46px),
     linear-gradient(160deg, var(--bg-a), var(--bg-b) 65%);
-  background-attachment: fixed;
+  /* NOT background-attachment: fixed - reliably causes the background to
+     flash/blank out during momentum scrolling and overscroll bounce on
+     mobile Safari/Chrome (confirmed live: reported as "background is not
+     correct" while scrolling on a phone). The fixed-backdrop parallax look
+     it gave on desktop isn't worth that. */
   color: var(--text);
   -webkit-font-smoothing: antialiased;
 }
