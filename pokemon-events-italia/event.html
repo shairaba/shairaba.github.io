@@ -4,6 +4,26 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Pok&eacute;mon Event Locator but better</title>
+  <!-- Static, non-dynamic OG tags: crawlers for WhatsApp/Telegram/etc. don't
+       run JavaScript, so they can't see the actual event this page renders
+       client-side from ?guid= - every shared event link gets this same
+       generic branded preview rather than nothing. -->
+  <meta name="description" content="Cerca i prossimi eventi Pok&eacute;mon ufficiali (VGC, GCC, GO) in tutta Italia: elenco, calendario e mappa, con tutti i dettagli.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://shairaba.github.io/pokemon-events-italia/event.html">
+  <meta property="og:title" content="Pok&eacute;mon Event Locator but better">
+  <meta property="og:description" content="Cerca i prossimi eventi Pok&eacute;mon ufficiali (VGC, GCC, GO) in tutta Italia: elenco, calendario e mappa, con tutti i dettagli.">
+  <meta property="og:image" content="https://shairaba.github.io/pokemon-events-italia/social-preview.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:locale" content="it_IT">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Pok&eacute;mon Event Locator but better">
+  <meta name="twitter:description" content="Cerca i prossimi eventi Pok&eacute;mon ufficiali (VGC, GCC, GO) in tutta Italia: elenco, calendario e mappa, con tutti i dettagli.">
+  <meta name="twitter:image" content="https://shairaba.github.io/pokemon-events-italia/social-preview.png">
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <!-- Applied before the stylesheet/first paint, from a saved cookie (or the
        OS preference on a first visit) - so a returning dark-mode user never
        sees a flash of the light theme while the page loads. The toggle

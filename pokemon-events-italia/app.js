@@ -27,6 +27,7 @@ const TRANSLATIONS = {
     gameTcg: "GCC",
     gamePgo: "GO",
     filterBtn: "Filtra",
+    resetFilters: "Azzera filtri",
     viewList: "Elenco",
     viewCalendar: "Calendario",
     viewMap: "Mappa",
@@ -59,7 +60,7 @@ const TRANSLATIONS = {
     noEventSpecified: "Evento non specificato.",
     eventNotFound: "Evento non trovato.",
     noEventName: "Evento senza nome",
-    cookieNotice: "Questo sito salva solo le tue preferenze di tema e lingua sul tuo dispositivo (un cookie tecnico e il local storage del browser). Nessun dato viene inviato a terzi o usato per tracciamento.",
+    cookieNotice: "Questo sito salva solo le tue preferenze (tema, lingua e filtri di ricerca) sul tuo dispositivo, tramite un cookie tecnico e il local storage del browser. Nessun dato viene inviato a terzi o usato per tracciamento.",
     cookieAccept: "Ho capito",
     venueUpcomingCount: (n) => `${n} eventi in programma qui.`,
     venueNotFound: "Negozio non trovato.",
@@ -85,6 +86,7 @@ const TRANSLATIONS = {
     gameTcg: "TCG",
     gamePgo: "GO",
     filterBtn: "Filter",
+    resetFilters: "Reset filters",
     viewList: "List",
     viewCalendar: "Calendar",
     viewMap: "Map",
@@ -117,7 +119,7 @@ const TRANSLATIONS = {
     noEventSpecified: "No event specified.",
     eventNotFound: "Event not found.",
     noEventName: "Unnamed event",
-    cookieNotice: "This site only stores your theme and language preference on your device (a technical cookie and browser local storage). No data is sent to third parties or used for tracking.",
+    cookieNotice: "This site only stores your preferences (theme, language, and search filters) on your device, via a technical cookie and browser local storage. No data is sent to third parties or used for tracking.",
     cookieAccept: "Got it",
     venueUpcomingCount: (n) => `${n} upcoming events here.`,
     venueNotFound: "Store not found.",
@@ -401,17 +403,23 @@ function googleMapsDirectionsUrl(event) {
   return `https://www.google.com/maps/dir/?api=1&destination=${event.latitude},${event.longitude}`;
 }
 
+/* Small inline icons (Feather-style: 24x24 viewBox, currentColor stroke) for
+   the card's date and address rows - same visual language as the
+   theme-toggle's sun/moon icons. */
+const CALENDAR_ICON_SVG = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>`;
+const MAP_PIN_ICON_SVG = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>`;
+
 /* Shared event-card markup for both the List view and the Calendar day
-   list. `showDate` prepends the date to the subtitle line (List spans many
-   days; Calendar's day-strip already establishes the date, so it only
-   needs the time there). */
+   list. `showDate` shows the full date (List spans many days); Calendar's
+   day-strip already establishes the date, so it only needs the time there.
+   The card's heading is always the venue/store name, never the specific
+   event name - most events have no distinct name anyway (falls back to the
+   venue), and the ones that do still show it on the event detail page. */
 function eventCardHtml(event, { showDate = true } = {}) {
   const meta = typeMeta(event);
-  const subtitleParts = [];
-  if (showDate) subtitleParts.push(formatDate(event, { year: undefined }));
-  else subtitleParts.push(formatTime(event));
-  const place = placeName(event);
-  if (place) subtitleParts.push(place);
+  const venue = placeName(event) || t("noEventName");
+  const dateText = showDate ? formatDate(event, { year: undefined }) : formatTime(event);
+  const gamesHtml = gamePillsHtml(event.products);
 
   const cost = formatAdmission(event);
   const inactiveClass = event.is_active === false ? " event-card-inactive" : "";
@@ -420,12 +428,12 @@ function eventCardHtml(event, { showDate = true } = {}) {
       <div class="event-card-icon ${meta.className}">${typeIconHtml(meta)}</div>
       <div class="event-card-body">
         <div class="event-card-title-row">
-          <div class="event-card-title ${meta.className}">${esc(displayName(event))}</div>
+          <div class="event-card-title ${meta.className}">${esc(venue)}</div>
           ${cost ? `<div class="event-card-cost">${esc(cost)}</div>` : ""}
         </div>
-        <div class="event-card-subtitle">${esc(subtitleParts.join(" · "))}</div>
-        <div class="event-card-games">${gamePillsHtml(event.products)}</div>
-        ${event.full_address ? `<div class="event-card-address">${esc(event.full_address)}</div>` : ""}
+        ${gamesHtml ? `<div class="event-card-games">${gamesHtml}</div>` : ""}
+        <div class="event-card-meta-row">${CALENDAR_ICON_SVG}<span>${esc(dateText)}</span></div>
+        ${event.full_address ? `<div class="event-card-meta-row event-card-meta-address">${MAP_PIN_ICON_SVG}<span>${esc(event.full_address)}</span></div>` : ""}
       </div>
     </div>`;
 }

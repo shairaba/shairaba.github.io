@@ -364,6 +364,18 @@ h1 {
   transform: translateY(-2px);
 }
 .filter-bar button:active { transform: scale(.97); }
+.filter-bar button.btn-reset {
+  background: transparent;
+  color: var(--ink-dim);
+  border: 2px solid var(--border);
+  box-shadow: none;
+}
+.filter-bar button.btn-reset:hover {
+  background: var(--panel-2);
+  color: var(--ink);
+  border-color: var(--border);
+  transform: none;
+}
 .filter-label { align-self: center; color: var(--ink-dim); font-size: .82rem; white-space: nowrap; }
 .pill-select { min-width: 150px; flex: 1 1 150px; }
 
@@ -440,12 +452,12 @@ h1 {
 .footnote { color: var(--muted-2); font-size: .78rem; margin-top: 28px; }
 
 /* Event cards - shared by List view and the Calendar day list */
-.event-list { display: flex; flex-direction: column; gap: 10px; }
+.event-list { display: flex; flex-direction: column; gap: 14px; }
 .event-card {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 12px 14px;
+  padding: 16px 18px;
   background: var(--panel);
   color: var(--ink);
   border-radius: var(--radius);
@@ -476,7 +488,21 @@ h1 {
 .event-card-icon .type-icon-img { width: 100%; height: 100%; object-fit: contain; }
 
 .event-card-body { flex: 1; min-width: 0; }
-.event-card-title-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 2px; }
+
+.event-card-games { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 6px; }
+.game-pill {
+  font-size: .64rem;
+  font-weight: 800;
+  letter-spacing: .02em;
+  padding: 1px 8px;
+  border-radius: 999px;
+  line-height: 1.5;
+}
+.game-pill-vg { background: color-mix(in srgb, var(--vg-color) 18%, transparent); color: var(--vg-color); }
+.game-pill-tcg { background: color-mix(in srgb, var(--tcg-color) 18%, transparent); color: var(--tcg-color); }
+.game-pill-pgo { background: color-mix(in srgb, var(--pgo-color) 18%, transparent); color: var(--pgo-color); }
+
+.event-card-title-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
 .event-card-title { font-weight: 800; font-size: .95rem; min-width: 0; }
 .event-card-title.type-cup { color: var(--cup-color); }
 .event-card-title.type-challenge { color: var(--challenge-color); }
@@ -492,28 +518,23 @@ h1 {
   border-radius: 999px;
   white-space: nowrap;
 }
-.event-card-subtitle { color: var(--ink-dim); font-size: .8rem; }
 
-.event-card-games { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
-.game-pill {
-  font-size: .64rem;
-  font-weight: 800;
-  letter-spacing: .02em;
-  padding: 1px 8px;
-  border-radius: 999px;
-  line-height: 1.5;
-}
-.game-pill-vg { background: color-mix(in srgb, var(--vg-color) 18%, transparent); color: var(--vg-color); }
-.game-pill-tcg { background: color-mix(in srgb, var(--tcg-color) 18%, transparent); color: var(--tcg-color); }
-.game-pill-pgo { background: color-mix(in srgb, var(--pgo-color) 18%, transparent); color: var(--pgo-color); }
-
-.event-card-address {
+/* Date/address rows - a small Feather-style icon plus text, replacing the
+   previous plain subtitle/address text lines. */
+.event-card-meta-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
   color: var(--ink-dim);
-  font-size: .74rem;
+  font-size: .8rem;
   line-height: 1.4;
-  margin-top: 4px;
+  margin-top: 3px;
+}
+.event-card-meta-row svg { flex-shrink: 0; margin-top: 2px; }
+.event-card-meta-row span { min-width: 0; }
+.event-card-meta-address span {
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -771,7 +792,7 @@ h1 {
   }
   .pill-select { min-width: 0; }
 
-  .event-card { padding: 11px 12px; gap: 11px; }
+  .event-card { padding: 14px 15px; gap: 12px; }
   .event-card-icon { flex-basis: 40px; width: 40px; height: 40px; font-size: 1.05rem; }
 
   #map { height: 55vh; min-height: 320px; }
