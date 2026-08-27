@@ -35,7 +35,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=6">
+  <link rel="stylesheet" href="style.css?v=9">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
@@ -84,6 +84,10 @@
 
     <form class="filter-bar" id="filter-form">
       <input type="text" id="q" data-i18n-placeholder="searchPlaceholder" placeholder="Cerca per nome, negozio, citt&agrave;...">
+      <button type="button" id="near-me-btn" class="near-me-btn">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+        <span data-i18n="nearMe">Vicino a me</span>
+      </button>
       <button type="button" id="filter-toggle" class="filter-toggle" aria-expanded="false" aria-controls="filter-panel-body">
         <span data-i18n="filtersLabel">Filtri</span>
         <span id="filter-count" class="filter-count-badge" hidden></span>
@@ -131,6 +135,13 @@
           <label class="toggle-chip game-toggle-pgo">
             <input type="checkbox" id="game-pgo" checked>
             <span data-i18n="gamePgo">GO</span>
+          </label>
+        </div>
+        <div class="filter-checkbox-group">
+          <span class="filter-label" data-i18n="moreFilters">Altro</span>
+          <label class="toggle-chip extra-toggle-favorites">
+            <input type="checkbox" id="filter-favorites-only">
+            <span data-i18n="favoritesOnly">Solo preferiti</span>
           </label>
         </div>
         <button type="submit" data-i18n="filterBtn">Filtra</button>
@@ -183,11 +194,18 @@
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"
     integrity="sha256-Hk4dIpcqOSb0hZjgyvFOP+cEmDXUKKNE/tT542ZbNQg=" crossorigin=""></script>
-  <script src="app.js?v=8"></script>
+  <script src="app.js?v=10"></script>
   <script>
     let allEvents = [];
     let calYear, calMonth, calSelectedKey;
     let calMode = localStorage.getItem("calMode") === "month" ? "month" : "strip";
+
+    // "Near me" sort state - deliberately NOT persisted to localStorage like
+    // the rest of the filters: location changes and re-prompting on every
+    // visit is the expected/least-surprising behavior for a geolocation
+    // feature, unlike a saved region or date range.
+    let userCoords = null;
+    let sortByDistance = false;
 
     const TYPE_KEYS = ["cup", "challenge", "tournament", "league"];
 
@@ -201,19 +219,21 @@
         games,
         dateFrom: document.getElementById("date-from").value,
         dateTo: document.getElementById("date-to").value,
+        favoritesOnly: document.getElementById("filter-favorites-only").checked,
       };
     }
 
     /* Surfaces how many filter categories are narrowed even while the
        mobile panel is collapsed, so a filtered-but-empty list doesn't read
-       as broken - each category (type/games/region/date range) counts once
-       regardless of how many chips within it are off. */
+       as broken - each category (type/games/region/date range/favorites)
+       counts once regardless of how many chips within it are off. */
     function updateFilterCountBadge(state) {
       let count = 0;
       if (state.types.length < TYPE_KEYS.length) count++;
       if (state.games.length < 3) count++;
       if (state.region) count++;
       if (state.dateFrom || state.dateTo) count++;
+      if (state.favoritesOnly) count++;
       const badge = document.getElementById("filter-count");
       badge.textContent = count || "";
       badge.hidden = count === 0;
@@ -255,6 +275,7 @@
           document.getElementById(`type-${ty}`).checked = state.types.includes(ty);
         });
       }
+      if (state.favoritesOnly) document.getElementById("filter-favorites-only").checked = true;
     }
 
     function resetFilterState() {
@@ -264,6 +285,7 @@
       document.getElementById("date-to").value = "";
       ["vg", "tcg", "pgo"].forEach((g) => { document.getElementById(`game-${g}`).checked = true; });
       TYPE_KEYS.forEach((ty) => { document.getElementById(`type-${ty}`).checked = true; });
+      document.getElementById("filter-favorites-only").checked = false;
       localStorage.removeItem(FILTERS_STORAGE_KEY);
       render();
     }
@@ -289,19 +311,40 @@
         rows = rows.filter((e) => (e.products || []).some((p) => filterState.games.includes(p)));
       if (filterState.dateFrom) rows = rows.filter((e) => e.start_date && e.start_date.slice(0, 10) >= filterState.dateFrom);
       if (filterState.dateTo) rows = rows.filter((e) => e.start_date && e.start_date.slice(0, 10) <= filterState.dateTo);
+      if (filterState.favoritesOnly) rows = rows.filter((e) => isFavorite(e.guid));
       return rows.slice().sort((a, b) => (a.start_date || "").localeCompare(b.start_date || ""));
     }
 
     const MAX_ROWS = 300;
 
+    /* "Near me" only re-sorts what the List view itself renders - it
+       wouldn't mean anything for the Calendar (grouped by day, not
+       distance) or the Map (already visual/spatial), so this is the one
+       place sortByDistance/userCoords are read. */
     function renderList(filtered) {
       const container = document.getElementById("rows");
-      const shown = filtered.slice(0, MAX_ROWS);
+      let rows = filtered;
+      if (sortByDistance && userCoords) {
+        rows = filtered.slice().sort((a, b) => {
+          const da = a.latitude != null && a.longitude != null ? distanceKm(userCoords.lat, userCoords.lon, a.latitude, a.longitude) : Infinity;
+          const db = b.latitude != null && b.longitude != null ? distanceKm(userCoords.lat, userCoords.lon, b.latitude, b.longitude) : Infinity;
+          return da - db;
+        });
+      }
+      const shown = rows.slice(0, MAX_ROWS);
       if (!shown.length) {
         container.innerHTML = `<p class="empty-state">${esc(t("noEventsFound"))}</p>`;
       } else {
-        container.innerHTML = shown.map((e) => eventCardHtml(e, { showDate: true })).join("");
+        container.innerHTML = shown
+          .map((e) => {
+            const dist = sortByDistance && userCoords && e.latitude != null && e.longitude != null
+              ? distanceKm(userCoords.lat, userCoords.lon, e.latitude, e.longitude)
+              : undefined;
+            return eventCardHtml(e, { showDate: true, distanceKm: dist });
+          })
+          .join("");
         wireEventCardClicks(container);
+        wireFavoriteButtons(container, () => render());
       }
       document.getElementById("showing-note").textContent =
         filtered.length > MAX_ROWS ? t("showingNote", MAX_ROWS, filtered.length) : "";
@@ -476,6 +519,7 @@
       } else {
         eventsContainer.innerHTML = dayEvents.map((e) => eventCardHtml(e, { showDate: false })).join("");
         wireEventCardClicks(eventsContainer);
+        wireFavoriteButtons(eventsContainer, () => renderCalendar(applyFilters(allEvents, currentFilterState())));
       }
 
       if (calMode === "strip") {
@@ -626,7 +670,41 @@
       TYPE_KEYS.forEach((ty) => document.getElementById(`type-${ty}`).addEventListener("change", render));
       regionSelect.addEventListener("change", render);
       ["vg", "tcg", "pgo"].forEach((g) => document.getElementById(`game-${g}`).addEventListener("change", render));
+      document.getElementById("filter-favorites-only").addEventListener("change", render);
       document.getElementById("reset-filters").addEventListener("click", resetFilterState);
+
+      const nearMeBtn = document.getElementById("near-me-btn");
+      if (!navigator.geolocation) {
+        nearMeBtn.style.display = "none";
+      } else {
+        nearMeBtn.addEventListener("click", () => {
+          if (sortByDistance) {
+            sortByDistance = false;
+            nearMeBtn.classList.remove("active");
+            render();
+            return;
+          }
+          nearMeBtn.disabled = true;
+          const label = nearMeBtn.querySelector("span");
+          label.textContent = t("locating");
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              userCoords = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+              sortByDistance = true;
+              nearMeBtn.disabled = false;
+              nearMeBtn.classList.add("active");
+              label.textContent = t("nearMe");
+              render();
+            },
+            () => {
+              nearMeBtn.disabled = false;
+              label.textContent = t("nearMe");
+              alert(t("locationDenied"));
+            },
+            { timeout: 10000 }
+          );
+        });
+      }
 
       updateMetaNote();
 

@@ -67,6 +67,19 @@ const TRANSLATIONS = {
     venueUpcomingCount: (n) => `${n} eventi in programma qui.`,
     venueNotFound: "Negozio non trovato.",
     viewVenueEvents: "Vedi tutti gli eventi di questo negozio",
+    addFavorite: "Aggiungi ai preferiti",
+    removeFavorite: "Rimuovi dai preferiti",
+    favoritesOnly: "Solo preferiti",
+    moreFilters: "Altro",
+    addToCalendar: "Aggiungi al calendario",
+    calendarGoogle: "Google Calendar",
+    calendarOutlook: "Outlook",
+    calendarIcs: "Apple Calendar / altro (.ics)",
+    share: "Condividi",
+    linkCopied: "Link copiato!",
+    nearMe: "Vicino a me",
+    locating: "Localizzazione…",
+    locationDenied: "Permesso di posizione negato.",
   },
   en: {
     locale: "en-US",
@@ -128,6 +141,19 @@ const TRANSLATIONS = {
     venueUpcomingCount: (n) => `${n} upcoming events here.`,
     venueNotFound: "Store not found.",
     viewVenueEvents: "See all events at this store",
+    addFavorite: "Add to favorites",
+    removeFavorite: "Remove from favorites",
+    favoritesOnly: "Favorites only",
+    moreFilters: "More",
+    addToCalendar: "Add to calendar",
+    calendarGoogle: "Google Calendar",
+    calendarOutlook: "Outlook",
+    calendarIcs: "Apple Calendar / other (.ics)",
+    share: "Share",
+    linkCopied: "Link copied!",
+    nearMe: "Near me",
+    locating: "Locating…",
+    locationDenied: "Location permission denied.",
   },
 };
 
@@ -224,6 +250,253 @@ function initCookieConsent() {
     banner.style.display = "none";
     document.body.classList.remove("has-cookie-banner");
   });
+}
+
+const FAVORITES_STORAGE_KEY = "favorites";
+
+function getFavorites() {
+  try {
+    const arr = JSON.parse(localStorage.getItem(FAVORITES_STORAGE_KEY) || "[]");
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+}
+
+function isFavorite(guid) {
+  return getFavorites().includes(guid);
+}
+
+/* Toggles guid in/out of the stored favorites list and returns the new
+   state (true = now favorited) - the caller updates its own button/UI off
+   that return value rather than re-reading storage. */
+function toggleFavorite(guid) {
+  const favs = getFavorites();
+  const idx = favs.indexOf(guid);
+  if (idx === -1) favs.push(guid);
+  else favs.splice(idx, 1);
+  try {
+    localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favs));
+  } catch {}
+  return favs.includes(guid);
+}
+
+const STAR_ICON_SVG = `<svg viewBox="0 0 24 24" width="15" height="15" stroke-linejoin="round" stroke-linecap="round" stroke-width="1.8"><path d="M12 3.5l2.6 5.9 6.4.6-4.8 4.2 1.4 6.3-5.6-3.4-5.6 3.4 1.4-6.3-4.8-4.2 6.4-.6z"></path></svg>`;
+
+/* `large` switches to the bigger detail-page variant (next to the h1)
+   instead of the small corner button used on cards. */
+function favoriteButtonHtml(guid, { large = false } = {}) {
+  const active = isFavorite(guid);
+  const cls = ["favorite-btn"];
+  if (large) cls.push("favorite-btn-lg");
+  if (active) cls.push("is-favorite");
+  return `<button type="button" class="${cls.join(" ")}" data-favorite-guid="${esc(guid)}" aria-pressed="${active}" aria-label="${esc(t(active ? "removeFavorite" : "addFavorite"))}">${STAR_ICON_SVG}</button>`;
+}
+
+/* Wires every [data-favorite-guid] button inside container. stopPropagation
+   is required, not cosmetic: on list/calendar cards this button sits inside
+   the whole-card click target that navigates to the event detail page (see
+   wireEventCardClicks) - without it, tapping the star would also fire the
+   card's own navigation. `onChange` lets a caller (e.g. the "favorites
+   only" filter) re-render itself when a toggle might change what should be
+   visible. */
+function wireFavoriteButtons(container, onChange) {
+  container.querySelectorAll("[data-favorite-guid]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      const guid = btn.dataset.favoriteGuid;
+      const active = toggleFavorite(guid);
+      btn.classList.toggle("is-favorite", active);
+      btn.setAttribute("aria-pressed", String(active));
+      btn.setAttribute("aria-label", t(active ? "removeFavorite" : "addFavorite"));
+      if (onChange) onChange(guid, active);
+    });
+  });
+}
+
+/* Haversine distance in km - used by the "near me" sort, which needs
+   straight-line distance from the visitor's geolocation to each event's
+   lat/long, not routing distance (that would need a routing API). */
+function distanceKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const toRad = (d) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function formatDistanceKm(km) {
+  return km < 10 ? `${km.toFixed(1)} km` : `${Math.round(km)} km`;
+}
+
+/* .ics export ("Add to calendar") - the scraped data has no explicit event
+   end time, so DTEND is start_date plus an assumed typical event length
+   rather than left equal to DTSTART (a zero-length event confuses some
+   calendar apps). Emits UTC Z-suffixed timestamps (start_date is already
+   absolute UTC, see the scraper's output) instead of a floating local time
+   with a VTIMEZONE block - simpler, and every mainstream calendar app
+   converts a Z timestamp to the viewer's own local time correctly. */
+const ICS_DEFAULT_DURATION_HOURS = 3;
+
+function icsEscape(text) {
+  return String(text || "")
+    .replace(/\\/g, "\\\\")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,")
+    .replace(/\r?\n/g, "\\n");
+}
+
+function icsDate(date) {
+  return date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+}
+
+function buildICS(event) {
+  const start = new Date(event.start_date);
+  const end = new Date(start.getTime() + ICS_DEFAULT_DURATION_HOURS * 3600000);
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Pokemon Event Locator but better//IT",
+    "BEGIN:VEVENT",
+    `UID:${event.guid}@pokemon-events-italia`,
+    `DTSTAMP:${icsDate(new Date())}`,
+    `DTSTART:${icsDate(start)}`,
+    `DTEND:${icsDate(end)}`,
+    `SUMMARY:${icsEscape(displayName(event))}`,
+    event.full_address ? `LOCATION:${icsEscape(event.full_address)}` : "",
+    event.details ? `DESCRIPTION:${icsEscape(event.details)}` : "",
+    event.event_website ? `URL:${icsEscape(event.event_website)}` : "",
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].filter(Boolean);
+  return lines.join("\r\n");
+}
+
+/* Opens the .ics as a normal navigation (window.open) rather than a forced
+   <a download> save: iOS/iPadOS Safari recognizes the text/calendar mime
+   type and shows its native "Add to Calendar" sheet directly when it's
+   navigated to like this, which a forced download attribute can prevent.
+   Desktop browsers still just download it, same outcome as before - this
+   is the fallback option for Apple Calendar and anything else without its
+   own web deep link (below). */
+function openICS(event) {
+  const blob = new Blob([buildICS(event)], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  window.open(url, "_blank");
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
+/* Google Calendar and Outlook both have a documented "add event" deep
+   link that takes plain query params - no auth, no API key, just a URL
+   that pre-fills their own compose form in a new tab. Both accept the
+   event's own timezone-less UTC instant, so the same start/end used for
+   the .ics above works unchanged. */
+function googleCalendarUrl(event) {
+  const start = new Date(event.start_date);
+  const end = new Date(start.getTime() + ICS_DEFAULT_DURATION_HOURS * 3600000);
+  const params = new URLSearchParams({
+    action: "TEMPLATE",
+    text: displayName(event),
+    dates: `${icsDate(start)}/${icsDate(end)}`,
+  });
+  if (event.full_address) params.set("location", event.full_address);
+  if (event.details) params.set("details", event.details);
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+
+function outlookCalendarUrl(event) {
+  const start = new Date(event.start_date);
+  const end = new Date(start.getTime() + ICS_DEFAULT_DURATION_HOURS * 3600000);
+  const params = new URLSearchParams({
+    path: "/calendar/action/compose",
+    rru: "addevent",
+    subject: displayName(event),
+    startdt: start.toISOString(),
+    enddt: end.toISOString(),
+  });
+  if (event.full_address) params.set("location", event.full_address);
+  if (event.details) params.set("body", event.details);
+  return `https://outlook.live.com/calendar/0/deeplink/compose?${params.toString()}`;
+}
+
+/* "Add to calendar" as a small popover menu (Google / Outlook / Apple &
+   others) instead of one button that just downloads an .ics - most
+   visitors use Google or Apple Calendar day to day and would rather land
+   straight in their own calendar's compose screen than handle a raw
+   downloaded file. idPrefix lets a page host more than one of these
+   (not currently needed, but avoids an id clash for free). */
+function calendarMenuHtml(idPrefix = "calendar-menu") {
+  return `
+    <div class="calendar-menu-wrap">
+      <button type="button" id="${idPrefix}-btn" class="btn btn-secondary" aria-haspopup="true" aria-expanded="false">${CALENDAR_ICON_SVG}<span>${esc(t("addToCalendar"))}</span></button>
+      <div id="${idPrefix}" class="calendar-menu" hidden>
+        <button type="button" class="calendar-menu-item" data-cal="google">${esc(t("calendarGoogle"))}</button>
+        <button type="button" class="calendar-menu-item" data-cal="outlook">${esc(t("calendarOutlook"))}</button>
+        <button type="button" class="calendar-menu-item" data-cal="ics">${esc(t("calendarIcs"))}</button>
+      </div>
+    </div>`;
+}
+
+/* Tracked on `document` itself (not a module-level variable, so multiple
+   pages/calls don't need to share one) - renderDetail() re-runs this on
+   every language toggle, and without removing the previous call's
+   document-level listener first, each toggle would stack one more
+   permanently-attached close handler pointing at the now-detached old menu
+   DOM (harmless individually, but an unbounded leak over repeated toggles). */
+function wireCalendarMenu(container, event, idPrefix = "calendar-menu") {
+  const btn = container.querySelector(`#${idPrefix}-btn`);
+  const menu = container.querySelector(`#${idPrefix}`);
+  if (!btn || !menu) return;
+  const close = () => {
+    menu.hidden = true;
+    btn.setAttribute("aria-expanded", "false");
+  };
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const willOpen = menu.hidden;
+    menu.hidden = !willOpen;
+    btn.setAttribute("aria-expanded", String(willOpen));
+  });
+  menu.querySelectorAll("[data-cal]").forEach((item) => {
+    item.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (item.dataset.cal === "google") window.open(googleCalendarUrl(event), "_blank", "noopener");
+      else if (item.dataset.cal === "outlook") window.open(outlookCalendarUrl(event), "_blank", "noopener");
+      else openICS(event);
+      close();
+    });
+  });
+  if (document.__calendarMenuClose) document.removeEventListener("click", document.__calendarMenuClose);
+  document.__calendarMenuClose = close;
+  document.addEventListener("click", close);
+}
+
+const SHARE_ICON_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>`;
+
+/* Native share sheet where available (mobile browsers, mostly); desktop
+   browsers largely don't implement navigator.share, so this falls back to
+   copying the link instead of silently doing nothing. Returns a result
+   string rather than showing any UI itself, since the two callers
+   (event.html, venue.html) show that result differently (swap their own
+   button's label briefly). */
+async function shareOrCopy(shareData) {
+  if (navigator.share) {
+    try {
+      await navigator.share(shareData);
+      return "shared";
+    } catch {
+      return "cancelled";
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(shareData.url);
+    return "copied";
+  } catch {
+    return "failed";
+  }
 }
 
 /* Floating bottom-right button, hidden until the page is scrolled down a
@@ -494,7 +767,7 @@ const MAP_PIN_ICON_SVG = `<svg viewBox="0 0 24 24" width="13" height="13" fill="
    The card's heading is always the venue/store name, never the specific
    event name - most events have no distinct name anyway (falls back to the
    venue), and the ones that do still show it on the event detail page. */
-function eventCardHtml(event, { showDate = true } = {}) {
+function eventCardHtml(event, { showDate = true, distanceKm: distKm } = {}) {
   const meta = typeMeta(event);
   const venue = placeName(event) || t("noEventName");
   const dateText = showDate ? formatDate(event, { year: undefined }) : formatTime(event);
@@ -504,6 +777,7 @@ function eventCardHtml(event, { showDate = true } = {}) {
   const inactiveClass = event.is_active === false ? " event-card-inactive" : "";
   return `
     <div class="event-card${inactiveClass}" data-guid="${esc(event.guid)}" role="button" tabindex="0">
+      ${favoriteButtonHtml(event.guid)}
       <div class="event-card-icon ${meta.className}">${typeIconHtml(meta)}</div>
       <div class="event-card-body">
         <div class="event-card-title-row">
@@ -511,6 +785,7 @@ function eventCardHtml(event, { showDate = true } = {}) {
           ${cost ? `<div class="event-card-cost">${esc(cost)}</div>` : ""}
         </div>
         ${gamesHtml ? `<div class="event-card-games">${gamesHtml}</div>` : ""}
+        ${typeof distKm === "number" ? `<div class="event-card-meta-row">${MAP_PIN_ICON_SVG}<span>${esc(formatDistanceKm(distKm))}</span></div>` : ""}
         <div class="event-card-meta-row">${CALENDAR_ICON_SVG}<span>${esc(dateText)}</span></div>
         ${event.full_address ? `<div class="event-card-meta-row event-card-meta-address">${MAP_PIN_ICON_SVG}<span>${esc(event.full_address)}</span></div>` : ""}
       </div>

@@ -39,7 +39,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=6">
+  <link rel="stylesheet" href="style.css?v=9">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 </head>
@@ -91,7 +91,7 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <script src="app.js?v=8"></script>
+  <script src="app.js?v=10"></script>
   <script>
     function metaItem(label, value, { href } = {}) {
       if (!value) return "";
@@ -119,6 +119,8 @@
         actions.push(`<a class="btn ${event.event_website ? "btn-secondary" : ""}" href="${esc(event.third_party_registration_website)}" target="_blank" rel="noopener">${esc(t("signUp"))}</a>`);
       if (event.latitude && event.longitude)
         actions.push(`<a class="btn btn-secondary" href="${esc(googleMapsDirectionsUrl(event))}" target="_blank" rel="noopener">${esc(t("takeMeThere"))}</a>`);
+      if (event.start_date) actions.push(calendarMenuHtml());
+      actions.push(`<button type="button" id="share-btn" class="btn btn-secondary">${SHARE_ICON_SVG}<span>${esc(t("share"))}</span></button>`);
 
       const attributesHtml = (event.attributes || [])
         .map((a) => `<span class="badge">${esc(a)}</span>`)
@@ -133,7 +135,10 @@
           <span class="badge ${meta.className}">${typeIconHtml(meta)} ${esc(meta.label)}</span>
           ${gamePillsHtml(event.products)}
         </div>
-        <h1 class="detail-title">${esc(displayName(event))}</h1>
+        <div class="detail-title-row">
+          <h1 class="detail-title">${esc(displayName(event))}</h1>
+          ${favoriteButtonHtml(event.guid, { large: true })}
+        </div>
         ${event.activity_group_display_id ? `<p class="detail-subtitle"><a class="venue-link" href="venue.html?vid=${esc(event.activity_group_display_id)}">${esc(t("viewVenueEvents"))} &rarr;</a></p>` : ""}
 
         ${metaGrid ? `<div class="detail-card"><div class="detail-meta-grid">${metaGrid}</div></div>` : ""}
@@ -169,6 +174,19 @@
         }).addTo(map);
         L.marker([event.latitude, event.longitude]).addTo(map);
       }
+
+      wireFavoriteButtons(main);
+      wireCalendarMenu(main, event);
+
+      document.getElementById("share-btn").addEventListener("click", async () => {
+        const btn = document.getElementById("share-btn");
+        const result = await shareOrCopy({ title: displayName(event), text: displayName(event), url: location.href });
+        if (result === "copied") {
+          const original = btn.innerHTML;
+          btn.innerHTML = esc(t("linkCopied"));
+          setTimeout(() => { btn.innerHTML = original; }, 2000);
+        }
+      });
     }
 
     (async function main() {
