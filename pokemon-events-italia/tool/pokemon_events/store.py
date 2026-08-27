@@ -64,15 +64,31 @@ def upsert_events(store: dict, fetched_events: list[dict], run_at: str) -> Upser
         guid = event["guid"]
         existing = events.get(guid)
         if existing is None:
-            events[guid] = {**event, "first_seen_at": run_at, "last_seen_at": run_at, "is_active": True}
+            events[guid] = {
+                **event,
+                "first_seen_at": run_at,
+                "last_seen_at": run_at,
+                "last_updated_at": run_at,
+                "is_active": True,
+            }
             added += 1
         else:
             content_changed = any(existing.get(k) != v for k, v in event.items())
+            # Distinct from last_seen_at (bumped on every run regardless of
+            # whether anything changed, i.e. "still active as of today") -
+            # this only moves when a field actually differs, so consumers
+            # (e.g. the Telegram bot's daily digest) can tell "this event's
+            # details changed" apart from "the scraper just re-confirmed it
+            # still exists." Falls back to the existing first_seen_at for
+            # rows written before this field existed, one-time backfill on
+            # their next re-scrape rather than a migration script.
+            last_updated_at = run_at if content_changed else existing.get("last_updated_at", existing.get("first_seen_at", run_at))
             events[guid] = {
                 **existing,
                 **event,
                 "first_seen_at": existing.get("first_seen_at", run_at),
                 "last_seen_at": run_at,
+                "last_updated_at": last_updated_at,
                 "is_active": True,
             }
             updated += 1 if content_changed else 0

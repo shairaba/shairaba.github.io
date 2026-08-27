@@ -1,0 +1,19 @@
+name = "pokemon-events-telegram-bot"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+
+# Runs the daily digest at 5:15 UTC - roughly matching the site's Apify
+# scraper, which syncs data/events.json around 6 AM Italian time (this
+# schedule runs ~15 min after to give that sync time to finish). Cloudflare
+# Cron Triggers use plain UTC with no daylight-saving awareness, so this
+# actually lands at 6:15 AM Italy time in winter (CET) and 7:15 AM in summer
+# (CEST) - a known simplification, adjust the hour below if that drift
+# matters to you.
+[triggers]
+crons = ["15 5 * * *"]
+
+# Replace with your own KV namespace id - see README.md for how to create
+# one (`wrangler kv namespace create SUBSCRIBERS`).
+[[kv_namespaces]]
+binding = "SUBSCRIBERS"
+id = "4551bfe4fd3b4ad292c8f049717bd22a"
