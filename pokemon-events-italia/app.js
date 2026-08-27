@@ -300,6 +300,23 @@ function esc(s) {
   return div.innerHTML;
 }
 
+/* Escapes text (same as esc()) then turns any http(s):// or bare www. URL
+   into a clickable link - event descriptions are free text typed by store
+   owners and often include a registration form or Facebook event link.
+   Trailing punctuation ("...form https://forms.gle/xyz." or "(see
+   https://example.com)") is pulled back outside the <a> since it's
+   normally sentence punctuation, not part of the URL. */
+function linkify(text) {
+  const escaped = esc(text);
+  return escaped.replace(/\b((?:https?:\/\/|www\.)[^\s<]+)/gi, (match) => {
+    const trailing = match.match(/[.,;:!?)\]}'"]+$/);
+    const clean = trailing ? match.slice(0, -trailing[0].length) : match;
+    const suffix = trailing ? trailing[0] : "";
+    const href = /^https?:\/\//i.test(clean) ? clean : `https://${clean}`;
+    return `<a href="${href}" target="_blank" rel="noopener noreferrer">${clean}</a>${suffix}`;
+  });
+}
+
 async function fetchJSON(path) {
   const res = await fetch(path);
   if (!res.ok) throw new Error(`${path}: ${res.status}`);

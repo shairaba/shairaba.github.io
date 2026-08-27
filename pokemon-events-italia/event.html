@@ -91,11 +91,12 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <script src="app.js?v=5"></script>
+  <script src="app.js?v=6"></script>
   <script>
-    function metaItem(label, value) {
+    function metaItem(label, value, { href } = {}) {
       if (!value) return "";
-      return `<div><div class="detail-meta-label">${esc(label)}</div><div class="detail-meta-value">${esc(value)}</div></div>`;
+      const content = href ? `<a href="${esc(href)}">${esc(value)}</a>` : esc(value);
+      return `<div><div class="detail-meta-label">${esc(label)}</div><div class="detail-meta-value">${content}</div></div>`;
     }
 
     function renderDetail(event) {
@@ -108,7 +109,7 @@
         metaItem(t("regFrom"), event.registration_start ? formatDate({ ...event, start_date: event.registration_start }) : ""),
         metaItem(t("regTo"), event.registration_end ? formatDate({ ...event, start_date: event.registration_end }) : ""),
         metaItem(t("cost"), formatAdmission(event)),
-        metaItem(t("email"), event.contact_email),
+        metaItem(t("email"), event.contact_email, { href: event.contact_email ? `mailto:${event.contact_email}` : undefined }),
         metaItem(t("phone"), event.contact_phone),
       ].filter(Boolean).join("");
 
@@ -149,7 +150,7 @@
         ${event.details ? `
         <div class="detail-card">
           <div class="detail-section-title">${esc(t("description"))}</div>
-          <div class="detail-description">${esc(event.details)}</div>
+          <div class="detail-description">${linkify(event.details)}</div>
         </div>` : ""}
 
         ${attributesHtml ? `
