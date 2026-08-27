@@ -133,7 +133,7 @@
           ${gamePillsHtml(event.products)}
         </div>
         <h1 class="detail-title">${esc(displayName(event))}</h1>
-        ${event.activity_group_display_id ? `<p class="detail-subtitle"><a class="venue-link" href="venue.html?vid=${esc(event.activity_group_display_id)}">${esc(placeName(event) && placeName(event) !== displayName(event) ? placeName(event) : t("viewVenueEvents"))} &rarr;</a></p>` : ""}
+        ${event.activity_group_display_id ? `<p class="detail-subtitle"><a class="venue-link" href="venue.html?vid=${esc(event.activity_group_display_id)}">${esc(t("viewVenueEvents"))} &rarr;</a></p>` : ""}
 
         ${metaGrid ? `<div class="detail-card"><div class="detail-meta-grid">${metaGrid}</div></div>` : ""}
 
