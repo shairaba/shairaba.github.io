@@ -35,7 +35,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=3">
+  <link rel="stylesheet" href="style.css?v=6">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
@@ -84,37 +84,58 @@
 
     <form class="filter-bar" id="filter-form">
       <input type="text" id="q" data-i18n-placeholder="searchPlaceholder" placeholder="Cerca per nome, negozio, citt&agrave;...">
-      <select id="type" class="pill-select">
-        <option value="" data-i18n="allTypes">Tutti i tipi</option>
-        <option value="cup" data-i18n="typeCup">Coppa di Lega</option>
-        <option value="challenge" data-i18n="typeChallenge">Sfida di Lega</option>
-        <option value="tournament" data-i18n="typeTournament">Torneo</option>
-        <option value="league" data-i18n="typeLeague">Lega</option>
-      </select>
-      <select id="region" class="pill-select">
-        <option value="" data-i18n="allRegions">Tutte le regioni</option>
-      </select>
-      <span class="filter-label" data-i18n="from">Da</span>
-      <input type="date" id="date-from">
-      <span class="filter-label" data-i18n="to">A</span>
-      <input type="date" id="date-to">
-      <div class="filter-checkbox-group">
-        <span class="filter-label" data-i18n="games">Giochi</span>
-        <label class="game-toggle game-toggle-vg">
-          <input type="checkbox" id="game-vg" checked>
-          <span data-i18n="gameVg">Video Game</span>
-        </label>
-        <label class="game-toggle game-toggle-tcg">
-          <input type="checkbox" id="game-tcg" checked>
-          <span data-i18n="gameTcg">GCC</span>
-        </label>
-        <label class="game-toggle game-toggle-pgo">
-          <input type="checkbox" id="game-pgo" checked>
-          <span data-i18n="gamePgo">GO</span>
-        </label>
+      <button type="button" id="filter-toggle" class="filter-toggle" aria-expanded="false" aria-controls="filter-panel-body">
+        <span data-i18n="filtersLabel">Filtri</span>
+        <span id="filter-count" class="filter-count-badge" hidden></span>
+        <svg class="filter-toggle-chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </button>
+      <div id="filter-panel-body" class="filter-panel-body collapsed">
+        <div class="filter-checkbox-group">
+          <span class="filter-label" data-i18n="types">Tipo</span>
+          <label class="toggle-chip type-toggle-cup">
+            <input type="checkbox" id="type-cup" checked>
+            <span data-i18n="typeCup">Coppa di Lega</span>
+          </label>
+          <label class="toggle-chip type-toggle-challenge">
+            <input type="checkbox" id="type-challenge" checked>
+            <span data-i18n="typeChallenge">Sfida di Lega</span>
+          </label>
+          <label class="toggle-chip type-toggle-tournament">
+            <input type="checkbox" id="type-tournament" checked>
+            <span data-i18n="typeTournament">Torneo</span>
+          </label>
+          <label class="toggle-chip type-toggle-league">
+            <input type="checkbox" id="type-league" checked>
+            <span data-i18n="typeLeague">Lega</span>
+          </label>
+        </div>
+        <select id="region" class="pill-select">
+          <option value="" data-i18n="allRegions">Tutte le regioni</option>
+        </select>
+        <span class="filter-label" data-i18n="from">Da</span>
+        <input type="date" id="date-from">
+        <span class="filter-label" data-i18n="to">A</span>
+        <input type="date" id="date-to">
+        <div class="filter-checkbox-group">
+          <span class="filter-label" data-i18n="games">Giochi</span>
+          <label class="toggle-chip game-toggle-vg">
+            <input type="checkbox" id="game-vg" checked>
+            <span data-i18n="gameVg">Video Game</span>
+          </label>
+          <label class="toggle-chip game-toggle-tcg">
+            <input type="checkbox" id="game-tcg" checked>
+            <span data-i18n="gameTcg">GCC</span>
+          </label>
+          <label class="toggle-chip game-toggle-pgo">
+            <input type="checkbox" id="game-pgo" checked>
+            <span data-i18n="gamePgo">GO</span>
+          </label>
+        </div>
+        <button type="submit" data-i18n="filterBtn">Filtra</button>
+        <button type="button" id="reset-filters" class="btn-reset" data-i18n="resetFilters">Azzera filtri</button>
       </div>
-      <button type="submit" data-i18n="filterBtn">Filtra</button>
-      <button type="button" id="reset-filters" class="btn-reset" data-i18n="resetFilters">Azzera filtri</button>
     </form>
 
     <div id="list-view">
@@ -162,22 +183,40 @@
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"
     integrity="sha256-Hk4dIpcqOSb0hZjgyvFOP+cEmDXUKKNE/tT542ZbNQg=" crossorigin=""></script>
-  <script src="app.js?v=6"></script>
+  <script src="app.js?v=8"></script>
   <script>
     let allEvents = [];
     let calYear, calMonth, calSelectedKey;
     let calMode = localStorage.getItem("calMode") === "month" ? "month" : "strip";
 
+    const TYPE_KEYS = ["cup", "challenge", "tournament", "league"];
+
     function currentFilterState() {
       const games = ["vg", "tcg", "pgo"].filter((g) => document.getElementById(`game-${g}`).checked);
+      const types = TYPE_KEYS.filter((ty) => document.getElementById(`type-${ty}`).checked);
       return {
         q: document.getElementById("q").value.trim(),
-        type: document.getElementById("type").value,
+        types,
         region: document.getElementById("region").value,
         games,
         dateFrom: document.getElementById("date-from").value,
         dateTo: document.getElementById("date-to").value,
       };
+    }
+
+    /* Surfaces how many filter categories are narrowed even while the
+       mobile panel is collapsed, so a filtered-but-empty list doesn't read
+       as broken - each category (type/games/region/date range) counts once
+       regardless of how many chips within it are off. */
+    function updateFilterCountBadge(state) {
+      let count = 0;
+      if (state.types.length < TYPE_KEYS.length) count++;
+      if (state.games.length < 3) count++;
+      if (state.region) count++;
+      if (state.dateFrom || state.dateTo) count++;
+      const badge = document.getElementById("filter-count");
+      badge.textContent = count || "";
+      badge.hidden = count === 0;
     }
 
     /* Filters persist across page loads (e.g. opening an event and coming
@@ -203,7 +242,6 @@
     function applyFilterStateToForm(state) {
       if (!state) return;
       if (state.q) document.getElementById("q").value = state.q;
-      if (state.type) document.getElementById("type").value = state.type;
       if (state.region) document.getElementById("region").value = state.region;
       if (state.dateFrom) document.getElementById("date-from").value = state.dateFrom;
       if (state.dateTo) document.getElementById("date-to").value = state.dateTo;
@@ -212,15 +250,20 @@
           document.getElementById(`game-${g}`).checked = state.games.includes(g);
         });
       }
+      if (Array.isArray(state.types)) {
+        TYPE_KEYS.forEach((ty) => {
+          document.getElementById(`type-${ty}`).checked = state.types.includes(ty);
+        });
+      }
     }
 
     function resetFilterState() {
       document.getElementById("q").value = "";
-      document.getElementById("type").value = "";
       document.getElementById("region").value = "";
       document.getElementById("date-from").value = "";
       document.getElementById("date-to").value = "";
       ["vg", "tcg", "pgo"].forEach((g) => { document.getElementById(`game-${g}`).checked = true; });
+      TYPE_KEYS.forEach((ty) => { document.getElementById(`type-${ty}`).checked = true; });
       localStorage.removeItem(FILTERS_STORAGE_KEY);
       render();
     }
@@ -239,7 +282,8 @@
             .some((s) => s.toLowerCase().includes(q))
         );
       }
-      if (filterState.type) rows = rows.filter((e) => eventTypeKey(e) === filterState.type);
+      if (filterState.types && filterState.types.length < 4)
+        rows = rows.filter((e) => filterState.types.includes(eventTypeKey(e)));
       if (filterState.region) rows = rows.filter((e) => e.region === filterState.region);
       if (filterState.games && filterState.games.length < 3)
         rows = rows.filter((e) => (e.products || []).some((p) => filterState.games.includes(p)));
@@ -457,6 +501,7 @@
     function render() {
       const filterState = currentFilterState();
       saveFilterState(filterState);
+      updateFilterCountBadge(filterState);
       const filtered = applyFilters(allEvents, filterState);
       renderList(filtered);
       if (document.getElementById("map-view").style.display !== "none") renderMap(filtered);
@@ -554,14 +599,31 @@
       // URL should always reflect what's actually in it.
       applyFilterStateToForm(loadFilterState());
       if (qs("q")) document.getElementById("q").value = qs("q");
-      if (qs("type")) document.getElementById("type").value = qs("type");
+      if (qs("type")) {
+        const requested = qs("type").split(",").filter((ty) => TYPE_KEYS.includes(ty));
+        if (requested.length) TYPE_KEYS.forEach((ty) => { document.getElementById(`type-${ty}`).checked = requested.includes(ty); });
+      }
       if (qs("region")) regionSelect.value = qs("region");
+
+      const filterToggle = document.getElementById("filter-toggle");
+      const filterPanelBody = document.getElementById("filter-panel-body");
+      function setFilterPanelExpanded(expanded) {
+        filterPanelBody.classList.toggle("collapsed", !expanded);
+        filterToggle.setAttribute("aria-expanded", String(expanded));
+      }
+      filterToggle.addEventListener("click", () => {
+        setFilterPanelExpanded(filterPanelBody.classList.contains("collapsed"));
+      });
 
       document.getElementById("filter-form").addEventListener("submit", (e) => {
         e.preventDefault();
         render();
+        // Collapsing on submit only matters visually on mobile (the panel
+        // is always expanded on desktop via display:contents) - it's the
+        // "apply & close" gesture for the mobile filter drawer.
+        setFilterPanelExpanded(false);
       });
-      document.getElementById("type").addEventListener("change", render);
+      TYPE_KEYS.forEach((ty) => document.getElementById(`type-${ty}`).addEventListener("change", render));
       regionSelect.addEventListener("change", render);
       ["vg", "tcg", "pgo"].forEach((g) => document.getElementById(`game-${g}`).addEventListener("change", render));
       document.getElementById("reset-filters").addEventListener("click", resetFilterState);

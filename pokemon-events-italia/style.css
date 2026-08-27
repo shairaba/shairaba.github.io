@@ -365,19 +365,64 @@ h1 {
 }
 .filter-bar button:active { transform: scale(.97); }
 .filter-bar button.btn-reset {
-  background: transparent;
-  color: var(--ink-dim);
-  border: 2px solid var(--border);
+  background: rgba(255, 255, 255, .14);
+  color: var(--text);
+  border: 2px solid rgba(255, 255, 255, .3);
   box-shadow: none;
 }
 .filter-bar button.btn-reset:hover {
-  background: var(--panel-2);
-  color: var(--ink);
-  border-color: var(--border);
+  background: rgba(255, 255, 255, .24);
+  color: var(--text);
+  border-color: rgba(255, 255, 255, .3);
   transform: none;
 }
-.filter-label { align-self: center; color: var(--ink-dim); font-size: .82rem; white-space: nowrap; }
+.filter-label { align-self: center; color: var(--muted); font-size: .82rem; white-space: nowrap; }
 .pill-select { min-width: 150px; flex: 1 1 150px; }
+
+/* Filter toggle - mobile-only "Filtri" button that collapses everything
+   past the search box, so the filter form doesn't dominate the screen
+   before the user has even seen a result. Hidden on desktop, where the
+   filter-panel-body below is always expanded (display:contents) and this
+   button would be redundant. */
+.filter-bar button.filter-toggle {
+  display: none;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  background: rgba(255, 255, 255, .14);
+  color: var(--text);
+  border: 2px solid rgba(255, 255, 255, .3);
+  border-radius: var(--radius-btn);
+  font-weight: 700;
+  cursor: pointer;
+}
+.filter-toggle-chevron { margin-left: auto; transition: transform .2s ease; flex-shrink: 0; }
+.filter-toggle[aria-expanded="true"] .filter-toggle-chevron { transform: rotate(180deg); }
+.filter-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: .72rem;
+  font-weight: 800;
+}
+/* The custom display:inline-flex above is an author-stylesheet rule, which
+   beats the UA stylesheet's `[hidden] { display: none }` regardless of
+   specificity (author normal always wins over user-agent normal) - without
+   this, the `hidden` attribute set in JS would be silently ignored and the
+   badge would show even at count 0. */
+.filter-count-badge[hidden] { display: none; }
+
+/* On desktop the panel's own children flow straight into .filter-bar's flex
+   layout as if this wrapper weren't there - `display: contents` drops the
+   wrapper from the box tree while keeping its children in the DOM (and
+   thus toggleable) for the mobile collapse below. */
+.filter-panel-body { display: contents; }
 
 .filter-checkbox-group {
   display: flex;
@@ -393,7 +438,7 @@ h1 {
    bright colored border with a glow and full-brightness text when
    checked. One color per game (kept as a --toggle-color custom property
    so the on/off rule below is written once, not three times). */
-.game-toggle {
+.toggle-chip {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -409,14 +454,14 @@ h1 {
   cursor: pointer;
   transition: border-color .15s ease, color .15s ease, box-shadow .15s ease, background-color .15s ease;
 }
-/* .filter-bar .game-toggle input (not just .game-toggle input): the mobile
+/* .filter-bar .toggle-chip input (not just .game-toggle input): the mobile
    `.filter-bar input { width: 100% }` override further down has equal
    selector specificity and appears later in the file, so on source order
    alone it would win and un-hide this input - bumping specificity here
    avoids relitigating the same bug fixed earlier for .filter-checkbox. */
-.filter-bar .game-toggle input { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
-.game-toggle span { pointer-events: none; }
-.game-toggle:has(input:checked) {
+.filter-bar .toggle-chip input { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
+.toggle-chip span { pointer-events: none; }
+.toggle-chip:has(input:checked) {
   border-color: var(--toggle-color);
   color: var(--ink);
   background: color-mix(in srgb, var(--toggle-color) 16%, var(--panel-2));
@@ -427,6 +472,11 @@ h1 {
 .game-toggle-vg { --toggle-color: var(--vg-color); }
 .game-toggle-tcg { --toggle-color: var(--tcg-color); }
 .game-toggle-pgo { --toggle-color: var(--pgo-color); }
+
+.type-toggle-cup { --toggle-color: var(--cup-color); }
+.type-toggle-challenge { --toggle-color: var(--challenge-color); }
+.type-toggle-tournament { --toggle-color: var(--tournament-color); }
+.type-toggle-league { --toggle-color: var(--league-color); }
 
 /* Type badges (used on the detail page; list/calendar cards use color + icon instead) */
 .badge {
@@ -819,9 +869,13 @@ body.has-cookie-banner .back-to-top { bottom: 90px; }
 
 /* Mobile */
 @media (max-width: 640px) {
-  .topbar { padding: 10px 14px; }
+  .topbar { padding: 8px 12px; gap: 8px; }
   .topbar .brand { font-size: .95rem; }
-  .logo { height: 38px; width: 38px; }
+  /* Drops the tagline pill's own line under the brand name - on a narrow
+     screen the brand row plus the controls row (which don't fit alongside
+     it and wrap below) already make the topbar tall enough without it. */
+  .brand-tagline { display: none; }
+  .logo { height: 34px; width: 34px; }
   .container { padding: 16px 12px 48px; }
   h1 { font-size: 1.15rem; }
 
@@ -835,6 +889,19 @@ body.has-cookie-banner .back-to-top { bottom: 90px; }
     flex: 0 0 auto;
     width: 100%;
   }
+  .filter-bar button.filter-toggle { display: flex; }
+  /* On mobile the wrapper is no longer inert (display:contents) - it's a
+     real column of its own so the whole block can be hidden behind the
+     toggle above without the form dominating the screen before the user
+     has even seen a result. */
+  .filter-panel-body {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    width: 100%;
+  }
+  .filter-panel-body.collapsed { display: none; }
   .pill-select { min-width: 0; }
 
   .event-card { padding: 14px 15px; gap: 12px; }
