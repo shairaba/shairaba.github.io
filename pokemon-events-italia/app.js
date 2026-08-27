@@ -407,14 +407,47 @@ async function loadEvents() {
   return Object.values(data.events || {});
 }
 
-/* Admission comes through inconsistently formatted ("10", "10 €", "10€",
-   or absent for most recurring free league nights) - normalize to a single
-   "N€" shape rather than assert "free" when it's simply unspecified. */
-function formatAdmission(event) {
+/* Admission comes through inconsistently formatted: a plain number ("10",
+   "10,00"), a spelled-out currency ("10 euro", "6.00 EUR", "10 chf"), a €
+   symbol before or after ("€ 10", "10€"), a non-numeric status ("FREE",
+   "GRATUITO", "a breve", "?"), absent entirely for most recurring free
+   league nights, or - rarely - two tiers for pre-registered vs walk-in
+   pricing ("Euro 20,00 (preiscritti) - Euro 25,00 (non preiscritti)").
+   Normalizes the common numeric shapes to a single "N€"; the two-tier case
+   keeps both amounts with their own label rather than collapsing to one
+   number (the old blanket strip-€-then-append-€ turned that whole sentence
+   into "...(non preiscritti)€"); anything else is left exactly as the
+   source wrote it rather than gluing a stray "€" onto text that doesn't
+   need one.
+
+   `compact` condenses the two-tier case to a short "10,00–15,00€" range
+   instead of the full "10,00€ (preiscritti) · 15,00€ (non preiscritti)" -
+   for the event-card pill, which is a fixed-height, non-wrapping badge that
+   the full labeled text would overflow (confirmed live: it spilled past
+   the card edge and squeezed the venue name onto extra lines). The event
+   detail page's own meta grid has room to spare, so it always gets the
+   full breakdown. */
+function formatAdmission(event, { compact = false } = {}) {
   const raw = (event.admission || "").trim();
   if (!raw) return null;
-  const numeric = raw.replace(/€/g, "").trim();
-  return numeric ? `${numeric}€` : raw;
+
+  const tierRe = /(?:euro\s*|€\s*)?([\d.,]+)\s*(?:€)?\s*\(?(non\s*preiscritt[ei]|preiscritt[ei])\)?/gi;
+  const tiers = [...raw.matchAll(tierRe)];
+  if (tiers.length >= 2) {
+    if (compact) {
+      const amounts = tiers.map(([, amount]) => amount);
+      return `${amounts[0]}–${amounts[amounts.length - 1]}€`;
+    }
+    return tiers.map(([, amount, label]) => `${amount}€ (${label.replace(/\s+/g, " ").toLowerCase()})`).join(" · ");
+  }
+
+  if (/^[\d.,]+$/.test(raw)) return `${raw}€`;
+  const symbolMatch = raw.match(/^€?\s*([\d.,]+)\s*€?$/);
+  if (symbolMatch) return `${symbolMatch[1]}€`;
+  const wordMatch = raw.match(/^([\d.,]+)\s*(?:euro|eur|chf)$/i);
+  if (wordMatch) return `${wordMatch[1]}€`;
+
+  return raw;
 }
 
 function googleMapsDirectionsUrl(event) {
@@ -439,7 +472,7 @@ function eventCardHtml(event, { showDate = true } = {}) {
   const dateText = showDate ? formatDate(event, { year: undefined }) : formatTime(event);
   const gamesHtml = gamePillsHtml(event.products);
 
-  const cost = formatAdmission(event);
+  const cost = formatAdmission(event, { compact: true });
   const inactiveClass = event.is_active === false ? " event-card-inactive" : "";
   return `
     <div class="event-card${inactiveClass}" data-guid="${esc(event.guid)}" role="button" tabindex="0">

@@ -91,7 +91,7 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <script src="app.js?v=2"></script>
+  <script src="app.js?v=4"></script>
   <script>
     function metaItem(label, value) {
       if (!value) return "";
@@ -107,7 +107,7 @@
         metaItem(t("dateTime"), formatDate(event)),
         metaItem(t("regFrom"), event.registration_start ? formatDate({ ...event, start_date: event.registration_start }) : ""),
         metaItem(t("regTo"), event.registration_end ? formatDate({ ...event, start_date: event.registration_end }) : ""),
-        metaItem(t("cost"), event.admission),
+        metaItem(t("cost"), formatAdmission(event)),
         metaItem(t("email"), event.contact_email),
         metaItem(t("phone"), event.contact_phone),
       ].filter(Boolean).join("");
