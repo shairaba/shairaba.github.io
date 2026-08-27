@@ -39,7 +39,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=9">
+  <link rel="stylesheet" href="style.css?v=10">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 </head>
@@ -104,11 +104,14 @@
       const meta = typeMeta(event);
       document.title = `${displayName(event)} - ${t("brand")}`;
 
+      // Order doubles as the desktop row split (see .detail-meta-grid): the
+      // first three fields make row 1, the rest fall to row 2 - mobile just
+      // follows the same DOM order into however many narrower columns fit.
       const metaGrid = [
         metaItem(t("dateTime"), formatDate(event)),
+        metaItem(t("cost"), formatAdmission(event)),
         metaItem(t("regFrom"), event.registration_start ? formatDate({ ...event, start_date: event.registration_start }) : ""),
         metaItem(t("regTo"), event.registration_end ? formatDate({ ...event, start_date: event.registration_end }) : ""),
-        metaItem(t("cost"), formatAdmission(event)),
         metaItem(t("email"), event.contact_email, { href: event.contact_email ? `mailto:${event.contact_email}` : undefined }),
         metaItem(t("phone"), event.contact_phone),
       ].filter(Boolean).join("");

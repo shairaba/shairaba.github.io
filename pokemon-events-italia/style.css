@@ -788,12 +788,12 @@ h1 {
   margin-bottom: 16px;
 }
 
-/* minmax lower bound tuned so all 6 possible fields (data, 2x iscrizioni,
-   costo, email, telefono) fit on one row at this card's typical width -
-   150px only fit 5, orphaning the 6th onto its own row with the grid's
-   other 4 column tracks left empty beside it (auto-fill keeps a fixed
-   track count across all rows, it doesn't shrink a sparse row). */
-.detail-meta-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(115px, 1fr)); gap: 16px; }
+/* Fixed 3 columns on desktop - paired with the field order in event.html's
+   metaGrid array (date/cost/signup-start, then signup-end/email/phone),
+   this reliably splits into exactly two rows of three regardless of which
+   optional fields (registration dates, phone) happen to be present. Mobile
+   overrides back to the old auto-fill behavior below. */
+.detail-meta-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 .detail-meta-label { font-size: .68rem; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-dim); margin-bottom: 3px; }
 /* overflow-wrap so long unbroken values (an email address has no spaces
    to break at) wrap inside their own narrow grid column instead of
@@ -1021,6 +1021,10 @@ body.has-cookie-banner .back-to-top { bottom: 90px; }
 
   .detail-card { padding: 14px 16px; }
   .detail-title { font-size: 1.12rem; }
+  /* Back to auto-fill on mobile (unlike desktop's fixed 3 columns) - lets
+     however many narrow columns actually fit wrap naturally instead of
+     squeezing 3 fixed columns into a much narrower card. */
+  .detail-meta-grid { grid-template-columns: repeat(auto-fill, minmax(115px, 1fr)); }
 
   .cal-weekdays, .cal-month-grid { gap: 4px; }
   .cal-grid-cell { font-size: .72rem; border-radius: 8px; }
