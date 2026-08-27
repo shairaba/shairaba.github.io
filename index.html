@@ -4,153 +4,315 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My Portfolio | Projects</title>
+<!-- Applied before the stylesheet/first paint, from a saved cookie (or the
+     OS preference on a first visit) - so a returning dark-mode user never
+     sees a flash of the light theme while the page loads. -->
+<script>
+(function () {
+  var m = document.cookie.match(/(?:^|; )theme=(dark|light)/);
+  var theme = m ? m[1] : (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  document.documentElement.setAttribute("data-theme", theme);
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-/* Using your exact color palette and variables */
+/* Same design language as pokemon-events-italia/PokemonTeamListCreator-ChampionsBeta:
+   periwinkle-to-indigo gradient + diamond lattice, pale-lavender/deep-indigo
+   panels, white pill buttons/badges, cookie-persisted light/dark toggle. */
 :root {
-  --bg: #0c0c16;
-  --surf: #13131f;
-  --surf2: #1c1c2e;
-  --bord: #2c2c48;
-  --acc: #e63946;
-  --acc2: #ffd166;
-  --txt: #f0f0f8;
-  --muted: #7777aa;
-  --r: 14px;
-  --rs: 8px;
-  --fh: 'Bebas Neue', sans-serif;
-  --fb: 'Nunito', sans-serif;
+  --bg-a: #6b63e6;
+  --bg-b: #262456;
+
+  --panel: #f5f3fc;
+  --panel-2: #e9e6f8;
+  --border: #ded7f2;
+
+  --text: #ffffff;
+  --muted: #d6d3f7;
+  --muted-2: #c1bbe8;
+
+  --ink: #333a72;
+  --ink-dim: #6b6f9c;
+
+  --accent: #4a4fc9;
+  --accent-strong: #363aa0;
+  --badge-bg: #ece8fa;
+  --shadow: 0 16px 34px rgba(18, 14, 54, .28);
+  --radius: 22px;
+  --radius-sm: 10px;
+  --radius-btn: 999px;
+
+  --btn-bg: #ffffff;
+  --btn-text: #333a72;
+  --btn-hover-a: #abe049;
+  --btn-hover-b: #ecf461;
 }
+
+:root[data-theme="dark"] {
+  --bg-a: #38316e;
+  --bg-b: #100e26;
+
+  --panel: #1f1a30;
+  --panel-2: #241e3a;
+  --border: #322b4a;
+
+  --text: #f1eefc;
+  --muted: #a79bc9;
+  --muted-2: #7a6f96;
+
+  --ink: #ece9fb;
+  --ink-dim: #a6a3d4;
+
+  --accent: #9d6bff;
+  --accent-strong: #c4a6ff;
+  --badge-bg: #2a2244;
+  --shadow: 0 16px 34px rgba(4, 3, 18, .5);
+}
+
+* { box-sizing: border-box; transition: background-color .3s ease, color .3s ease, border-color .3s ease; }
+
+html, body { max-width: 100%; }
+html { background: var(--bg-b); }
 
 body {
-  background: var(--bg);
-  color: var(--txt);
-  font-family: var(--fb);
-  min-height: 100vh;
   margin: 0;
-  display: flex;
-  justify-content: center;
+  font-family: 'Montserrat', sans-serif;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
 }
 
-/* Background Gradients */
+/* Fixed full-viewport gradient+lattice layer, not painted on body directly -
+   keeps the same look regardless of scroll position/page length. */
 body::before {
-  content: '';
+  content: "";
   position: fixed;
   inset: 0;
-  background: radial-gradient(ellipse at 20% 50%, rgba(230,57,70,.07) 0%, transparent 60%),
-              radial-gradient(ellipse at 80% 20%, rgba(255,209,102,.05) 0%, transparent 60%);
-  z-index: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, .05) 0 2px, transparent 2px 46px),
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, .05) 0 2px, transparent 2px 46px),
+    linear-gradient(160deg, var(--bg-a), var(--bg-b) 65%);
 }
+
+a { color: var(--accent); text-decoration: none; }
+
+@keyframes fadeSlideDown {
+  from { opacity: 0; transform: translateY(-12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .topbar { animation: fadeSlideDown .5s ease both; }
+  .wrap { animation: fadeSlideUp .5s ease both; animation-delay: .08s; }
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 14px 24px;
+  background: color-mix(in srgb, var(--bg-b) 55%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 4px 16px -6px rgba(0, 0, 0, .35);
+}
+
+/* Light/dark toggle - a sliding day/night switch. */
+#theme-toggle {
+  position: relative;
+  flex-shrink: 0;
+  width: 52px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-btn);
+  cursor: pointer;
+  background: linear-gradient(90deg, #ffcf6b, #ff9a3c);
+  box-shadow: 0 6px 14px rgba(10, 8, 40, .35), inset 0 0 0 2px rgba(255, 255, 255, .3);
+  transition: background .3s ease, transform .15s ease;
+}
+:root[data-theme="dark"] #theme-toggle { background: linear-gradient(90deg, #2a2650, #100e26); }
+#theme-toggle:hover { transform: translateY(-2px); }
+#theme-toggle .theme-switch-icon {
+  position: absolute;
+  top: 50%;
+  width: 13px;
+  height: 13px;
+  transform: translateY(-50%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity .2s ease;
+}
+#theme-toggle .theme-switch-sun { right: 7px; opacity: 1; }
+#theme-toggle .theme-switch-moon { left: 7px; opacity: 0; }
+:root[data-theme="dark"] #theme-toggle .theme-switch-sun { opacity: 0; }
+:root[data-theme="dark"] #theme-toggle .theme-switch-moon { opacity: 1; }
+#theme-toggle .theme-switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, .3);
+  transition: transform .3s ease;
+}
+:root[data-theme="dark"] #theme-toggle .theme-switch-knob { transform: translateX(24px); }
 
 .wrap {
   position: relative;
-  z-index: 1;
-  max-width: 860px;
+  max-width: 900px;
+  margin: 0 auto;
   width: 100%;
-  padding: 60px 20px;
+  padding: 48px 20px 72px;
 }
 
-.hdr { text-align: center; margin-bottom: 50px; }
-
+.hdr { text-align: center; margin-bottom: 44px; }
 .hdr h1 {
-  font-family: var(--fh);
-  font-size: clamp(3rem, 8vw, 5rem);
-  letter-spacing: 4px;
-  background: linear-gradient(135deg, #fff 0%, var(--acc2) 50%, var(--acc) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  font-weight: 800;
+  font-size: clamp(2.2rem, 6vw, 3.2rem);
+  letter-spacing: -.01em;
+  line-height: 1.1;
+  color: var(--text);
   margin: 0;
+}
+.hdr p {
+  color: var(--muted);
+  margin: 10px 0 0;
+  font-size: 1rem;
 }
 
 .project-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 18px;
 }
 
-/* Card Style from your Generator */
 .card {
-  background: var(--surf);
-  border: 1px solid var(--bord);
-  border-radius: var(--r);
-  padding: 30px;
-  position: relative;
-  overflow: hidden;
-  transition: transform 0.3s ease;
+  background: var(--panel);
+  color: var(--ink);
+  border-radius: var(--radius);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .8), var(--shadow);
+  padding: 26px 26px 24px;
   text-decoration: none;
-  color: inherit;
   display: block;
+  transition: transform .12s ease;
 }
-
-.card:hover {
-  transform: translateY(-5px);
-  border-color: var(--acc2);
-}
-
-.card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0; height: 3px;
-  background: linear-gradient(90deg, var(--acc), var(--acc2));
-}
+.card:hover { transform: translateY(-4px); }
+.card:active { transform: translateY(-1px); }
 
 .card h2 {
-  font-family: var(--fh);
-  font-size: 1.8rem;
-  letter-spacing: 2px;
-  margin-bottom: 10px;
-  color: var(--acc2);
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -.01em;
+  margin: 0 0 8px;
+  color: var(--ink);
 }
-
 .card p {
-  color: var(--muted);
-  font-size: 0.95rem;
-  line-height: 1.6;
+  color: var(--ink-dim);
+  font-size: .9rem;
+  line-height: 1.55;
+  margin: 0;
 }
 
 .badge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   padding: 4px 12px;
-  border-radius: 99px;
-  background: rgba(230, 57, 70, 0.15);
-  color: var(--acc);
+  border-radius: var(--radius-btn);
+  background: var(--badge-bg);
+  color: var(--accent);
   font-weight: 800;
-  font-size: 0.7rem;
+  font-size: .68rem;
+  letter-spacing: .04em;
   text-transform: uppercase;
-  margin-top: 15px;
+  margin-top: 16px;
+}
+.badge.badge-beta { background: var(--panel-2); color: var(--ink-dim); }
+
+.footnote {
+  color: var(--muted-2);
+  font-size: .78rem;
+  text-align: center;
+  margin-top: 40px;
+}
+
+@media (max-width: 640px) {
+  .topbar { padding: 10px 14px; }
+  .wrap { padding: 32px 16px 48px; }
+  .card { padding: 20px; }
 }
 </style>
 </head>
 <body>
+  <header class="topbar">
+    <button id="theme-toggle" type="button" aria-label="Toggle dark mode">
+      <span class="theme-switch-icon theme-switch-sun" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="12" cy="12" r="4"></circle>
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+        </svg>
+      </span>
+      <span class="theme-switch-icon theme-switch-moon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+          <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 1 0 10.5 10.5z"></path>
+        </svg>
+      </span>
+      <span class="theme-switch-knob"></span>
+    </button>
+  </header>
+
   <div class="wrap">
     <header class="hdr">
-      <h1>MY PROJECTS</h1>
+      <h1>My Projects</h1>
     </header>
 
     <div class="project-grid">
       <a href="vgc-teamlist-generator/index.html" class="card">
         <h2>VGC Teamlist Generator</h2>
-        <p>A specialized tool for competitive Pokémon players to generate professional graphic teamlists from Poképaste URLs.</p>
+        <p>A specialized tool for competitive Pok&eacute;mon players to generate professional graphic teamlists from Pok&eacute;paste URLs.</p>
         <span class="badge">Active Project</span>
       </a>
-	  <a href="ev-converter/index.html" class="card">
+      <a href="ev-converter/index.html" class="card">
         <h2>VGC EVs Converter</h2>
-        <p>A tool to convert EVs pastes from up to Gen9 to Pokémon Champions and viceversa.</p>
+        <p>A tool to convert EVs pastes from up to Gen9 to Pok&eacute;mon Champions and viceversa.</p>
         <span class="badge">Active Project</span>
       </a>
-	  	  <a href="PokemonTeamListCreator-ChampionsBeta/index.html" class="card">
+      <a href="PokemonTeamListCreator-ChampionsBeta/index.html" class="card">
         <h2>VGC TeamlistCreator</h2>
-        <p>A tool to convert EVs pastes to Teamlist PDFs. ORIGINAL PROJECT BY DhSufi</p>
-        <span class="badge">Beta Project</span>
+        <p>A tool to convert EVs pastes to Teamlist PDFs. Original project by DhSufi.</p>
+        <span class="badge badge-beta">Beta Project</span>
       </a>
-
-      <div class="card" style="opacity: 0.5; cursor: default;">
-        <h2>Coming Soon</h2>
-        <p>New projects are currently under development. Stay tuned!</p>
-      </div>
+      <a href="pokemon-events-italia/index.html" class="card">
+        <h2>Pok&eacute;mon Event Locator but better</h2>
+        <p>Browse upcoming official Pok&eacute;mon events (VGC, TCG, GO) across Italy - searchable list, calendar, and map, with full event details.</p>
+        <span class="badge">Active Project</span>
+      </a>
     </div>
+
+    <p class="footnote">Not affiliated with The Pok&eacute;mon Company International.</p>
   </div>
+
+  <script>
+    var themeToggle = document.getElementById("theme-toggle");
+    themeToggle.addEventListener("click", function () {
+      var next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", next);
+      document.cookie = "theme=" + next + "; max-age=" + (60 * 60 * 24 * 365) + "; path=/; SameSite=Lax";
+    });
+  </script>
 </body>
 </html>
