@@ -39,7 +39,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=2">
+  <link rel="stylesheet" href="style.css?v=3">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 </head>
@@ -136,6 +136,7 @@
         <a class="back-link" href="index.html">${esc(t("backToList"))}</a>
         <h1 class="detail-title">${esc(currentVenue.name)}</h1>
         ${currentVenue.address ? `<p class="detail-subtitle">${esc(currentVenue.address)}</p>` : ""}
+        ${currentVenue.latitude && currentVenue.longitude ? `<div class="detail-actions"><a class="btn btn-secondary" href="${esc(googleMapsDirectionsUrl(currentVenue))}" target="_blank" rel="noopener">${esc(t("takeMeThere"))}</a></div>` : ""}
         ${currentVenue.latitude && currentVenue.longitude ? `<div id="venue-map"></div>` : ""}
 
         <div class="filter-bar venue-filter-bar" id="filter-form">

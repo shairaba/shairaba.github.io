@@ -491,6 +491,8 @@ h1 {
 
 .event-card-games { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 6px; }
 .game-pill {
+  display: inline-flex;
+  align-items: center;
   font-size: .64rem;
   font-weight: 800;
   letter-spacing: .02em;
@@ -498,9 +500,16 @@ h1 {
   border-radius: 999px;
   line-height: 1.5;
 }
-.game-pill-vg { background: color-mix(in srgb, var(--vg-color) 18%, transparent); color: var(--vg-color); }
-.game-pill-tcg { background: color-mix(in srgb, var(--tcg-color) 18%, transparent); color: var(--tcg-color); }
-.game-pill-pgo { background: color-mix(in srgb, var(--pgo-color) 18%, transparent); color: var(--pgo-color); }
+/* Mixed against --panel, not transparent: these pills also appear on the
+   event detail page's .detail-badges, which sits directly on the page's
+   own gradient background rather than inside a card - a transparent tint
+   there left barely any backing behind the colored text, hard to read
+   especially in light mode. Mixing against --panel gives a solid pale/dark
+   backing that works the same whether the pill is on a card or the
+   gradient. */
+.game-pill-vg { background: color-mix(in srgb, var(--vg-color) 18%, var(--panel)); color: var(--vg-color); }
+.game-pill-tcg { background: color-mix(in srgb, var(--tcg-color) 18%, var(--panel)); color: var(--tcg-color); }
+.game-pill-pgo { background: color-mix(in srgb, var(--pgo-color) 18%, var(--panel)); color: var(--pgo-color); }
 
 .event-card-title-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
 .event-card-title { font-weight: 800; font-size: .95rem; min-width: 0; }
