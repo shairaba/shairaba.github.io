@@ -420,13 +420,20 @@ async function loadEvents() {
    source wrote it rather than gluing a stray "€" onto text that doesn't
    need one.
 
-   `compact` condenses the two-tier case to a short "10,00–15,00€" range
-   instead of the full "10,00€ (preiscritti) · 15,00€ (non preiscritti)" -
-   for the event-card pill, which is a fixed-height, non-wrapping badge that
-   the full labeled text would overflow (confirmed live: it spilled past
-   the card edge and squeezed the venue name onto extra lines). The event
+   `compact` condenses the two-tier case to a short "10–15€" range instead
+   of the full "10€ (preiscritti) · 15€ (non preiscritti)" - for the
+   event-card pill, which is a fixed-height, non-wrapping badge that the
+   full labeled text would overflow (confirmed live: it spilled past the
+   card edge and squeezed the venue name onto extra lines). The event
    detail page's own meta grid has room to spare, so it always gets the
-   full breakdown. */
+   full breakdown.
+
+   Every amount also drops a bare ",00"/".00" - "10,00" displays as "10",
+   but "9.99" keeps its decimals since those actually matter. */
+function stripZeroDecimals(amount) {
+  return amount.replace(/[.,]00$/, "");
+}
+
 function formatAdmission(event, { compact = false } = {}) {
   const raw = (event.admission || "").trim();
   if (!raw) return null;
@@ -435,17 +442,19 @@ function formatAdmission(event, { compact = false } = {}) {
   const tiers = [...raw.matchAll(tierRe)];
   if (tiers.length >= 2) {
     if (compact) {
-      const amounts = tiers.map(([, amount]) => amount);
+      const amounts = tiers.map(([, amount]) => stripZeroDecimals(amount));
       return `${amounts[0]}–${amounts[amounts.length - 1]}€`;
     }
-    return tiers.map(([, amount, label]) => `${amount}€ (${label.replace(/\s+/g, " ").toLowerCase()})`).join(" · ");
+    return tiers
+      .map(([, amount, label]) => `${stripZeroDecimals(amount)}€ (${label.replace(/\s+/g, " ").toLowerCase()})`)
+      .join(" · ");
   }
 
-  if (/^[\d.,]+$/.test(raw)) return `${raw}€`;
+  if (/^[\d.,]+$/.test(raw)) return `${stripZeroDecimals(raw)}€`;
   const symbolMatch = raw.match(/^€?\s*([\d.,]+)\s*€?$/);
-  if (symbolMatch) return `${symbolMatch[1]}€`;
+  if (symbolMatch) return `${stripZeroDecimals(symbolMatch[1])}€`;
   const wordMatch = raw.match(/^([\d.,]+)\s*(?:euro|eur|chf)$/i);
-  if (wordMatch) return `${wordMatch[1]}€`;
+  if (wordMatch) return `${stripZeroDecimals(wordMatch[1])}€`;
 
   return raw;
 }
