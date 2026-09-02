@@ -19,16 +19,56 @@ from __future__ import annotations
 
 import copy
 import json
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from . import filters
 from .browser_client import SearchParams
 
 TEMPLATE_PATH = Path(__file__).resolve().parent / "captured_request_template.json"
 
+UTC = ZoneInfo("UTC")
+DEFAULT_EVENT_TIMEZONE = "Europe/Rome"
+
 
 def _load_template() -> dict:
     return json.loads(TEMPLATE_PATH.read_text())
+
+
+def _fix_mislabeled_local_time(raw: str | None, tz_name: str | None) -> str | None:
+    """Start_date/Registration_start/Registration_end come back from the
+    upstream Pokemon Events API suffixed with "Z" (claiming UTC), but the
+    wall-clock values are actually already the venue's own local time -
+    confirmed both directly (a specific event's official ticketing page
+    showed 8:30 PM local; treating our stored value as genuine UTC and
+    converting to Europe/Rome for display produced 10:30 PM, a 2-hour gap
+    exactly matching the CEST offset) and statistically (raw Start_date
+    times cluster overwhelmingly on the hour/half-hour across the whole
+    nationwide dataset - how people schedule store events in their own
+    local time, not how genuine UTC timestamps from a nationwide set of
+    independently-run stores would ever distribute).
+
+    Re-interprets the wall-clock numbers as local time in the event's own
+    venue timezone (tz_name, e.g. "Europe/Rome") and returns the correctly
+    DST-aware-computed UTC instant instead, so every downstream consumer
+    (the site's app.js, the Telegram bot) that already does "stored value
+    is UTC -> convert to venue timezone for display" keeps working
+    unmodified, now against correct data - no display-layer changes needed
+    anywhere else. Falls back to the raw value unchanged if it doesn't
+    parse (defensive: one malformed row from upstream shouldn't crash the
+    whole scrape), rather than raising.
+    """
+    if not raw:
+        return raw
+    try:
+        naive = raw.replace("Z", "").split("+")[0].split(".")[0]
+        wall_clock = datetime.fromisoformat(naive)
+        zone = ZoneInfo(tz_name) if tz_name else ZoneInfo(DEFAULT_EVENT_TIMEZONE)
+        localized = wall_clock.replace(tzinfo=zone)
+        return localized.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    except (ValueError, KeyError):
+        return raw
 
 
 def build_payload(search: SearchParams, max_records: int) -> dict:
@@ -101,6 +141,8 @@ def normalize_event(raw: dict) -> dict | None:
     tags = ((series.get("Tags") or {}).get("List")) or []
     attributes = [a.get("Display_name") for a in (raw.get("Attributes") or {}).get("List") or [] if a.get("Display_name")]
 
+    event_timezone = address.get("Timezone") or DEFAULT_EVENT_TIMEZONE
+
     return {
         "guid": guid,
         "display_id": raw.get("Display_id") or None,
@@ -111,9 +153,9 @@ def normalize_event(raw: dict) -> dict | None:
         "category": raw.get("Category") or None,
         "products": (raw.get("Products") or {}).get("List") or [],
         "status": raw.get("Status") or None,
-        "start_date": raw.get("Start_date") or None,
-        "registration_start": raw.get("Registration_start") or None,
-        "registration_end": raw.get("Registration_end") or None,
+        "start_date": _fix_mislabeled_local_time(raw.get("Start_date"), event_timezone),
+        "registration_start": _fix_mislabeled_local_time(raw.get("Registration_start"), event_timezone),
+        "registration_end": _fix_mislabeled_local_time(raw.get("Registration_end"), event_timezone),
         "admission": raw.get("Admission") or None,
         "details": raw.get("Details") or None,
         "event_website": raw.get("Event_website") or None,
