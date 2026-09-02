@@ -35,7 +35,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=10">
+  <link rel="stylesheet" href="style.css?v=11">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
@@ -83,11 +83,23 @@
     <p class="lede meta" id="meta-note">Caricamento&hellip;</p>
 
     <form class="filter-bar" id="filter-form">
-      <input type="text" id="q" data-i18n-placeholder="searchPlaceholder" placeholder="Cerca per nome, negozio, citt&agrave;...">
+      <div class="location-search-wrap" id="location-search-wrap">
+        <input type="text" id="location-q" autocomplete="off"
+          data-i18n-placeholder="locationSearchPlaceholder" placeholder="Cerca una citt&agrave; o zona...">
+        <ul class="location-suggestions" id="location-suggestions" hidden></ul>
+      </div>
       <button type="button" id="near-me-btn" class="near-me-btn">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
         <span data-i18n="nearMe">Vicino a me</span>
       </button>
+      <select id="location-radius" class="pill-select location-radius-select" data-i18n-aria-label="radiusLabel" aria-label="Raggio" hidden>
+        <option value="10">10 km</option>
+        <option value="20">20 km</option>
+        <option value="50" selected>50 km</option>
+        <option value="100">100 km</option>
+        <option value="200">200 km</option>
+      </select>
+      <button type="button" id="location-clear-btn" class="location-clear-btn" data-i18n-aria-label="clearLocation" aria-label="Cancella posizione" hidden>&times;</button>
       <button type="button" id="filter-toggle" class="filter-toggle" aria-expanded="false" aria-controls="filter-panel-body">
         <span data-i18n="filtersLabel">Filtri</span>
         <span id="filter-count" class="filter-count-badge" hidden></span>
@@ -194,18 +206,19 @@
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"
     integrity="sha256-Hk4dIpcqOSb0hZjgyvFOP+cEmDXUKKNE/tT542ZbNQg=" crossorigin=""></script>
-  <script src="app.js?v=10"></script>
+  <script src="app.js?v=11"></script>
   <script>
     let allEvents = [];
     let calYear, calMonth, calSelectedKey;
     let calMode = localStorage.getItem("calMode") === "month" ? "month" : "strip";
 
-    // "Near me" sort state - deliberately NOT persisted to localStorage like
-    // the rest of the filters: location changes and re-prompting on every
-    // visit is the expected/least-surprising behavior for a geolocation
-    // feature, unlike a saved region or date range.
-    let userCoords = null;
-    let sortByDistance = false;
+    // Location filter, set either by picking a location-search suggestion
+    // or by "Vicino a me" (which just fills this in with the browser's
+    // geolocation instead of a geocoded place) - deliberately NOT persisted
+    // to localStorage like the rest of the filters: location changes and
+    // re-prompting on every visit is the expected/least-surprising behavior
+    // for a geolocation feature, unlike a saved region or date range.
+    let selectedLocation = null; // { lat, lon, label, source: "search" | "geo" }
 
     const TYPE_KEYS = ["cup", "challenge", "tournament", "league"];
 
@@ -213,13 +226,14 @@
       const games = ["vg", "tcg", "pgo"].filter((g) => document.getElementById(`game-${g}`).checked);
       const types = TYPE_KEYS.filter((ty) => document.getElementById(`type-${ty}`).checked);
       return {
-        q: document.getElementById("q").value.trim(),
         types,
         region: document.getElementById("region").value,
         games,
         dateFrom: document.getElementById("date-from").value,
         dateTo: document.getElementById("date-to").value,
         favoritesOnly: document.getElementById("filter-favorites-only").checked,
+        location: selectedLocation,
+        radiusKm: Number(document.getElementById("location-radius").value) || 50,
       };
     }
 
@@ -234,6 +248,7 @@
       if (state.region) count++;
       if (state.dateFrom || state.dateTo) count++;
       if (state.favoritesOnly) count++;
+      if (state.location) count++;
       const badge = document.getElementById("filter-count");
       badge.textContent = count || "";
       badge.hidden = count === 0;
@@ -247,7 +262,10 @@
 
     function saveFilterState(state) {
       try {
-        localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(state));
+        // location/radiusKm deliberately excluded - see selectedLocation's
+        // own comment above for why.
+        const { location, radiusKm, ...persisted } = state;
+        localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(persisted));
       } catch {}
     }
 
@@ -261,7 +279,6 @@
 
     function applyFilterStateToForm(state) {
       if (!state) return;
-      if (state.q) document.getElementById("q").value = state.q;
       if (state.region) document.getElementById("region").value = state.region;
       if (state.dateFrom) document.getElementById("date-from").value = state.dateFrom;
       if (state.dateTo) document.getElementById("date-to").value = state.dateTo;
@@ -279,13 +296,13 @@
     }
 
     function resetFilterState() {
-      document.getElementById("q").value = "";
       document.getElementById("region").value = "";
       document.getElementById("date-from").value = "";
       document.getElementById("date-to").value = "";
       ["vg", "tcg", "pgo"].forEach((g) => { document.getElementById(`game-${g}`).checked = true; });
       TYPE_KEYS.forEach((ty) => { document.getElementById(`type-${ty}`).checked = true; });
       document.getElementById("filter-favorites-only").checked = false;
+      clearLocation({ skipRender: true });
       localStorage.removeItem(FILTERS_STORAGE_KEY);
       render();
     }
@@ -296,14 +313,6 @@
         const key = localDateKey(e);
         return key && key >= todayKey;
       });
-      if (filterState.q) {
-        const q = filterState.q.toLowerCase();
-        rows = rows.filter((e) =>
-          [e.name, e.activity_group_name, e.venue_name, e.full_address]
-            .filter(Boolean)
-            .some((s) => s.toLowerCase().includes(q))
-        );
-      }
       if (filterState.types && filterState.types.length < 4)
         rows = rows.filter((e) => filterState.types.includes(eventTypeKey(e)));
       if (filterState.region) rows = rows.filter((e) => e.region === filterState.region);
@@ -312,22 +321,30 @@
       if (filterState.dateFrom) rows = rows.filter((e) => e.start_date && e.start_date.slice(0, 10) >= filterState.dateFrom);
       if (filterState.dateTo) rows = rows.filter((e) => e.start_date && e.start_date.slice(0, 10) <= filterState.dateTo);
       if (filterState.favoritesOnly) rows = rows.filter((e) => isFavorite(e.guid));
+      if (filterState.location) {
+        const { lat, lon } = filterState.location;
+        rows = rows.filter(
+          (e) => e.latitude != null && e.longitude != null && distanceKm(lat, lon, e.latitude, e.longitude) <= filterState.radiusKm
+        );
+      }
       return rows.slice().sort((a, b) => (a.start_date || "").localeCompare(b.start_date || ""));
     }
 
     const MAX_ROWS = 300;
 
-    /* "Near me" only re-sorts what the List view itself renders - it
-       wouldn't mean anything for the Calendar (grouped by day, not
+    /* A location filter only re-sorts what the List view itself renders -
+       it wouldn't mean anything for the Calendar (grouped by day, not
        distance) or the Map (already visual/spatial), so this is the one
-       place sortByDistance/userCoords are read. */
-    function renderList(filtered) {
+       place filterState.location is read for sorting/distance display
+       (applyFilters above already did the radius filtering itself). */
+    function renderList(filtered, filterState) {
       const container = document.getElementById("rows");
+      const loc = filterState && filterState.location;
       let rows = filtered;
-      if (sortByDistance && userCoords) {
+      if (loc) {
         rows = filtered.slice().sort((a, b) => {
-          const da = a.latitude != null && a.longitude != null ? distanceKm(userCoords.lat, userCoords.lon, a.latitude, a.longitude) : Infinity;
-          const db = b.latitude != null && b.longitude != null ? distanceKm(userCoords.lat, userCoords.lon, b.latitude, b.longitude) : Infinity;
+          const da = a.latitude != null && a.longitude != null ? distanceKm(loc.lat, loc.lon, a.latitude, a.longitude) : Infinity;
+          const db = b.latitude != null && b.longitude != null ? distanceKm(loc.lat, loc.lon, b.latitude, b.longitude) : Infinity;
           return da - db;
         });
       }
@@ -337,8 +354,8 @@
       } else {
         container.innerHTML = shown
           .map((e) => {
-            const dist = sortByDistance && userCoords && e.latitude != null && e.longitude != null
-              ? distanceKm(userCoords.lat, userCoords.lon, e.latitude, e.longitude)
+            const dist = loc && e.latitude != null && e.longitude != null
+              ? distanceKm(loc.lat, loc.lon, e.latitude, e.longitude)
               : undefined;
             return eventCardHtml(e, { showDate: true, distanceKm: dist });
           })
@@ -547,7 +564,7 @@
       saveFilterState(filterState);
       updateFilterCountBadge(filterState);
       const filtered = applyFilters(allEvents, filterState);
-      renderList(filtered);
+      renderList(filtered, filterState);
       if (document.getElementById("map-view").style.display !== "none") renderMap(filtered);
       if (document.getElementById("calendar-view").style.display !== "none") renderCalendar(filtered);
     }
@@ -608,6 +625,139 @@
       document.getElementById("meta-note").textContent = t("metaCount", upcomingCount);
     }
 
+    /* Applies a picked location (a geocoded place, or "Vicino a me"'s
+       browser geolocation - both funnel through here) and reveals the
+       radius selector + clear button that only make sense once a location
+       is actually set. */
+    function selectLocation(loc) {
+      selectedLocation = loc;
+      document.getElementById("location-q").value = loc.label;
+      document.getElementById("location-radius").hidden = false;
+      document.getElementById("location-clear-btn").hidden = false;
+      document.getElementById("near-me-btn").classList.toggle("active", loc.source === "geo");
+      hideLocationSuggestions();
+      render();
+    }
+
+    function clearLocation({ skipRender = false } = {}) {
+      selectedLocation = null;
+      document.getElementById("location-q").value = "";
+      document.getElementById("location-radius").hidden = true;
+      document.getElementById("location-clear-btn").hidden = true;
+      document.getElementById("near-me-btn").classList.remove("active");
+      hideLocationSuggestions();
+      if (!skipRender) render();
+    }
+
+    function hideLocationSuggestions() {
+      const list = document.getElementById("location-suggestions");
+      list.hidden = true;
+      list.innerHTML = "";
+    }
+
+    function renderLocationSuggestions(results) {
+      const list = document.getElementById("location-suggestions");
+      if (!results.length) {
+        list.innerHTML = `<li class="location-suggestion-empty">${esc(t("noLocationResults"))}</li>`;
+        list.hidden = false;
+        return;
+      }
+      list.innerHTML = results
+        .map((r, i) => `<li class="location-suggestion-item" data-idx="${i}" role="option" tabindex="-1">${esc(r.label)}</li>`)
+        .join("");
+      list.hidden = false;
+      list.querySelectorAll(".location-suggestion-item").forEach((li) => {
+        li.addEventListener("click", () => selectLocation({ ...results[Number(li.dataset.idx)], source: "search" }));
+      });
+    }
+
+    /* De-duplicates consecutive identical parts - Photon often repeats the
+       place name in both `name` and `city` for a city-level result. */
+    function photonLabel(props) {
+      const parts = [props.name, props.city, props.state, props.country].filter(Boolean);
+      const deduped = parts.filter((p, i) => p !== parts[i - 1]);
+      return deduped.join(", ");
+    }
+
+    /* Photon (komoot's OSM-based geocoder) - same "no API key" convention
+       as the Leaflet/OSM map tiles used by the Map view, and unlike
+       Nominatim's own usage policy, Photon is explicitly built to support
+       this kind of typeahead/autocomplete use case. Deliberately no lat/lon
+       bias: tried biasing toward central Italy to prefer "Milano, Italia"
+       over "Milano, Texas" for an ambiguous query, but it also pulled in a
+       tiny same-named locality near the bias point over the actual city
+       (a real Rome street called "Bologna" outranked the city of Bologna) -
+       Photon's own importance ranking already puts the well-known Italian
+       place first without that push, confirmed against both cases above. */
+    async function searchLocations(query, signal) {
+      const params = new URLSearchParams({
+        q: query,
+        limit: "6",
+      });
+      // Photon's public instance only supports lang=default/de/en/fr - "it"
+      // 400s. "default" (i.e. omitting the param) already returns Italian
+      // names for Italian places, so English is the only case worth asking
+      // for explicitly.
+      if (getLang() === "en") params.set("lang", "en");
+      const res = await fetch(`https://photon.komoot.io/api/?${params.toString()}`, { signal });
+      if (!res.ok) throw new Error(`Photon: ${res.status}`);
+      const data = await res.json();
+      return (data.features || [])
+        .filter((f) => f.geometry && Array.isArray(f.geometry.coordinates))
+        .map((f) => ({
+          lat: f.geometry.coordinates[1],
+          lon: f.geometry.coordinates[0],
+          label: photonLabel(f.properties || {}),
+        }));
+    }
+
+    const LOCATION_SEARCH_MIN_CHARS = 2;
+    const LOCATION_SEARCH_DEBOUNCE_MS = 300;
+    let locationSearchTimer = null;
+    let locationSearchAbort = null;
+
+    function initLocationSearch() {
+      const input = document.getElementById("location-q");
+      input.addEventListener("input", () => {
+        // Typing again after a location was already selected means the
+        // user is searching for something new - drop the stale filter
+        // rather than keep filtering by the old place while the box shows
+        // different text.
+        if (selectedLocation) clearLocation();
+        const query = input.value.trim();
+        clearTimeout(locationSearchTimer);
+        if (locationSearchAbort) locationSearchAbort.abort();
+        if (query.length < LOCATION_SEARCH_MIN_CHARS) {
+          hideLocationSuggestions();
+          return;
+        }
+        locationSearchTimer = setTimeout(async () => {
+          locationSearchAbort = new AbortController();
+          try {
+            const results = await searchLocations(query, locationSearchAbort.signal);
+            renderLocationSuggestions(results);
+          } catch (err) {
+            if (err.name !== "AbortError") {
+              console.error(err);
+              const list = document.getElementById("location-suggestions");
+              list.innerHTML = `<li class="location-suggestion-empty">${esc(t("locationSearchError"))}</li>`;
+              list.hidden = false;
+            }
+          }
+        }, LOCATION_SEARCH_DEBOUNCE_MS);
+      });
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") hideLocationSuggestions();
+      });
+      document.addEventListener("click", (e) => {
+        if (!document.getElementById("location-search-wrap").contains(e.target)) hideLocationSuggestions();
+      });
+      document.getElementById("location-radius").addEventListener("change", () => {
+        if (selectedLocation) render();
+      });
+      document.getElementById("location-clear-btn").addEventListener("click", () => clearLocation());
+    }
+
     (async function main() {
       initThemeToggle();
       initCookieConsent();
@@ -642,7 +792,6 @@
       // own query params (if present) win over those - a shared/bookmarked
       // URL should always reflect what's actually in it.
       applyFilterStateToForm(loadFilterState());
-      if (qs("q")) document.getElementById("q").value = qs("q");
       if (qs("type")) {
         const requested = qs("type").split(",").filter((ty) => TYPE_KEYS.includes(ty));
         if (requested.length) TYPE_KEYS.forEach((ty) => { document.getElementById(`type-${ty}`).checked = requested.includes(ty); });
@@ -673,15 +822,15 @@
       document.getElementById("filter-favorites-only").addEventListener("change", render);
       document.getElementById("reset-filters").addEventListener("click", resetFilterState);
 
+      initLocationSearch();
+
       const nearMeBtn = document.getElementById("near-me-btn");
       if (!navigator.geolocation) {
         nearMeBtn.style.display = "none";
       } else {
         nearMeBtn.addEventListener("click", () => {
-          if (sortByDistance) {
-            sortByDistance = false;
-            nearMeBtn.classList.remove("active");
-            render();
+          if (selectedLocation && selectedLocation.source === "geo") {
+            clearLocation();
             return;
           }
           nearMeBtn.disabled = true;
@@ -689,12 +838,9 @@
           label.textContent = t("locating");
           navigator.geolocation.getCurrentPosition(
             (pos) => {
-              userCoords = { lat: pos.coords.latitude, lon: pos.coords.longitude };
-              sortByDistance = true;
               nearMeBtn.disabled = false;
-              nearMeBtn.classList.add("active");
               label.textContent = t("nearMe");
-              render();
+              selectLocation({ lat: pos.coords.latitude, lon: pos.coords.longitude, label: t("yourLocation"), source: "geo" });
             },
             () => {
               nearMeBtn.disabled = false;

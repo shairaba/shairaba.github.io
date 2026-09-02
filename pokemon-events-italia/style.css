@@ -507,6 +507,69 @@ h1 {
 }
 .filter-bar button.near-me-btn:disabled { opacity: .6; cursor: wait; }
 
+/* Location search - a geocoded-place autocomplete alongside the plain
+   name/store text search (#q), combinable with it and with "Vicino a me"
+   (which just calls the same selectLocation() with the browser's own
+   coordinates instead of a geocoded result - see index.html). */
+.location-search-wrap { position: relative; flex: 1 1 200px; min-width: 160px; }
+.location-search-wrap input { width: 100%; box-sizing: border-box; }
+.location-suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  max-height: 260px;
+  overflow-y: auto;
+}
+.location-suggestion-item {
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  font-size: .86rem;
+  color: var(--ink);
+  cursor: pointer;
+}
+.location-suggestion-item:hover,
+.location-suggestion-item:focus {
+  background: color-mix(in srgb, var(--accent) 14%, var(--panel));
+}
+.location-suggestion-empty {
+  padding: 8px 10px;
+  font-size: .86rem;
+  color: var(--muted);
+}
+.location-radius-select { flex: 0 0 auto; min-width: 100px; }
+/* Small round "x" to drop the current location filter - same base treatment
+   as .near-me-btn/.btn-reset, just circular and icon-sized instead of a
+   labeled pill. */
+.filter-bar button.location-clear-btn {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  line-height: 1;
+  background: rgba(255, 255, 255, .14);
+  color: var(--text);
+  border: 2px solid rgba(255, 255, 255, .3);
+  border-radius: 50%;
+}
+/* Same author-stylesheet-beats-UA-stylesheet pitfall as .filter-count-badge
+   above: the explicit `display: inline-flex` right above this would
+   otherwise win over the browser's own `[hidden] { display: none }` rule
+   and show the button even while its `hidden` attribute is set. */
+.filter-bar button.location-clear-btn[hidden] { display: none; }
+
 /* Type badges (used on the detail page; list/calendar cards use color + icon instead) */
 .badge {
   display: inline-flex;
@@ -995,7 +1058,7 @@ body.has-cookie-banner .back-to-top { bottom: 90px; }
      otherwise set each input's HEIGHT to 160px instead of its width.
      Matches the same selector specificity as those type-specific desktop
      rules (input[type=...]) so this override actually wins. */
-  .filter-bar input, .filter-bar input[type="text"], .filter-bar input[type="date"], .filter-bar select, .filter-bar button {
+  .filter-bar input, .filter-bar input[type="text"], .filter-bar input[type="date"], .filter-bar select, .filter-bar button, .location-search-wrap {
     flex: 0 0 auto;
     width: 100%;
   }
