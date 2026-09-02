@@ -1,11 +1,17 @@
 import { REGION_LABELS, REGION_KEYS, TYPE_LABELS, TYPE_KEYS, GAME_LABELS, GAME_KEYS } from "./data.js";
-import { passesFilter, toggleValue, summarizeSelection } from "./prefs.js";
+import { passesFilter, toggleValue, summarizeSelection, MODES } from "./prefs.js";
 import { venueName } from "./venues.js";
 
 /* Everything in this file is pure (menu text/keyboard in, no I/O) so it can
    be unit-tested and reasoned about without a real Telegram connection or
    KV binding - index.js is the only place that actually talks to Telegram
    or storage. */
+
+export const MODE_LABELS = {
+  both: "📬📋 Entrambe",
+  digest: "📬 Solo digest giornaliero",
+  list: "📋 Solo lista tornei (/list)",
+};
 
 export function rootMenuView(prefs) {
   const storesSummary = prefs.stores === null || prefs.stores === undefined
@@ -16,8 +22,9 @@ export function rootMenuView(prefs) {
     `🗺 Regioni: ${summarizeSelection(prefs.regions, REGION_LABELS, REGION_KEYS)}\n` +
     `🏆 Tipo evento: ${summarizeSelection(prefs.types, TYPE_LABELS, TYPE_KEYS)}\n` +
     `🎮 Gioco: ${summarizeSelection(prefs.games, GAME_LABELS, GAME_KEYS)}\n` +
-    `🏪 Negozi specifici: ${storesSummary}\n\n` +
-    "Riceverai un riepilogo giornaliero dei nuovi eventi che rispettano questi filtri. Scegli una categoria da modificare:";
+    `🏪 Negozi specifici: ${storesSummary}\n` +
+    `🔀 Modalità: ${MODE_LABELS[prefs.mode] || MODE_LABELS.both}\n\n` +
+    "Questi filtri valgono sia per il digest giornaliero che per /list. Scegli una categoria da modificare:";
   return {
     text,
     reply_markup: {
@@ -26,9 +33,25 @@ export function rootMenuView(prefs) {
         [{ text: "🏆 Tipo evento", callback_data: "nav:type" }],
         [{ text: "🎮 Gioco", callback_data: "nav:game" }],
         [{ text: "🏪 Negozi specifici", callback_data: "nav:store" }],
+        [{ text: "🔀 Modalità", callback_data: "nav:mode" }],
         [{ text: "✅ Fatto", callback_data: "nav:done" }],
       ],
     },
+  };
+}
+
+export function modeMenuView(prefs) {
+  const rows = MODES.map((key) => [
+    { text: `${prefs.mode === key ? "✅" : "⬜"} ${MODE_LABELS[key]}`, callback_data: `setmode:${key}` },
+  ]);
+  rows.push([{ text: "‹ Indietro", callback_data: "nav:root" }]);
+  return {
+    text:
+      "🔀 <b>Modalità di funzionamento</b>\n\n" +
+      "📬 <b>Digest giornaliero</b>: un messaggio quando compaiono nuovi eventi che rispettano i tuoi filtri.\n" +
+      "📋 <b>Lista tornei</b>: un messaggio fisso con i tornei attualmente in programma, tenuto aggiornato automaticamente (creato con /list).\n\n" +
+      "Scegli quale/i vuoi ricevere:",
+    reply_markup: { inline_keyboard: rows },
   };
 }
 

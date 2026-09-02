@@ -2,18 +2,37 @@ name = "pokemon-events-telegram-bot"
 main = "src/index.js"
 compatibility_date = "2024-11-01"
 
-# Runs the daily digest at 5:15 UTC - roughly matching the site's Apify
-# scraper, which syncs data/events.json around 6 AM Italian time (this
-# schedule runs ~15 min after to give that sync time to finish). Cloudflare
-# Cron Triggers use plain UTC with no daylight-saving awareness, so this
-# actually lands at 6:15 AM Italy time in winter (CET) and 7:15 AM in summer
-# (CEST) - a known simplification, adjust the hour below if that drift
-# matters to you.
+# Two schedules, told apart in src/index.js's scheduled() by which exact
+# cron string fired (must match DAILY_DIGEST_CRON/DAILY_LIST_CRON there if
+# you change either one). Both are plain UTC - Cloudflare Cron Triggers
+# have no daylight-saving awareness, so each one's actual Italian-time
+# landing spot drifts by an hour across the DST boundary, a known
+# simplification (see each entry below); adjust the hour if that matters
+# to you, or add a second entry for the other half of the year.
+#   - "15 5 * * *": once a day, roughly matching the site's Apify scraper,
+#     which syncs data/events.json around 6 AM Italian time (this runs ~15
+#     min after to give that sync time to finish). Runs the digest only -
+#     /list has its own schedule below.
+#   - "0 6 * * *": once a day, landing at 8:00 AM Italy time in summer
+#     (CEST) and 7:00 AM in winter (CET). Refreshes every eligible chat's
+#     /list message - not more often than that, since events.json itself
+#     doesn't change more than once a day anyway (see above), so this is
+#     purely to drop events that started since the last check and keep
+#     each message's "Aggiornato: ..." timestamp current.
 [triggers]
-crons = ["15 5 * * *"]
+crons = ["15 5 * * *", "0 6 * * *"]
 
 # Replace with your own KV namespace id - see README.md for how to create
 # one (`wrangler kv namespace create SUBSCRIBERS`).
 [[kv_namespaces]]
 binding = "SUBSCRIBERS"
 id = "4551bfe4fd3b4ad292c8f049717bd22a"
+
+# Plain (non-secret) config, safe to commit since none of it is sensitive -
+# see README.md's "restrict who can use commands inside a group" section.
+# Uncomment to require the sender be a group admin/the creator (checked
+# live via getChatMember) before /settings, /list etc. work for them inside
+# a group or supergroup - combines with the ALLOWED_GROUP_USER_IDS secret
+# if that's also set (either passing is enough), and does nothing in DMs.
+[vars]
+REQUIRE_GROUP_ADMIN = "true"

@@ -1,8 +1,8 @@
-import { eventTypeKey, TYPE_LABELS } from "./data.js";
+import { eventTypeKey } from "./data.js";
 import { passesFilter } from "./prefs.js";
+import { formatEventBody } from "./eventFormat.js";
 
 export const EVENTS_URL = "https://shairaba.github.io/pokemon-events-italia/data/events.json";
-export const SITE_BASE = "https://shairaba.github.io/pokemon-events-italia/";
 
 /* First run for a chat (lastNotifiedAt still null) looks back 24h rather
    than dumping the entire multi-year dataset as "new" - a fresh subscriber
@@ -56,43 +56,22 @@ export function matchesChat(event, prefs, sinceMs, nowMs) {
   return true;
 }
 
-function formatEventDate(event) {
-  try {
-    return new Intl.DateTimeFormat("it-IT", {
-      day: "numeric",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone: event.timezone || "Europe/Rome",
-    }).format(new Date(event.start_date));
-  } catch {
-    return event.start_date;
-  }
-}
-
 function eventLine(event) {
-  const venue = event.activity_group_name || event.venue_name || event.name || "Evento";
-  const typeLabel = TYPE_LABELS[eventTypeKey(event)];
-  const where = event.region ? event.region.charAt(0) + event.region.slice(1).toLowerCase() : "";
-  const link = `${SITE_BASE}event.html?guid=${encodeURIComponent(event.guid)}`;
-  const tag = isNewEvent(event) ? "🆕 Nuovo" : "✏️ Aggiornato";
-  return (
-    `${tag} — 📅 <b>${formatEventDate(event)}</b> — ${escapeHtml(venue)}\n` +
-    `${typeLabel}${where ? " · " + escapeHtml(where) : ""}\n` +
-    `<a href="${link}">Dettagli</a>`
-  );
+  const tag = isNewEvent(event) ? "🆕 <b>Nuovo</b>" : "✏️ <b>Aggiornato</b>";
+  return `${tag}\n${formatEventBody(event)}`;
 }
 
-function escapeHtml(s) {
-  return String(s || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
-/* Telegram caps a message at 4096 chars - splits the event list into
-   multiple messages if a very broad filter ever produces a long digest,
-   rather than silently truncating or failing to send. */
+/* Telegram caps a message at 4096 chars and rejects an oversized send
+   outright, with no partial-send fallback - splits the event list into
+   multiple messages once adding another event would cross this soft cap
+   (well under the hard limit, deliberately, for headroom). The overflow
+   check below runs before adding EVERY line, including the first one in a
+   fresh segment - eventFormat.js's MAX_ADDRESS_LENGTH/MAX_URL_LENGTH bound
+   the two scraped fields that actually vary in length, so in practice no
+   single event's line gets anywhere near this cap, but the check doesn't
+   rely on that: even a hypothetical event whose own line alone exceeded
+   MAX_MESSAGE_LENGTH would just become a message of its own next iteration
+   rather than silently riding along attached to the previous line. */
 const MAX_MESSAGE_LENGTH = 3500;
 
 function digestHeader(events) {
@@ -112,14 +91,17 @@ export function formatDigest(events) {
   const lines = events.map(eventLine);
   const messages = [];
   let current = header;
+  let segmentHasEvents = false;
   for (const line of lines) {
-    if (current.length + line.length + 2 > MAX_MESSAGE_LENGTH && current !== header) {
+    if (segmentHasEvents && current.length + line.length + 2 > MAX_MESSAGE_LENGTH) {
       messages.push(current.trim());
       current = "";
+      segmentHasEvents = false;
     }
     current += line + "\n\n";
+    segmentHasEvents = true;
   }
-  if (current.trim()) messages.push(current.trim());
+  if (segmentHasEvents) messages.push(current.trim());
   return messages;
 }
 

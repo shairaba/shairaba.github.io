@@ -1,17 +1,27 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { rootMenuView, regionMenuView, applyCallback, storeMenuView, storeSearchResultsView } from "../src/settings.js";
+import { rootMenuView, regionMenuView, applyCallback, storeMenuView, storeSearchResultsView, modeMenuView } from "../src/settings.js";
 import { defaultPrefs } from "../src/prefs.js";
 
-test("rootMenuView lists all four filter categories and a Fatto button", () => {
+test("rootMenuView lists all four filter categories, the workmode, and a Fatto button", () => {
   const view = rootMenuView(defaultPrefs());
   assert.match(view.text, /Regioni: Tutte/);
   assert.match(view.text, /Tipo evento: Tutte/);
   assert.match(view.text, /Gioco: Tutte/);
   assert.match(view.text, /Negozi specifici: Nessun filtro/);
+  assert.match(view.text, /Modalità: 📬📋 Entrambe/);
   const flatButtons = view.reply_markup.inline_keyboard.flat();
   assert.ok(flatButtons.some((b) => b.callback_data === "nav:done"));
   assert.ok(flatButtons.some((b) => b.callback_data === "nav:store"));
+  assert.ok(flatButtons.some((b) => b.callback_data === "nav:mode"));
+});
+
+test("modeMenuView marks the chat's current mode and offers the other two", () => {
+  const view = modeMenuView({ ...defaultPrefs(), mode: "list" });
+  const buttons = view.reply_markup.inline_keyboard.flat();
+  assert.ok(buttons.find((b) => b.callback_data === "setmode:list").text.startsWith("✅"));
+  assert.ok(buttons.find((b) => b.callback_data === "setmode:both").text.startsWith("⬜"));
+  assert.ok(buttons.find((b) => b.callback_data === "setmode:digest").text.startsWith("⬜"));
 });
 
 test("regionMenuView marks every region checked by default", () => {

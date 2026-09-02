@@ -86,16 +86,16 @@ test("formatDigest: includes a count header and one block per event", () => {
   const messages = formatDigest([makeEvent(), makeEvent({ guid: "g2" })]);
   assert.equal(messages.length, 1);
   assert.match(messages[0], /2 nuovi eventi/);
-  assert.match(messages[0], /Store One/);
+  assert.match(messages[0], /guid=g1/);
 });
 
 test("formatDigest: distinguishes new vs edited events in the header and per-line tag", () => {
-  const edited = makeEvent({ guid: "g2", activity_group_name: "Store Two", first_seen_at: "2026-08-01T00:00:00Z", last_updated_at: "2026-09-09T18:00:00Z" });
+  const edited = makeEvent({ guid: "g2", first_seen_at: "2026-08-01T00:00:00Z", last_updated_at: "2026-09-09T18:00:00Z" });
   const messages = formatDigest([makeEvent(), edited]);
   assert.equal(messages.length, 1);
   assert.match(messages[0], /1 nuovo e 1 aggiornato/);
-  assert.match(messages[0], /🆕 Nuovo.*Store One/s);
-  assert.match(messages[0], /✏️ Aggiornato.*Store Two/s);
+  assert.match(messages[0], /🆕 <b>Nuovo<\/b>\n.*guid=g1/s);
+  assert.match(messages[0], /✏️ <b>Aggiornato<\/b>\n.*guid=g2/s);
 });
 
 test("formatDigest: splits into multiple messages past the length cap", () => {
