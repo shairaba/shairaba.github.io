@@ -100,6 +100,10 @@
         <option value="200">200 km</option>
       </select>
       <button type="button" id="location-clear-btn" class="location-clear-btn" data-i18n-aria-label="clearLocation" aria-label="Cancella posizione" hidden>&times;</button>
+      <div class="sort-toggle" id="sort-toggle" hidden>
+        <button type="button" class="sort-toggle-btn active" data-sort="distance" data-i18n="sortByDistance">Distanza</button>
+        <button type="button" class="sort-toggle-btn" data-sort="date" data-i18n="sortByDate">Data</button>
+      </div>
       <button type="button" id="filter-toggle" class="filter-toggle" aria-expanded="false" aria-controls="filter-panel-body">
         <span data-i18n="filtersLabel">Filtri</span>
         <span id="filter-count" class="filter-count-badge" hidden></span>
@@ -162,6 +166,7 @@
     </form>
 
     <div id="list-view">
+      <p class="matches-summary" id="matches-summary"></p>
       <div class="event-list" id="rows"><p class="loading" data-i18n="loading">Caricamento&hellip;</p></div>
       <p class="showing-note" id="showing-note"></p>
     </div>
@@ -219,6 +224,11 @@
     // re-prompting on every visit is the expected/least-surprising behavior
     // for a geolocation feature, unlike a saved region or date range.
     let selectedLocation = null; // { lat, lon, label, source: "search" | "geo" }
+    // Only meaningful while selectedLocation is set (the sort-toggle button
+    // is hidden otherwise) - reset to "distance" every time a location is
+    // (re)selected, since that's the useful default right after picking a
+    // place, regardless of what was chosen for a previous location.
+    let locationSortMode = "distance";
 
     const TYPE_KEYS = ["cup", "challenge", "tournament", "league"];
 
@@ -234,6 +244,7 @@
         favoritesOnly: document.getElementById("filter-favorites-only").checked,
         location: selectedLocation,
         radiusKm: Number(document.getElementById("location-radius").value) || 50,
+        sortMode: selectedLocation ? locationSortMode : "date",
       };
     }
 
@@ -262,9 +273,9 @@
 
     function saveFilterState(state) {
       try {
-        // location/radiusKm deliberately excluded - see selectedLocation's
-        // own comment above for why.
-        const { location, radiusKm, ...persisted } = state;
+        // location/radiusKm/sortMode deliberately excluded - see
+        // selectedLocation's own comment above for why.
+        const { location, radiusKm, sortMode, ...persisted } = state;
         localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(persisted));
       } catch {}
     }
@@ -336,12 +347,17 @@
        it wouldn't mean anything for the Calendar (grouped by day, not
        distance) or the Map (already visual/spatial), so this is the one
        place filterState.location is read for sorting/distance display
-       (applyFilters above already did the radius filtering itself). */
+       (applyFilters above already did the radius filtering itself).
+       Distance badges show on every card once a location is set regardless
+       of sort mode - still useful info even when sorted by date - but the
+       sort-toggle button (only visible alongside a location) lets the
+       result stay in the usual chronological order instead. */
     function renderList(filtered, filterState) {
       const container = document.getElementById("rows");
       const loc = filterState && filterState.location;
+      const useDistanceSort = loc && filterState.sortMode === "distance";
       let rows = filtered;
-      if (loc) {
+      if (useDistanceSort) {
         rows = filtered.slice().sort((a, b) => {
           const da = a.latitude != null && a.longitude != null ? distanceKm(loc.lat, loc.lon, a.latitude, a.longitude) : Infinity;
           const db = b.latitude != null && b.longitude != null ? distanceKm(loc.lat, loc.lon, b.latitude, b.longitude) : Infinity;
@@ -559,11 +575,31 @@
       calSelectedKey = anchorKey;
     }
 
+    /* "Resume" line above the List view's cards, breaking the current
+       matched count down by type (e.g. "1 Sfida di Lega, 2 Coppa di Lega
+       trovati per i tuoi filtri.") - counts the full filtered set, not just
+       what MAX_ROWS actually renders, same basis as #showing-note below.
+       List-view only per its own placement inside #list-view (Calendar/Map
+       group differently, a type breakdown wouldn't read the same there). */
+    function renderMatchesSummary(filtered) {
+      const el = document.getElementById("matches-summary");
+      if (!filtered.length) {
+        el.textContent = "";
+        return;
+      }
+      const counts = {};
+      TYPE_KEYS.forEach((ty) => { counts[ty] = 0; });
+      filtered.forEach((e) => { counts[eventTypeKey(e)]++; });
+      const parts = TYPE_KEYS.filter((ty) => counts[ty] > 0).map((ty) => `${counts[ty]} ${t(TYPE_META[ty].labelKey)}`);
+      el.textContent = parts.length ? `${parts.join(", ")} ${t("matchesSummarySuffix")}` : "";
+    }
+
     function render() {
       const filterState = currentFilterState();
       saveFilterState(filterState);
       updateFilterCountBadge(filterState);
       const filtered = applyFilters(allEvents, filterState);
+      renderMatchesSummary(filtered);
       renderList(filtered, filterState);
       if (document.getElementById("map-view").style.display !== "none") renderMap(filtered);
       if (document.getElementById("calendar-view").style.display !== "none") renderCalendar(filtered);
@@ -635,6 +671,9 @@
       document.getElementById("location-radius").hidden = false;
       document.getElementById("location-clear-btn").hidden = false;
       document.getElementById("near-me-btn").classList.toggle("active", loc.source === "geo");
+      locationSortMode = "distance";
+      document.getElementById("sort-toggle").hidden = false;
+      document.querySelectorAll(".sort-toggle-btn").forEach((b) => b.classList.toggle("active", b.dataset.sort === "distance"));
       hideLocationSuggestions();
       render();
     }
@@ -644,6 +683,7 @@
       document.getElementById("location-q").value = "";
       document.getElementById("location-radius").hidden = true;
       document.getElementById("location-clear-btn").hidden = true;
+      document.getElementById("sort-toggle").hidden = true;
       document.getElementById("near-me-btn").classList.remove("active");
       hideLocationSuggestions();
       if (!skipRender) render();
@@ -756,6 +796,14 @@
         if (selectedLocation) render();
       });
       document.getElementById("location-clear-btn").addEventListener("click", () => clearLocation());
+      document.querySelectorAll(".sort-toggle-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          if (btn.dataset.sort === locationSortMode) return;
+          locationSortMode = btn.dataset.sort;
+          document.querySelectorAll(".sort-toggle-btn").forEach((b) => b.classList.toggle("active", b.dataset.sort === locationSortMode));
+          render();
+        });
+      });
     }
 
     (async function main() {

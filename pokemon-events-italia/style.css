@@ -570,6 +570,44 @@ h1 {
    and show the button even while its `hidden` attribute is set. */
 .filter-bar button.location-clear-btn[hidden] { display: none; }
 
+/* Sort toggle (Distanza/Data) - only shown alongside an active location
+   filter (see selectLocation()/clearLocation() in index.html), so it
+   reuses the filter-bar's own theme-aware pill-track look rather than the
+   fixed white-on-purple .view-toggle in the topbar, which is styled for
+   sitting directly on that header background instead. */
+.sort-toggle {
+  display: flex;
+  gap: 3px;
+  flex: 0 0 auto;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-btn);
+  padding: 3px;
+}
+.sort-toggle[hidden] { display: none; }
+/* Prefixed with .filter-bar button throughout (matching .near-me-btn's own
+   selector shape) rather than plain .sort-toggle-btn - .filter-bar button
+   and its sibling `.filter-bar input, .filter-bar select, .filter-bar
+   button` rule both include an element selector, which otherwise ties or
+   beats a same-single-class selector on specificity and silently wins
+   individual properties (padding/background/etc, and on hover the accent
+   fill). */
+.filter-bar button.sort-toggle-btn {
+  background: transparent;
+  border: none;
+  color: var(--ink-dim);
+  font-size: .82rem;
+  font-weight: 700;
+  padding: 7px 14px;
+  border-radius: var(--radius-btn);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.filter-bar button.sort-toggle-btn.active { background: var(--accent); color: #fff; }
+
+.matches-summary { color: var(--text); font-size: .88rem; font-weight: 600; margin: 0 0 14px; }
+.matches-summary:empty { display: none; }
+
 /* Type badges (used on the detail page; list/calendar cards use color + icon instead) */
 .badge {
   display: inline-flex;
@@ -1058,10 +1096,14 @@ body.has-cookie-banner .back-to-top { bottom: 90px; }
      otherwise set each input's HEIGHT to 160px instead of its width.
      Matches the same selector specificity as those type-specific desktop
      rules (input[type=...]) so this override actually wins. */
-  .filter-bar input, .filter-bar input[type="text"], .filter-bar input[type="date"], .filter-bar select, .filter-bar button, .location-search-wrap {
+  .filter-bar input, .filter-bar input[type="text"], .filter-bar input[type="date"], .filter-bar select, .filter-bar button, .location-search-wrap, .sort-toggle {
     flex: 0 0 auto;
     width: 100%;
   }
+  /* min-width: 0 overrides flex items' default min-width:auto (their
+     content's natural nowrap width), which otherwise blocks flex-shrink
+     from actually applying and pushes the second button off-screen. */
+  .filter-bar button.sort-toggle-btn { flex: 1 1 0; min-width: 0; }
   .filter-bar button.filter-toggle { display: flex; }
   /* On mobile the wrapper is no longer inert (display:contents) - it's a
      real column of its own so the whole block can be hidden behind the

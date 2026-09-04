@@ -85,6 +85,9 @@ const TRANSLATIONS = {
     locationSearchError: "Ricerca posizione non riuscita.",
     clearLocation: "Cancella posizione",
     radiusLabel: "Raggio",
+    sortByDistance: "Distanza",
+    sortByDate: "Data",
+    matchesSummarySuffix: "trovati per i tuoi filtri.",
   },
   en: {
     locale: "en-US",
@@ -164,6 +167,9 @@ const TRANSLATIONS = {
     locationSearchError: "Location search failed.",
     clearLocation: "Clear location",
     radiusLabel: "Radius",
+    sortByDistance: "Distance",
+    sortByDate: "Date",
+    matchesSummarySuffix: "found for your filters.",
   },
 };
 
