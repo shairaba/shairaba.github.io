@@ -530,4 +530,16 @@ input.invalid, select.invalid { border-color: var(--err); }
   .panel { padding: 16px 16px; }
   .sprite-chip { width: 26px; height: 26px; border-radius: 6px; }
   .sprite { width: 20px; height: 20px; }
+
+  /* Winner team preview on the tournament list: 6 sprites read better as a
+     tidy 3x2 grid than an organically-wrapping row at phone width. */
+  .tournament-card-winner { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .tournament-card-winner .sprite-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    width: 100%;
+    max-width: 200px;
+  }
+  .tournament-card-winner .sprite-chip { width: 100%; height: auto; aspect-ratio: 1; }
 }

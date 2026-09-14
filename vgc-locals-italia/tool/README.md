@@ -14,10 +14,15 @@ python ingest.py
 
 Requires `CSV_URL` in `ingest.py` to already point at the published Sheet
 (see setup below). Writes `../data/dashboard.json`, `../data/tournaments.json`,
-and one `../data/tournaments/<id>.json` per tournament. Warnings (bad rows,
-unrecognized species, a tournament with more rows than its derived top cut
-size) print to stderr but don't stop the run - a single bad tournament
-shouldn't block publishing everyone else's data.
+one `../data/tournaments/<id>.json` per tournament, one static
+`../t/<id>.html` page per tournament (real content + social-preview meta
+tags - see `tournament_page.py`), and one `../data/og/<id>.png` social-
+preview image per tournament (see `og_image.py`; needs `fonts/Montserrat-
+Variable.ttf`, already committed - a variable font so one file covers every
+weight used). Warnings (bad rows, unrecognized species, a tournament with
+more rows than its derived top cut size) print to stderr but don't stop the
+run - a single bad tournament shouldn't block publishing everyone else's
+data.
 
 ## How organizers actually submit data
 

@@ -5,10 +5,6 @@
 const LIMITLESS_SPRITE_BASE = "https://r2.limitlesstcg.net/pokemon/gen9";
 const POKESTATS_SPRITE_BASE = "https://pokestats.top/images/pokemon/imgs";
 
-function qs(name) {
-  return new URLSearchParams(location.search).get(name);
-}
-
 function spriteUrl(speciesId, source) {
   if (!speciesId) return "";
   const base = source === "pokestats" ? POKESTATS_SPRITE_BASE : LIMITLESS_SPRITE_BASE;

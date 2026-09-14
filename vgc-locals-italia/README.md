@@ -32,15 +32,31 @@ depending on turnout - never the full entrant field) as a bare 6-species team
   Cup/Challenge) list of submitted locals: each card shows the tournament,
   entrant count &rarr; top cut size, and the winner's team. Click through to
   a tournament for every top-cut roster.
-- **Tournament detail** (`tournament.html?id=<id>`) - every top-cut player's
-  full team for one event, in placement order.
+- **Tournament detail** (`t/<id>.html`) - every top-cut player's full team
+  for one event, in placement order. Unlike the other pages, this one is
+  **fully pre-rendered as a static file per tournament** by the ingest
+  pipeline (not fetched client-side) - see "Social previews" below for why.
 - **Dashboard** (`dashboard.html`) - the pooled, cross-tournament top-cut
   usage stats (the pikalytics-style view).
 - **Submit results** (`submit.html`) - see "Submitting a tournament" below.
 
-`app.js`, `style.css` are shared across all four pages (a static, backend-free
+`app.js`, `style.css` are shared across all pages (a static, backend-free
 frontend, same convention as every other app in this repo: fetches `data/`
-client-side and renders it, no server, no build step).
+client-side and renders it, no server, no build step) - `t/<id>.html` pages
+load them too (for the theme toggle and shared look) even though their main
+content doesn't depend on a client-side fetch.
+
+## Social previews
+
+Sharing a tournament link on X/WhatsApp/Telegram shows the tournament name,
+winner, and a generated image of their team - link-preview crawlers don't
+run JavaScript, so this needs real `<meta property="og:*">` tags and a real
+image file already sitting in the initial HTML response, not something
+assembled client-side. `tool/tournament_page.py` renders each `t/<id>.html`
+with the roster content and those tags baked in directly; `tool/og_image.py`
+renders the 1200x630 preview image (`data/og/<id>.png`) with Pillow. Both
+run as part of `ingest.py`'s normal pipeline, so they stay in sync with the
+JSON automatically - no separate step.
 
 ## How the data pipeline works
 

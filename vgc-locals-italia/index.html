@@ -92,7 +92,7 @@
         : `<p class="muted">No teams submitted yet.</p>`;
 
       return `
-        <a class="tournament-card" href="tournament.html?id=${encodeURIComponent(t.id)}">
+        <a class="tournament-card" href="t/${encodeURIComponent(t.id)}.html">
           <div class="tournament-card-head">
             <span class="tournament-card-title">${esc(t.name)}</span>
             ${typeBadgeHtml(t.tournament_type)}

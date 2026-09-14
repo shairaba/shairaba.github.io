@@ -19,7 +19,9 @@ from pathlib import Path
 
 import requests
 
+from og_image import render_og_image
 from species_reference import lookup_species
+from tournament_page import write_tournament_page
 
 # The Sheet's public CSV export - works because it's shared as "anyone with
 # the link can view" (Sheets' own /export endpoint), which is simpler than
@@ -27,8 +29,11 @@ from species_reference import lookup_species
 # require a separate publish step.
 CSV_URL = "https://docs.google.com/spreadsheets/d/1wFQQoeH3JaxECZDw1hX2AlbpQ8FbK_zUrTZWJ3UUaSQ/export?format=csv"
 
-DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+APP_DIR = Path(__file__).resolve().parent.parent
+DATA_DIR = APP_DIR / "data"
 TOURNAMENTS_DIR = DATA_DIR / "tournaments"
+OG_IMAGE_DIR = DATA_DIR / "og"
+TOURNAMENT_PAGES_DIR = APP_DIR / "t"
 
 VALID_TOURNAMENT_TYPES = {"vg cup", "vg challenge"}
 
@@ -248,6 +253,13 @@ def main():
         (TOURNAMENTS_DIR / f"{tid}.json").write_text(
             json.dumps(detail, separators=(",", ":"), ensure_ascii=False)
         )
+        # Static HTML (real content + og:* meta tags, for both crawlers and
+        # a slightly faster first paint) plus the social-preview image it
+        # points at - see tournament_page.py / og_image.py's own docstrings
+        # for why these can't just be rendered client-side like the rest of
+        # the site.
+        write_tournament_page(detail, TOURNAMENT_PAGES_DIR)
+        render_og_image(detail, OG_IMAGE_DIR / f"{tid}.png")
         tournaments_index.append(
             {
                 "id": detail["id"],
