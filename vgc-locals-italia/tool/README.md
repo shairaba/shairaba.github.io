@@ -142,3 +142,36 @@ client-side validation read from that generated file, not from
 `species_reference.py` directly (that's Python, not loadable in-browser) -
 forgetting this step means the submission page's picker/validation goes
 stale relative to what `ingest.py` will actually accept server-side.
+
+## Sprite source
+
+Sprites primarily come from `sprite_map.py`'s `SPECIES_TO_DEX` - a curated
+mapping to [shairaba/VGC-Teamlist-Generator-Assets](https://github.com/shairaba/VGC-Teamlist-Generator-Assets)
+(the same community asset repo `../../vgc-teamlist-generator` already uses),
+served via jsDelivr. Species not in that mapping (currently just
+Floette-Eternal-Flower-Mega and Gigantamax Grimmsnarl, which that repo
+doesn't have art for) fall back to the existing Limitless → pokestats
+chain everywhere a sprite renders.
+
+That mapping was built by cross-referencing every species in
+`SPECIES_LIST` against the asset repo's actual file listing - **not** just
+`vgc-teamlist-generator`'s own name→dex lookup table, which turned out to
+lag behind the repo's real contents (confirmed live: real Mega sprites
+existed under dex codes that table didn't know about). Several entries also
+needed a visual check, not just "does a file exist" - the raw listing had a
+few cases of one species' code pointing at a different, unrelated species'
+image (a stale/reused placeholder from however the repo's maintainer built
+it up over time). See `sprite_map.py`'s module docstring for specifics.
+That asset repo is also being edited live by its maintainer, so if a sprite
+ever looks wrong or 404s, re-check that species' dex folder by hand rather
+than assuming the mapping is still accurate - don't just re-scrape the
+listing and trust it blindly.
+
+**After editing `sprite_map.py`, regenerate its JS mirror:**
+
+```
+python3 generate_sprite_map_js.py
+```
+
+This writes `../sprite-map.js`, which every page's `app.js` reads via
+`spriteChipHtml()`.

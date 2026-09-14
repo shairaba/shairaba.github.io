@@ -20,7 +20,7 @@ from pathlib import Path
 import requests
 from PIL import Image, ImageDraw, ImageFont
 
-from local_sprites import local_sprite_path
+from sprite_map import new_cdn_sprite_url
 
 FONT_PATH = Path(__file__).resolve().parent / "fonts" / "Montserrat-Variable.ttf"
 
@@ -54,16 +54,16 @@ def _fetch_sprite(species_id):
     if species_id in _sprite_cache:
         return _sprite_cache[species_id]
 
-    local_path = local_sprite_path(species_id)
-    if local_path:
-        img = Image.open(local_path).convert("RGBA")
-        _sprite_cache[species_id] = img
-        return img
+    urls = []
+    new_cdn = new_cdn_sprite_url(species_id)
+    if new_cdn:
+        urls.append(new_cdn)
+    urls += [f"{LIMITLESS_SPRITE_BASE}/{species_id}.png", f"{POKESTATS_SPRITE_BASE}/{species_id}.png"]
 
     img = None
-    for base in (LIMITLESS_SPRITE_BASE, POKESTATS_SPRITE_BASE):
+    for url in urls:
         try:
-            resp = requests.get(f"{base}/{species_id}.png", timeout=10)
+            resp = requests.get(url, timeout=10)
             if resp.ok and resp.content:
                 img = Image.open(io.BytesIO(resp.content)).convert("RGBA")
                 break

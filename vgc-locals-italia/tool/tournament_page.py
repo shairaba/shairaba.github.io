@@ -15,7 +15,7 @@ normally.
 import html
 from pathlib import Path
 
-from local_sprites import LOCAL_SPRITE_OVERRIDES
+from sprite_map import new_cdn_sprite_url
 
 SITE_BASE = "https://shairaba.github.io/vgc-locals-italia"
 
@@ -67,17 +67,9 @@ def esc(s):
 
 
 def sprite_chip_html(species_id, name):
-    if species_id in LOCAL_SPRITE_OVERRIDES:
-        # Root-relative (not "../data/...") so it resolves the same
-        # regardless of how deep the generated page sits (../t/<id>.html
-        # today, possibly deeper later) - see local_sprites.py.
-        src = esc(f"/vgc-locals-italia/data/sprites/{species_id}.png")
-        return (
-            f'<span class="sprite-chip"><img class="sprite" src="{src}" '
-            f'alt="{esc(name)}" title="{esc(name)}" loading="lazy"></span>'
-        )
-    primary = esc(f"{LIMITLESS_SPRITE_BASE}/{species_id}.png")
-    fallback = esc(f"{POKESTATS_SPRITE_BASE}/{species_id}.png")
+    new_cdn = new_cdn_sprite_url(species_id)
+    primary = esc(new_cdn or f"{LIMITLESS_SPRITE_BASE}/{species_id}.png")
+    fallback = esc(f"{LIMITLESS_SPRITE_BASE}/{species_id}.png" if new_cdn else f"{POKESTATS_SPRITE_BASE}/{species_id}.png")
     return (
         f'<span class="sprite-chip"><img class="sprite" src="{primary}" '
         f'alt="{esc(name)}" title="{esc(name)}" loading="lazy" '
@@ -178,6 +170,7 @@ def render_tournament_page(tournament):
   </main>
 
   <script src="../app.js"></script>
+  <script src="../sprite-map.js"></script>
   <script>
     (function () {{
       const renderMeta = () => {{

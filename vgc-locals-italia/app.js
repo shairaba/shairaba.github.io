@@ -221,14 +221,12 @@ function initLangToggle(onChange) {
 const LIMITLESS_SPRITE_BASE = "https://r2.limitlesstcg.net/pokemon/gen9";
 const POKESTATS_SPRITE_BASE = "https://pokestats.top/images/pokemon/imgs";
 
-// Species missing a good sprite on both CDNs, using our own instead (see
-// data/sprites/<id>.png). Keep in sync by hand with tool/local_sprites.py's
-// same set - JS can't import that file directly.
-const LOCAL_SPRITE_OVERRIDES = new Set(["staraptor-mega"]);
-function localSpriteUrl(speciesId) {
-  // Root-relative so it resolves the same from every page depth (index.html
-  // at the app root, t/<id>.html one level down, etc.).
-  return `/vgc-locals-italia/data/sprites/${speciesId}.png`;
+// NEW_SPRITE_CDN_BASE / SPECIES_TO_DEX come from sprite-map.js (generated
+// from tool/sprite_map.py - see that file for how the mapping was built and
+// why some species intentionally aren't in it).
+function newCdnSpriteUrl(speciesId) {
+  const dex = typeof SPECIES_TO_DEX !== "undefined" ? SPECIES_TO_DEX[speciesId] : null;
+  return dex ? `${NEW_SPRITE_CDN_BASE}/${dex}.png` : null;
 }
 
 function qs(name) {
@@ -258,12 +256,9 @@ async function fetchJSON(path) {
 // fall back to pokestats' CDN on 404, same pattern as
 // vgc-tournament-explorer/dashboard.html's spriteChipHtml.
 function spriteChipHtml(speciesId, name) {
-  if (LOCAL_SPRITE_OVERRIDES.has(speciesId)) {
-    const src = esc(localSpriteUrl(speciesId));
-    return `<span class="sprite-chip"><img class="sprite" src="${src}" alt="${esc(name)}" title="${esc(name)}" loading="lazy"></span>`;
-  }
-  const primary = esc(spriteUrl(speciesId, "limitless"));
-  const fallback = esc(spriteUrl(speciesId, "pokestats"));
+  const newCdn = newCdnSpriteUrl(speciesId);
+  const primary = esc(newCdn || spriteUrl(speciesId, "limitless"));
+  const fallback = esc(newCdn ? spriteUrl(speciesId, "limitless") : spriteUrl(speciesId, "pokestats"));
   return `<span class="sprite-chip"><img class="sprite" src="${primary}" alt="${esc(name)}" title="${esc(name)}" loading="lazy" onerror="this.onerror=null;this.src='${fallback}';"></span>`;
 }
 
