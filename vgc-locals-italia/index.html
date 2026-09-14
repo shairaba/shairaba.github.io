@@ -85,26 +85,13 @@
     let activeType = "";
     let activeSpecies = ""; // species_id, or "" for no filter
 
-    // Top 6 most-used Pokémon *among winning teams specifically* (not
-    // overall top-cut usage) - every button is guaranteed to actually match
-    // at least one tournament, since matching a winner's team is exactly
-    // what clicking one filters by.
-    function topWinnerSpecies(tournaments, limit) {
-      const counts = new Map(); // species_id -> {name, count}
-      tournaments.forEach((t) => {
-        (t.winner && t.winner.team ? t.winner.team : []).forEach((mon) => {
-          const entry = counts.get(mon.species_id) || { name: mon.species_name, count: 0 };
-          entry.count += 1;
-          counts.set(mon.species_id, entry);
-        });
-      });
-      return Array.from(counts, ([species_id, v]) => ({ species_id, species_name: v.name, count: v.count }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, limit);
-    }
-
-    function renderSpeciesFilter() {
-      const top = topWinnerSpecies(allTournaments, 6);
+    // Top 6 by overall top-cut usage (dashboard.json's own pooled stat,
+    // same one the Dashboard page shows) - not just winners. Clicking a
+    // button still filters to tournaments whose *winner* used it (see
+    // winnerTeamHasSpecies below), so a given button can occasionally match
+    // nothing - an accepted tradeoff for using the more meaningful stat.
+    function renderSpeciesFilter(topPokemon) {
+      const top = (topPokemon || []).slice(0, 6);
       const container = document.getElementById("species-filter");
       if (!top.length) {
         container.innerHTML = "";
@@ -192,9 +179,13 @@
     });
 
     (async function () {
-      allTournaments = await fetchJSON("data/tournaments.json");
+      const [tournaments, dashboard] = await Promise.all([
+        fetchJSON("data/tournaments.json"),
+        fetchJSON("data/dashboard.json"),
+      ]);
+      allTournaments = tournaments;
       allTournaments.sort((a, b) => (a.date < b.date ? 1 : -1));
-      renderSpeciesFilter();
+      renderSpeciesFilter(dashboard.top_pokemon);
       render();
     })();
   </script>
