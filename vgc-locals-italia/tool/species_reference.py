@@ -296,6 +296,7 @@ SPECIES_LIST = [
     ('Paldean Tauros Blaze Breed', 'tauros-paldea-blaze'),
     ('Pangoro', 'pangoro'),
     ('Passimian', 'passimian'),
+    ('Pawmot', 'pawmot'),
     ('Pelipper', 'pelipper'),
     ('Pidgeot', 'pidgeot'),
     ('Pidgeot-Mega', 'pidgeot-mega'),

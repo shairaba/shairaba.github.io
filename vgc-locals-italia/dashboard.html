@@ -25,10 +25,13 @@
     </a>
     <div class="topbar-controls">
       <nav>
-        <a href="index.html">Tournaments</a>
-        <a href="submit.html">Submit results</a>
+        <a href="index.html" data-i18n="navTournaments">Tournaments</a>
       </nav>
-      <button id="theme-toggle" type="button" aria-label="Toggle dark mode">
+      <div class="lang-toggle">
+        <button class="lang-btn" data-lang="it" type="button">IT</button>
+        <button class="lang-btn" data-lang="en" type="button">EN</button>
+      </div>
+      <button id="theme-toggle" type="button" data-i18n-aria-label="themeToggleLabel" aria-label="Toggle dark mode">
         <span class="theme-switch-icon theme-switch-sun" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
             <circle cx="12" cy="12" r="4"></circle>
@@ -45,8 +48,8 @@
     </div>
   </header>
   <main class="container">
-    <h1>Top Cut Usage</h1>
-    <p class="lede">
+    <h1 data-i18n="dashboardH1">Top Cut Usage</h1>
+    <p class="lede" data-i18n="dashboardLede">
       Community-submitted usage stats from Italian VGC local tournaments'
       top cuts (top 2, 4, or 8, depending on turnout - not the full entrant
       field), so these numbers aren't directly comparable to full-meta usage
@@ -56,25 +59,20 @@
     <div class="stat-row">
       <div class="stat">
         <div class="stat-num" id="stat-tournaments">-</div>
-        <div class="stat-label">Locals counted</div>
+        <div class="stat-label" data-i18n="statLocalsCounted">Locals counted</div>
       </div>
       <div class="stat">
         <div class="stat-num" id="stat-players">-</div>
-        <div class="stat-label">Top-cut teams counted</div>
+        <div class="stat-label" data-i18n="statTopCutTeams">Top-cut teams counted</div>
       </div>
     </div>
 
     <section class="panel">
-      <h2>Most used Pok&eacute;mon in top cut</h2>
-      <div class="meter-list" id="top-pokemon"><p class="loading">Loading&hellip;</p></div>
+      <h2 data-i18n="mostUsedHeading">Most used Pok&eacute;mon in top cut</h2>
+      <div class="meter-list" id="top-pokemon"><p class="loading" data-i18n="loading">Loading&hellip;</p></div>
     </section>
 
-    <p class="footnote">
-      Data is submitted manually by tournament organizers via
-      <a href="submit.html">the submission page</a> and only covers each
-      event's top cut - see this app's README for details and caveats. Not
-      affiliated with The Pok&eacute;mon Company International.
-    </p>
+    <p class="footnote" data-i18n="footnoteDisclaimer">Not affiliated with The Pok&eacute;mon Company International.</p>
   </main>
 
   <script src="app.js"></script>
@@ -82,7 +80,7 @@
     function renderMeters(list) {
       const container = document.getElementById("top-pokemon");
       if (!list.length) {
-        container.innerHTML = '<p class="empty-state">No data yet - check back once locals have been submitted.</p>';
+        container.innerHTML = `<p class="empty-state">${esc(t("noDataYet"))}</p>`;
         return;
       }
       const max = list[0].count;
@@ -105,6 +103,7 @@
       document.getElementById("stat-tournaments").textContent = dashboard.meta.total_tournaments.toLocaleString();
       document.getElementById("stat-players").textContent = dashboard.meta.total_top_cut_players.toLocaleString();
       renderMeters(dashboard.top_pokemon);
+      initLangToggle(() => renderMeters(dashboard.top_pokemon));
     })();
   </script>
 </body>

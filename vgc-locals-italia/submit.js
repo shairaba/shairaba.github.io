@@ -95,7 +95,7 @@ function validateStep1() {
   const nameField = document.getElementById("f-tournament-name");
   const nameVal = nameField.querySelector("input").value.trim();
   if (!nameVal) {
-    setFieldError(nameField, "Required.");
+    setFieldError(nameField, t("fieldRequired"));
     ok = false;
   } else {
     setFieldError(nameField, "");
@@ -104,7 +104,7 @@ function validateStep1() {
   const dateField = document.getElementById("f-tournament-date");
   const dateVal = dateField.querySelector("input").value;
   if (!dateVal) {
-    setFieldError(dateField, "Required.");
+    setFieldError(dateField, t("fieldRequired"));
     ok = false;
   } else {
     setFieldError(dateField, "");
@@ -113,7 +113,7 @@ function validateStep1() {
   const typeField = document.getElementById("f-tournament-type");
   const typeVal = typeField.querySelector("select").value;
   if (!typeVal) {
-    setFieldError(typeField, "Required.");
+    setFieldError(typeField, t("fieldRequired"));
     ok = false;
   } else {
     setFieldError(typeField, "");
@@ -123,7 +123,7 @@ function validateStep1() {
   const playersRaw = playersField.querySelector("input").value;
   const playersVal = parseInt(playersRaw, 10);
   if (!playersRaw || !Number.isInteger(playersVal) || playersVal <= 0) {
-    setFieldError(playersField, "Enter a positive whole number.");
+    setFieldError(playersField, t("fieldPositiveNumber"));
     ok = false;
   } else {
     setFieldError(playersField, "");
@@ -132,7 +132,7 @@ function validateStep1() {
   const toField = document.getElementById("f-to-name");
   const toVal = toField.querySelector("input").value.trim();
   if (!toVal) {
-    setFieldError(toField, "Required.");
+    setFieldError(toField, t("fieldRequired"));
     ok = false;
   } else {
     setFieldError(toField, "");
@@ -153,11 +153,11 @@ function validateStep1() {
 
 function playerCardHtml(index, topCutSize) {
   const monFields = MON_FIELD_KEYS.map((key, i) => {
-    const label = `Pokémon ${i + 1}`;
+    const label = t("pokemonLabel", i + 1);
     return `
       <div class="field species-picker" data-mon-field="${key}">
-        <label>${label}</label>
-        <input type="text" data-mon-input="${key}" autocomplete="off" placeholder="Search…">
+        <label>${esc(label)}</label>
+        <input type="text" data-mon-input="${key}" autocomplete="off" placeholder="${esc(t("searchPlaceholderShort"))}">
         <div class="species-picker-panel" data-mon-panel="${key}"></div>
         <span class="field-error"></span>
       </div>`;
@@ -165,14 +165,18 @@ function playerCardHtml(index, topCutSize) {
 
   // Placement isn't a separate field - it's implied by entry order (enter
   // trainers in their actual finishing order), computed in submitAll().
+  // The heading below is display-only and localized; the actual placement
+  // *value* submitted to the Sheet always uses the canonical English
+  // ordinal() (see submitAll) regardless of UI language, since ingest.py's
+  // find_winner() matches the literal string "1st".
   return `
     <div class="player-card" data-player-index="${index}">
       <div class="player-card-head">
-        <h3>${ordinal(index + 1)} place</h3>
+        <h3>${esc(t("placeLabel", index + 1))}</h3>
       </div>
       <div class="field-row">
         <div class="field" data-field="player-name">
-          <label>Player name (optional)</label>
+          <label>${esc(t("playerNameLabel"))}</label>
           <input type="text" data-player-name autocomplete="off">
         </div>
       </div>
@@ -204,7 +208,7 @@ function filterSpeciesList(query) {
 function renderSpeciesOptions(panel, query) {
   const matches = filterSpeciesList(query);
   if (!matches.length) {
-    panel.innerHTML = '<div class="species-picker-empty">No match.</div>';
+    panel.innerHTML = `<div class="species-picker-empty">${esc(t("speciesNoMatch"))}</div>`;
     return;
   }
   panel.innerHTML = matches
@@ -298,8 +302,13 @@ function goToStep2() {
   const step2 = document.getElementById("step-2");
   step2.hidden = false;
 
-  document.getElementById("step-2-summary").textContent =
-    `${info.tournamentName} - ${info.tournamentType} - ${info.numberOfPlayers} entrants -> top ${info.topCutSize}. Enter each top-cut player's team below.`;
+  document.getElementById("step-2-summary").textContent = t(
+    "stepTwoSummary",
+    info.tournamentName,
+    info.tournamentType,
+    info.numberOfPlayers,
+    info.topCutSize
+  );
 
   const cardsHtml = Array.from({ length: info.topCutSize }, (_, i) =>
     playerCardHtml(i, info.topCutSize)
@@ -321,10 +330,10 @@ function validatePlayerCard(cardEl) {
     const input = fieldEl.querySelector("input");
     const val = input.value.trim();
     if (!val) {
-      setFieldError(fieldEl, "Required.");
+      setFieldError(fieldEl, t("fieldRequired"));
       ok = false;
     } else if (!SPECIES_NAME_SET.has(val.toLowerCase())) {
-      setFieldError(fieldEl, "Not a recognized Pokémon - pick one from the list.");
+      setFieldError(fieldEl, t("fieldUnknownSpecies"));
       ok = false;
     } else {
       setFieldError(fieldEl, "");
@@ -388,7 +397,7 @@ async function submitAll() {
 
   for (let i = 0; i < cards.length; i++) {
     const card = cards[i];
-    progressEl.textContent = `Submitting team ${i + 1} of ${cards.length}…`;
+    progressEl.textContent = t("progressLine", i + 1, cards.length);
 
     const monFields = {};
     MON_FIELD_KEYS.forEach((key) => {
@@ -409,10 +418,7 @@ async function submitAll() {
   progressEl.textContent = "";
   document.getElementById("step-2").hidden = true;
   document.getElementById("step-done").hidden = false;
-  document.getElementById("done-summary").textContent =
-    `Submitted ${cards.length} team${cards.length === 1 ? "" : "s"} for "${tournamentInfo.tournamentName}". ` +
-    "Since this page can't confirm Google actually received each one (see the note below), " +
-    "double check the response Sheet once you're done.";
+  document.getElementById("done-summary").textContent = t("doneSummary", cards.length, tournamentInfo.tournamentName);
 }
 
 function resetAll() {
@@ -447,4 +453,11 @@ document.addEventListener("DOMContentLoaded", () => {
   );
   document.addEventListener("keydown", handleSpeciesKeydown);
   document.addEventListener("mousedown", handleDocumentMousedown);
+
+  // No onChange re-render: step 1's labels retranslate in place via
+  // data-i18n automatically, and step 2's player cards (if already
+  // generated) are deliberately left in whichever language they were
+  // created in rather than rebuilt - rebuilding mid-entry would risk
+  // wiping out species/player-name values the TO already typed in.
+  initLangToggle();
 });

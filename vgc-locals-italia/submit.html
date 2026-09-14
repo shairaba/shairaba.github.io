@@ -25,10 +25,14 @@
     </a>
     <div class="topbar-controls">
       <nav>
-        <a href="index.html">Tournaments</a>
-        <a href="dashboard.html">Dashboard</a>
+        <a href="index.html" data-i18n="navTournaments">Tournaments</a>
+        <a href="dashboard.html" data-i18n="navDashboard">Dashboard</a>
       </nav>
-      <button id="theme-toggle" type="button" aria-label="Toggle dark mode">
+      <div class="lang-toggle">
+        <button class="lang-btn" data-lang="it" type="button">IT</button>
+        <button class="lang-btn" data-lang="en" type="button">EN</button>
+      </div>
+      <button id="theme-toggle" type="button" data-i18n-aria-label="themeToggleLabel" aria-label="Toggle dark mode">
         <span class="theme-switch-icon theme-switch-sun" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
             <circle cx="12" cy="12" r="4"></circle>
@@ -45,30 +49,30 @@
     </div>
   </header>
   <main class="container">
-    <h1>Submit a tournament</h1>
-    <p class="lede">
+    <h1 data-i18n="submitH1">Submit a tournament</h1>
+    <p class="lede" data-i18n="submitLede">
       For tournament organizers: enter your event once, then each top-cut
       player's 6-Pok&eacute;mon team. Only include players who made it into
       the official top cut - not the full entrant list.
     </p>
 
-    <div class="notice">
+    <div class="notice" data-i18n="submitNotice">
       This sends data straight to the results spreadsheet - there's no login,
       so please only submit tournaments you actually ran.
     </div>
 
     <!-- Step 1: tournament details -->
     <form id="tournament-form" class="panel">
-      <h2>Tournament details</h2>
+      <h2 data-i18n="tournamentDetailsHeading">Tournament details</h2>
 
       <div class="field-row">
         <div class="field" id="f-tournament-name">
-          <label>Tournament name</label>
-          <input type="text" autocomplete="off" placeholder="e.g. Milano Winter Locals #3">
+          <label data-i18n="labelTournamentName">Tournament name</label>
+          <input type="text" autocomplete="off" data-i18n-placeholder="placeholderTournamentName" placeholder="e.g. Milano Winter Locals #3">
           <span class="field-error"></span>
         </div>
         <div class="field" id="f-tournament-date">
-          <label>Date</label>
+          <label data-i18n="labelDate">Date</label>
           <input type="date">
           <span class="field-error"></span>
         </div>
@@ -76,66 +80,66 @@
 
       <div class="field-row">
         <div class="field" id="f-tournament-type">
-          <label>Type of tournament</label>
+          <label data-i18n="labelTournamentType">Type of tournament</label>
           <select>
-            <option value="">Select…</option>
+            <option value="" data-i18n="selectPlaceholder">Select…</option>
             <option value="VG Cup">VG Cup</option>
             <option value="VG Challenge">VG Challenge</option>
           </select>
           <span class="field-error"></span>
         </div>
         <div class="field" id="f-number-of-players">
-          <label>Number of players</label>
-          <input type="number" min="1" step="1" placeholder="e.g. 14">
-          <span class="hint">Determines top cut size: &lt;9 → top 2, 9-16 → top 4, 17+ → top 8.</span>
+          <label data-i18n="labelNumberOfPlayers">Number of players</label>
+          <input type="number" min="1" step="1" data-i18n-placeholder="placeholderNumberOfPlayers" placeholder="e.g. 14">
+          <span class="hint" data-i18n="hintTopCutSize">Determines top cut size: &lt;9 → top 2, 9-16 → top 4, 17+ → top 8.</span>
           <span class="field-error"></span>
         </div>
       </div>
 
       <div class="field-row">
         <div class="field" id="f-to-name">
-          <label>Your name (tournament organizer)</label>
-          <input type="text" autocomplete="off" placeholder="For follow-up only, not shown publicly">
+          <label data-i18n="labelToName">Your name (tournament organizer)</label>
+          <input type="text" autocomplete="off" data-i18n-placeholder="placeholderToName" placeholder="For follow-up only, not shown publicly">
           <span class="field-error"></span>
         </div>
       </div>
 
       <div class="step-actions">
-        <button type="button" class="btn" id="to-step-2-btn">Continue to team entry</button>
+        <button type="button" class="btn" id="to-step-2-btn" data-i18n="continueBtn">Continue to team entry</button>
       </div>
     </form>
 
     <!-- Step 2: player rosters -->
     <section id="step-2" class="panel" hidden>
-      <h2>Top-cut teams</h2>
+      <h2 data-i18n="topCutTeamsHeading">Top-cut teams</h2>
       <p class="meta" id="step-2-summary"></p>
 
       <div id="player-cards"></div>
 
       <p class="progress-line" id="progress-line"></p>
       <div class="step-actions">
-        <button type="button" class="btn btn-secondary" id="back-to-step-1-btn">Back</button>
-        <button type="button" class="btn" id="submit-all-btn">Submit all teams</button>
+        <button type="button" class="btn btn-secondary" id="back-to-step-1-btn" data-i18n="backBtn">Back</button>
+        <button type="button" class="btn" id="submit-all-btn" data-i18n="submitAllBtn">Submit all teams</button>
       </div>
     </section>
 
     <!-- Done -->
     <section id="step-done" class="panel" hidden>
-      <h2>Submitted</h2>
+      <h2 data-i18n="submittedHeading">Submitted</h2>
       <p id="done-summary"></p>
       <div class="step-actions">
-        <button type="button" class="btn btn-secondary" id="submit-another-btn">Submit another tournament</button>
-        <a class="btn" href="index.html">Back to tournaments</a>
+        <button type="button" class="btn btn-secondary" id="submit-another-btn" data-i18n="submitAnotherBtn">Submit another tournament</button>
+        <a class="btn" href="index.html" data-i18n="backToTournamentsBtn">Back to tournaments</a>
       </div>
     </section>
 
-    <p class="footnote">
+    <p class="footnote" data-i18n="submitFootnote">
       This page posts directly to the results Google Form behind the scenes
-      (see the site's <a href="https://github.com/shairaba/shairaba.github.io/tree/main/vgc-locals-italia" target="_blank" rel="noopener">source</a>
-      for details) rather than sending you to the Form itself - it can't
-      confirm Google actually received each submission, since that request
-      is fired cross-origin. If something looks off, the tournament data
-      also lives in the Form's response spreadsheet directly.
+      (see the site's source for details) rather than sending you to the
+      Form itself - it can't confirm Google actually received each
+      submission, since that request is fired cross-origin. If something
+      looks off, the tournament data also lives in the Form's response
+      spreadsheet directly.
     </p>
   </main>
 

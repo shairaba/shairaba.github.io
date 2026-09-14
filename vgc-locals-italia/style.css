@@ -168,6 +168,30 @@ button { font-family: inherit; }
 }
 .topbar nav a:hover { color: #fff; background: rgba(255, 255, 255, .14); text-decoration: none; }
 
+/* IT/EN language toggle - identical component to
+   ../pokemon-events-italia/style.css's .lang-toggle. */
+.lang-toggle {
+  display: flex;
+  gap: 3px;
+  background: rgba(255, 255, 255, .14);
+  border: 1px solid rgba(255, 255, 255, .2);
+  border-radius: var(--radius-btn);
+  padding: 3px;
+  flex-shrink: 0;
+}
+.lang-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, .8);
+  font-size: .76rem;
+  font-weight: 800;
+  padding: 6px 11px;
+  border-radius: var(--radius-btn);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.lang-btn.active { background: #fff; color: #17141f; box-shadow: var(--shadow); }
+
 /* Light/dark toggle - a sliding day/night switch, identical component to
    the sibling apps' (see pokemon-events-italia/app.js's initThemeToggle). */
 #theme-toggle {

@@ -35,11 +35,14 @@ TOPBAR = """  <header class="topbar">
     </a>
     <div class="topbar-controls">
       <nav>
-        <a href="../index.html">Tournaments</a>
-        <a href="../dashboard.html">Dashboard</a>
-        <a href="../submit.html">Submit results</a>
+        <a href="../index.html" data-i18n="navTournaments">Tournaments</a>
+        <a href="../dashboard.html" data-i18n="navDashboard">Dashboard</a>
       </nav>
-      <button id="theme-toggle" type="button" aria-label="Toggle dark mode">
+      <div class="lang-toggle">
+        <button class="lang-btn" data-lang="it" type="button">IT</button>
+        <button class="lang-btn" data-lang="en" type="button">EN</button>
+      </div>
+      <button id="theme-toggle" type="button" data-i18n-aria-label="themeToggleLabel" aria-label="Toggle dark mode">
         <span class="theme-switch-icon theme-switch-sun" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
             <circle cx="12" cy="12" r="4"></circle>
@@ -112,7 +115,7 @@ def render_tournament_page(tournament):
         key=lambda r: int("".join(c for c in (r.get("placement") or "") if c.isdigit()) or 999),
     )
     roster_html = "".join(roster_card_html(r) for r in rosters) or (
-        '<p class="empty-state">No teams submitted for this tournament yet.</p>'
+        '<p class="empty-state" data-i18n="noTeamsForTournamentYet">No teams submitted for this tournament yet.</p>'
     )
 
     return f"""<!doctype html>
@@ -145,25 +148,34 @@ def render_tournament_page(tournament):
 <body>
 {TOPBAR}
   <main class="container">
-    <p class="breadcrumb"><a href="../index.html">&larr; All tournaments</a></p>
+    <p class="breadcrumb"><a href="../index.html" data-i18n="breadcrumbAllTournaments">&larr; All tournaments</a></p>
 
     <div class="detail-title-row">
       <h1>{esc(name)}</h1>
       {type_badge_html(tournament["tournament_type"])}
     </div>
-    <p class="lede">{esc(tournament["date"])} &middot; {tournament["number_of_players"]} players &rarr; top {tournament["top_cut_size"]}</p>
+    <p class="lede" id="detail-meta"></p>
 
     <section class="panel">
-      <h2>All top-cut teams</h2>
+      <h2 data-i18n="allTeamsHeading">All top-cut teams</h2>
       <div class="roster-list">{roster_html}</div>
     </section>
 
-    <p class="footnote">
+    <p class="footnote" data-i18n="footnoteDisclaimer">
       Not affiliated with The Pok&eacute;mon Company International.
     </p>
   </main>
 
   <script src="../app.js"></script>
+  <script>
+    (function () {{
+      const renderMeta = () => {{
+        document.getElementById("detail-meta").textContent = t("cardMeta", {tournament["date"]!r}, {tournament["number_of_players"]}, {tournament["top_cut_size"]});
+      }};
+      renderMeta();
+      initLangToggle(renderMeta);
+    }})();
+  </script>
 </body>
 </html>
 """
