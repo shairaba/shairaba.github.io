@@ -121,27 +121,27 @@ def render_og_image(tournament, output_path):
     title_font = _font("Bold", 56)
     max_title_width = CANVAS_W - MARGIN * 2
     lines = _wrap_title(draw, tournament["name"], title_font, max_title_width)
-    y = 150
+    y = 148
     for line in lines:
         draw.text((MARGIN, y), line, font=title_font, fill=WHITE)
-        y += 68
+        y += 66
 
     # Badge + meta line
     badge_font = _font("Bold", 22)
     is_cup = tournament["tournament_type"] == "VG Cup"
     badge_color = CUP_COLOR if is_cup else CHALLENGE_COLOR
     badge_bg = (255, 255, 255, 40)
-    pill_w = _draw_pill(draw, (MARGIN, y + 14), tournament["tournament_type"], badge_font, badge_color, badge_bg)
+    pill_w = _draw_pill(draw, (MARGIN, y + 10), tournament["tournament_type"], badge_font, badge_color, badge_bg)
 
     meta_font = _font("SemiBold", 24)
     meta_text = f"{tournament['date']}  ·  {tournament['number_of_players']} players → top {tournament['top_cut_size']}"
-    draw.text((MARGIN + pill_w + 16, y + 20), meta_text, font=meta_font, fill=MUTED)
+    draw.text((MARGIN + pill_w + 16, y + 16), meta_text, font=meta_font, fill=MUTED)
 
     # Winner + team
     winner = tournament.get("winner")
     if winner:
         winner_font = _font("SemiBold", 26)
-        winner_y = y + 76
+        winner_y = y + 66
         draw.text(
             (MARGIN, winner_y),
             f"Winner: {winner.get('player_name') or 'Anonymous'}",
@@ -149,49 +149,38 @@ def render_og_image(tournament, output_path):
             fill=WHITE,
         )
 
-        chip_y = winner_y + 56
-        chip_size = 96
-        gap = 22
+        # No species-name labels under the chips (by request) - just big,
+        # clean sprites. That frees up the space labels + their gap used to
+        # need, so the chips can be noticeably bigger than a labeled row
+        # could afford.
+        chip_y = winner_y + 46
+        chip_size = 155
+        gap = 20
         slot = chip_size + gap
         team = winner.get("team") or []
         chip_x = MARGIN
 
-        name_font = _font("Medium", 15)
-        # Available width for a label is its own chip's width plus half the
-        # gap on each side (labels can lean into the gap without touching
-        # the neighboring chip's label, which is centered the same way).
-        label_max_w = chip_size + gap - 6
         for mon in team[:6]:
             draw.rounded_rectangle(
                 [chip_x, chip_y, chip_x + chip_size, chip_y + chip_size],
-                radius=16,
+                radius=20,
                 fill=(255, 255, 255, 230),
             )
             sprite = _fetch_sprite(mon["species_id"])
             if sprite:
-                inner = chip_size - 16
-                thumb = sprite.copy()
-                thumb.thumbnail((inner, inner))
+                inner = chip_size - 24
+                # Source sprites are small (~64-96px natively) - thumbnail()
+                # only ever shrinks, so it left them looking tiny inside the
+                # bigger chip. Scale up explicitly instead, preserving
+                # aspect ratio; NEAREST keeps the pixel-art crisp rather
+                # than blurring it (matches style.css's own
+                # image-rendering: pixelated for these same sprites).
+                scale = min(inner / sprite.width, inner / sprite.height)
+                new_w, new_h = max(1, round(sprite.width * scale)), max(1, round(sprite.height * scale))
+                thumb = sprite.resize((new_w, new_h), Image.NEAREST)
                 px = chip_x + (chip_size - thumb.width) // 2
                 py = chip_y + (chip_size - thumb.height) // 2
                 img.paste(thumb, (px, py), thumb)
-
-            label = mon["species_name"]
-            bbox = draw.textbbox((0, 0), label, font=name_font)
-            while bbox[2] - bbox[0] > label_max_w and len(label) > 1:
-                label = label[:-1]
-                trial = label.rstrip("-") + ".."
-                bbox = draw.textbbox((0, 0), trial, font=name_font)
-            if label != mon["species_name"]:
-                label = label.rstrip("-") + ".."
-                bbox = draw.textbbox((0, 0), label, font=name_font)
-            label_w = bbox[2] - bbox[0]
-            draw.text(
-                (chip_x + chip_size / 2 - label_w / 2 - bbox[0], chip_y + chip_size + 8),
-                label,
-                font=name_font,
-                fill=MUTED,
-            )
             chip_x += slot
 
     output_path.parent.mkdir(parents=True, exist_ok=True)

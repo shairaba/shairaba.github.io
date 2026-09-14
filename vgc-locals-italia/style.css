@@ -536,10 +536,10 @@ input.invalid, select.invalid { border-color: var(--err); }
   .tournament-card-winner { flex-direction: column; align-items: flex-start; gap: 6px; }
   .tournament-card-winner .sprite-row {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 6px;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 4px;
     width: 100%;
-    max-width: 200px;
   }
-  .tournament-card-winner .sprite-chip { width: 100%; height: auto; aspect-ratio: 1; }
+  .tournament-card-winner .sprite-chip { width: 100%; height: auto; aspect-ratio: 1; border-radius: 5px; }
+  .tournament-card-winner .sprite { width: 80%; height: 80%; }
 }
