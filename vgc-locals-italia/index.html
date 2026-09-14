@@ -57,13 +57,15 @@
     </p>
 
     <form class="filter-bar" id="filter-form">
-      <input type="text" id="f-search" placeholder="Search by tournament name…" autocomplete="off">
+      <input type="text" id="f-search" placeholder="Search by tournament or Pok&eacute;mon name…" autocomplete="off">
       <div class="type-toggle" id="type-toggle">
         <button type="button" class="type-toggle-btn active" data-type="">All</button>
         <button type="button" class="type-toggle-btn" data-type="VG Cup">Cup</button>
         <button type="button" class="type-toggle-btn" data-type="VG Challenge">Challenge</button>
       </div>
     </form>
+
+    <div class="species-filter" id="species-filter"></div>
 
     <p class="showing-note" id="showing-note"></p>
 
@@ -81,6 +83,43 @@
   <script>
     let allTournaments = [];
     let activeType = "";
+    let activeSpecies = ""; // species_id, or "" for no filter
+
+    // Top 6 most-used Pokémon *among winning teams specifically* (not
+    // overall top-cut usage) - every button is guaranteed to actually match
+    // at least one tournament, since matching a winner's team is exactly
+    // what clicking one filters by.
+    function topWinnerSpecies(tournaments, limit) {
+      const counts = new Map(); // species_id -> {name, count}
+      tournaments.forEach((t) => {
+        (t.winner && t.winner.team ? t.winner.team : []).forEach((mon) => {
+          const entry = counts.get(mon.species_id) || { name: mon.species_name, count: 0 };
+          entry.count += 1;
+          counts.set(mon.species_id, entry);
+        });
+      });
+      return Array.from(counts, ([species_id, v]) => ({ species_id, species_name: v.name, count: v.count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, limit);
+    }
+
+    function renderSpeciesFilter() {
+      const top = topWinnerSpecies(allTournaments, 6);
+      const container = document.getElementById("species-filter");
+      if (!top.length) {
+        container.innerHTML = "";
+        return;
+      }
+      container.innerHTML = top
+        .map(
+          (s) => `
+        <button type="button" class="species-filter-btn${s.species_id === activeSpecies ? " active" : ""}" data-species="${esc(s.species_id)}">
+          ${spriteChipHtml(s.species_id, s.species_name)}
+          <span>${esc(s.species_name)}</span>
+        </button>`
+        )
+        .join("");
+    }
 
     function tournamentCardHtml(t) {
       const winnerHtml = t.winner
@@ -102,11 +141,21 @@
         </a>`;
     }
 
+    function winnerTeamHasSpecies(t, speciesId) {
+      return !!(t.winner && t.winner.team && t.winner.team.some((mon) => mon.species_id === speciesId));
+    }
+
+    function matchesSearch(t, q) {
+      if (t.name.toLowerCase().includes(q)) return true;
+      return !!(t.winner && t.winner.team && t.winner.team.some((mon) => mon.species_name.toLowerCase().includes(q)));
+    }
+
     function render() {
       const q = document.getElementById("f-search").value.trim().toLowerCase();
       const filtered = allTournaments.filter((t) => {
         if (activeType && t.tournament_type !== activeType) return false;
-        if (q && !t.name.toLowerCase().includes(q)) return false;
+        if (activeSpecies && !winnerTeamHasSpecies(t, activeSpecies)) return false;
+        if (q && !matchesSearch(t, q)) return false;
         return true;
       });
 
@@ -131,10 +180,21 @@
       document.querySelectorAll(".type-toggle-btn").forEach((b) => b.classList.toggle("active", b === btn));
       render();
     });
+    document.getElementById("species-filter").addEventListener("click", (e) => {
+      const btn = e.target.closest(".species-filter-btn");
+      if (!btn) return;
+      // Clicking the already-active filter clears it; otherwise select it.
+      activeSpecies = btn.dataset.species === activeSpecies ? "" : btn.dataset.species;
+      document
+        .querySelectorAll(".species-filter-btn")
+        .forEach((b) => b.classList.toggle("active", b.dataset.species === activeSpecies));
+      render();
+    });
 
     (async function () {
       allTournaments = await fetchJSON("data/tournaments.json");
       allTournaments.sort((a, b) => (a.date < b.date ? 1 : -1));
+      renderSpeciesFilter();
       render();
     })();
   </script>

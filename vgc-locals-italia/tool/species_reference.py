@@ -229,6 +229,8 @@ SPECIES_LIST = [
     ('Hydrapple', 'hydrapple'),
     ('Hydreigon', 'hydreigon'),
     ('Incineroar', 'incineroar'),
+    ('Indeedee', 'indeedee'),
+    ('Indeedee ♀', 'indeedee-f'),
     ('Infernape', 'infernape'),
     ('Inteleon', 'inteleon'),
     ('Jolteon', 'jolteon'),
