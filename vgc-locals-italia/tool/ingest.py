@@ -21,10 +21,11 @@ import requests
 
 from species_reference import lookup_species
 
-# Set this once the Form's response Sheet has been published to web as CSV
-# (File > Share > Publish to web > select the responses tab > CSV format).
-# See tool/README.md for the exact steps.
-CSV_URL = "REPLACE_ME_WITH_PUBLISHED_SHEET_CSV_URL"
+# The Sheet's public CSV export - works because it's shared as "anyone with
+# the link can view" (Sheets' own /export endpoint), which is simpler than
+# the "Publish to web" flow tool/README.md originally described and doesn't
+# require a separate publish step.
+CSV_URL = "https://docs.google.com/spreadsheets/d/1wFQQoeH3JaxECZDw1hX2AlbpQ8FbK_zUrTZWJ3UUaSQ/export?format=csv"
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 TOURNAMENTS_DIR = DATA_DIR / "tournaments"
@@ -75,9 +76,16 @@ def derive_top_cut_size(number_of_players):
 def fetch_rows(csv_url):
     resp = requests.get(csv_url, timeout=30)
     resp.raise_for_status()
+    # Google's CSV export doesn't send a charset in its Content-Type header,
+    # so requests falls back to HTTP's ISO-8859-1 default instead of
+    # detecting the actual encoding (verified live: this mangled "é" in
+    # "Pokémon", silently breaking every species-column header match, which
+    # dropped every row's species data with no error - only a confusing
+    # "unrecognized species ''" warning). The export is always UTF-8.
+    text = resp.content.decode("utf-8")
     # Google Sheets CSV exports use CRLF line endings; splitlines() handles
     # \r\n / \n / \r uniformly, unlike a naive text.split("\n").
-    reader = csv.reader(resp.text.splitlines())
+    reader = csv.reader(text.splitlines())
     header = next(reader)
     keys = [normalize_header(h) for h in header]
     rows = []
