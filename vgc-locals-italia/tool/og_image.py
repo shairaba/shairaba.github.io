@@ -20,6 +20,8 @@ from pathlib import Path
 import requests
 from PIL import Image, ImageDraw, ImageFont
 
+from local_sprites import local_sprite_path
+
 FONT_PATH = Path(__file__).resolve().parent / "fonts" / "Montserrat-Variable.ttf"
 
 CANVAS_W, CANVAS_H = 1200, 630
@@ -51,6 +53,13 @@ def _font(weight, size):
 def _fetch_sprite(species_id):
     if species_id in _sprite_cache:
         return _sprite_cache[species_id]
+
+    local_path = local_sprite_path(species_id)
+    if local_path:
+        img = Image.open(local_path).convert("RGBA")
+        _sprite_cache[species_id] = img
+        return img
+
     img = None
     for base in (LIMITLESS_SPRITE_BASE, POKESTATS_SPRITE_BASE):
         try:

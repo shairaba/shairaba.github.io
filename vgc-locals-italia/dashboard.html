@@ -87,13 +87,14 @@
       container.innerHTML = list
         .map(
           (p) => `
-        <div class="meter-row">
+        <a class="meter-row" href="species.html?id=${encodeURIComponent(p.species_id)}">
           ${spriteChipHtml(p.species_id, p.species_name)}
           <div class="meter-body">
             <div class="meter-label"><span class="truncate">${esc(p.species_name)}</span><span class="meter-value">${p.usage_pct}%</span></div>
             <div class="meter-track"><div class="meter-fill" style="width:${(100 * p.count) / max}%"></div></div>
           </div>
-        </div>`
+          <span class="meter-chevron" aria-hidden="true">&rsaquo;</span>
+        </a>`
         )
         .join("");
     }

@@ -490,14 +490,28 @@ input.invalid, select.invalid { border-color: var(--err); }
 .mon-mini { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: .84rem; color: var(--ink); }
 
 /* ---------- Usage meters ---------- */
+/* Each row is a link to species.html?id=... (full per-tournament team
+   breakdown for that Pokémon), not an inline expand. */
 
 .meter-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
-.meter-row { display: flex; align-items: center; gap: 10px; }
+.meter-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 6px;
+  margin: -4px -6px;
+  border-radius: var(--radius-sm);
+  color: inherit;
+}
+.meter-row:hover { background: var(--panel-2); text-decoration: none; }
+.meter-row:hover .meter-label span:first-child { text-decoration: underline; }
 .meter-body { flex: 1; min-width: 0; }
 .meter-label { display: flex; justify-content: space-between; gap: 10px; font-size: .86rem; margin-bottom: 4px; color: var(--ink); }
 .meter-value { color: var(--ink-dim); font-variant-numeric: tabular-nums; flex-shrink: 0; }
 .meter-track { height: 6px; border-radius: 3px; background: var(--panel-2); overflow: hidden; }
 .meter-fill { height: 100%; border-radius: 3px; background: var(--accent); }
+.meter-chevron { color: var(--ink-dim); flex-shrink: 0; font-size: 1.1rem; line-height: 1; }
+.meter-row:hover .meter-chevron { color: var(--accent); }
 
 /* ---------- Species picker (custom sprite dropdown) ---------- */
 

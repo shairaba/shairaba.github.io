@@ -79,6 +79,10 @@ const TRANSLATIONS = {
     breadcrumbAllTournaments: "← Tutti i tornei",
     allTeamsHeading: "Tutte le squadre del top cut",
     noTeamsForTournamentYet: "Nessuna squadra ancora inviata per questo torneo.",
+
+    breadcrumbDashboard: "← Statistiche",
+    speciesUsedIn: (tournaments, teams) =>
+      `Usato in ${tournaments} torne${tournaments === 1 ? "o" : "i"}, ${teams} squadr${teams === 1 ? "a" : "e"} in totale.`,
   },
   en: {
     navTournaments: "Tournaments",
@@ -154,6 +158,10 @@ const TRANSLATIONS = {
     breadcrumbAllTournaments: "← All tournaments",
     allTeamsHeading: "All top-cut teams",
     noTeamsForTournamentYet: "No teams submitted for this tournament yet.",
+
+    breadcrumbDashboard: "← Dashboard",
+    speciesUsedIn: (tournaments, teams) =>
+      `Used in ${tournaments} tournament${tournaments === 1 ? "" : "s"}, ${teams} team${teams === 1 ? "" : "s"} total.`,
   },
 };
 
@@ -213,6 +221,20 @@ function initLangToggle(onChange) {
 const LIMITLESS_SPRITE_BASE = "https://r2.limitlesstcg.net/pokemon/gen9";
 const POKESTATS_SPRITE_BASE = "https://pokestats.top/images/pokemon/imgs";
 
+// Species missing a good sprite on both CDNs, using our own instead (see
+// data/sprites/<id>.png). Keep in sync by hand with tool/local_sprites.py's
+// same set - JS can't import that file directly.
+const LOCAL_SPRITE_OVERRIDES = new Set(["staraptor-mega"]);
+function localSpriteUrl(speciesId) {
+  // Root-relative so it resolves the same from every page depth (index.html
+  // at the app root, t/<id>.html one level down, etc.).
+  return `/vgc-locals-italia/data/sprites/${speciesId}.png`;
+}
+
+function qs(name) {
+  return new URLSearchParams(location.search).get(name);
+}
+
 function spriteUrl(speciesId, source) {
   if (!speciesId) return "";
   const base = source === "pokestats" ? POKESTATS_SPRITE_BASE : LIMITLESS_SPRITE_BASE;
@@ -236,6 +258,10 @@ async function fetchJSON(path) {
 // fall back to pokestats' CDN on 404, same pattern as
 // vgc-tournament-explorer/dashboard.html's spriteChipHtml.
 function spriteChipHtml(speciesId, name) {
+  if (LOCAL_SPRITE_OVERRIDES.has(speciesId)) {
+    const src = esc(localSpriteUrl(speciesId));
+    return `<span class="sprite-chip"><img class="sprite" src="${src}" alt="${esc(name)}" title="${esc(name)}" loading="lazy"></span>`;
+  }
   const primary = esc(spriteUrl(speciesId, "limitless"));
   const fallback = esc(spriteUrl(speciesId, "pokestats"));
   return `<span class="sprite-chip"><img class="sprite" src="${primary}" alt="${esc(name)}" title="${esc(name)}" loading="lazy" onerror="this.onerror=null;this.src='${fallback}';"></span>`;

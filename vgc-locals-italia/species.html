@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VGC Locals Italia</title>
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <script>
+  (function () {
+    var m = document.cookie.match(/(?:^|; )theme=(dark|light)/);
+    var theme = m ? m[1] : (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", theme);
+  })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand-group" href="index.html">
+      <img class="logo" src="logo.svg" alt="">
+      <span class="brand">VGC Locals Italia</span>
+    </a>
+    <div class="topbar-controls">
+      <nav>
+        <a href="index.html" data-i18n="navTournaments">Tournaments</a>
+        <a href="dashboard.html" data-i18n="navDashboard">Dashboard</a>
+      </nav>
+      <div class="lang-toggle">
+        <button class="lang-btn" data-lang="it" type="button">IT</button>
+        <button class="lang-btn" data-lang="en" type="button">EN</button>
+      </div>
+      <button id="theme-toggle" type="button" data-i18n-aria-label="themeToggleLabel" aria-label="Toggle dark mode">
+        <span class="theme-switch-icon theme-switch-sun" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+          </svg>
+        </span>
+        <span class="theme-switch-icon theme-switch-moon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+            <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 1 0 10.5 10.5z"></path>
+          </svg>
+        </span>
+        <span class="theme-switch-knob"></span>
+      </button>
+    </div>
+  </header>
+  <main class="container">
+    <p class="breadcrumb"><a href="dashboard.html" data-i18n="breadcrumbDashboard">&larr; Dashboard</a></p>
+    <div id="content"><p class="loading" data-i18n="loading">Loading&hellip;</p></div>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    function teamRosterCardHtml(playerName, placement, team, tournamentType) {
+      const monHtml = (team || [])
+        .map(
+          (mon) => `
+        <div class="mon-mini">
+          ${spriteChipHtml(mon.species_id, mon.species_name)}
+          <span class="truncate">${esc(mon.species_name)}</span>
+        </div>`
+        )
+        .join("");
+      return `
+        <div class="roster-card">
+          <div class="roster-card-head">
+            <span class="roster-place">${esc(placement || "-")}</span>
+            <span class="roster-player">${esc(playerName)}</span>
+          </div>
+          <div class="mon-mini-grid">${monHtml}</div>
+        </div>`;
+    }
+
+    function tournamentGroupHtml(group) {
+      return `
+        <section class="panel">
+          <div class="detail-title-row">
+            <h2 style="text-transform:none;letter-spacing:0;color:var(--ink);font-size:1.1rem;margin:0;">
+              <a href="t/${encodeURIComponent(group.id)}.html">${esc(group.name)}</a>
+            </h2>
+            ${typeBadgeHtml(group.tournamentType)}
+            <span class="muted">${esc(group.date)}</span>
+          </div>
+          <div class="roster-list">
+            ${group.rosters.map((r) => teamRosterCardHtml(r.player_name || t("anonymous"), r.placement, r.team, group.tournamentType)).join("")}
+          </div>
+        </section>`;
+    }
+
+    async function loadSpeciesData(speciesId) {
+      const tournaments = await fetchJSON("data/tournaments.json");
+      const details = await Promise.all(
+        tournaments.map((tr) => fetchJSON(`data/tournaments/${encodeURIComponent(tr.id)}.json`))
+      );
+      const groups = [];
+      let speciesName = null;
+      let totalTeams = 0;
+      details.forEach((detail) => {
+        const rosters = (detail.rosters || []).filter((r) =>
+          (r.team || []).some((mon) => {
+            if (mon.species_id === speciesId) {
+              speciesName = speciesName || mon.species_name;
+              return true;
+            }
+            return false;
+          })
+        );
+        if (rosters.length) {
+          totalTeams += rosters.length;
+          groups.push({
+            id: detail.id,
+            name: detail.name,
+            date: detail.date,
+            tournamentType: detail.tournament_type,
+            rosters,
+          });
+        }
+      });
+      groups.sort((a, b) => (a.date < b.date ? 1 : -1));
+      return { speciesName, totalTeams, groups };
+    }
+
+    (async function () {
+      const speciesId = qs("id");
+      const content = document.getElementById("content");
+      if (!speciesId) {
+        content.innerHTML = `<p class="empty-state">${esc(t("noMatchFilters"))}</p>`;
+        return;
+      }
+
+      const { speciesName, totalTeams, groups } = await loadSpeciesData(speciesId);
+
+      if (!speciesName) {
+        document.title = `VGC Locals Italia`;
+        content.innerHTML = `<p class="empty-state">${esc(t("noDataYet"))}</p>`;
+        return;
+      }
+
+      document.title = `${speciesName} - VGC Locals Italia`;
+
+      const renderHeader = () => `
+        <div class="detail-title-row">
+          ${spriteChipHtml(speciesId, speciesName)}
+          <h1 style="margin:0;">${esc(speciesName)}</h1>
+        </div>
+        <p class="lede">${esc(t("speciesUsedIn", groups.length, totalTeams))}</p>
+      `;
+
+      const render = () => {
+        content.innerHTML = renderHeader() + groups.map(tournamentGroupHtml).join("");
+      };
+      render();
+      initLangToggle(render);
+    })();
+  </script>
+</body>
+</html>

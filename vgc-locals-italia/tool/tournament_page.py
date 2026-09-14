@@ -15,6 +15,8 @@ normally.
 import html
 from pathlib import Path
 
+from local_sprites import LOCAL_SPRITE_OVERRIDES
+
 SITE_BASE = "https://shairaba.github.io/vgc-locals-italia"
 
 LIMITLESS_SPRITE_BASE = "https://r2.limitlesstcg.net/pokemon/gen9"
@@ -65,6 +67,15 @@ def esc(s):
 
 
 def sprite_chip_html(species_id, name):
+    if species_id in LOCAL_SPRITE_OVERRIDES:
+        # Root-relative (not "../data/...") so it resolves the same
+        # regardless of how deep the generated page sits (../t/<id>.html
+        # today, possibly deeper later) - see local_sprites.py.
+        src = esc(f"/vgc-locals-italia/data/sprites/{species_id}.png")
+        return (
+            f'<span class="sprite-chip"><img class="sprite" src="{src}" '
+            f'alt="{esc(name)}" title="{esc(name)}" loading="lazy"></span>'
+        )
     primary = esc(f"{LIMITLESS_SPRITE_BASE}/{species_id}.png")
     fallback = esc(f"{POKESTATS_SPRITE_BASE}/{species_id}.png")
     return (
