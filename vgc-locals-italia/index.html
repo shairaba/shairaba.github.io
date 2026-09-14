@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VGC Locals Italia</title>
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <!-- Applied before first paint from a saved cookie (or OS preference on a
+       first visit), matching ../pokemon-events-italia/index.html's script -
+       so a returning dark-mode visitor never sees a flash of the light theme. -->
+  <script>
+  (function () {
+    var m = document.cookie.match(/(?:^|; )theme=(dark|light)/);
+    var theme = m ? m[1] : (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", theme);
+  })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand-group" href="index.html">
+      <img class="logo" src="logo.svg" alt="">
+      <span class="brand">VGC Locals Italia</span>
+    </a>
+    <div class="topbar-controls">
+      <nav>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="submit.html">Submit results</a>
+      </nav>
+      <button id="theme-toggle" type="button" aria-label="Toggle dark mode">
+        <span class="theme-switch-icon theme-switch-sun" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+          </svg>
+        </span>
+        <span class="theme-switch-icon theme-switch-moon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+            <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 1 0 10.5 10.5z"></path>
+          </svg>
+        </span>
+        <span class="theme-switch-knob"></span>
+      </button>
+    </div>
+  </header>
+  <main class="container">
+    <h1>Italian VGC Locals</h1>
+    <p class="lede">
+      Community-submitted results from Italian VGC local tournaments' top
+      cuts. Click a tournament to see every top-cut team, or check the
+      <a href="dashboard.html">usage dashboard</a> for stats pooled across
+      all of them.
+    </p>
+
+    <form class="filter-bar" id="filter-form">
+      <input type="text" id="f-search" placeholder="Search by tournament name…" autocomplete="off">
+      <div class="type-toggle" id="type-toggle">
+        <button type="button" class="type-toggle-btn active" data-type="">All</button>
+        <button type="button" class="type-toggle-btn" data-type="VG Cup">Cup</button>
+        <button type="button" class="type-toggle-btn" data-type="VG Challenge">Challenge</button>
+      </div>
+    </form>
+
+    <p class="showing-note" id="showing-note"></p>
+
+    <div class="tournament-list" id="tournament-list"><p class="loading">Loading&hellip;</p></div>
+
+    <p class="footnote">
+      Data is submitted manually by tournament organizers via
+      <a href="submit.html">the submission page</a> and only covers each
+      event's top cut - see this app's README for details and caveats. Not
+      affiliated with The Pok&eacute;mon Company International.
+    </p>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    let allTournaments = [];
+    let activeType = "";
+
+    function tournamentCardHtml(t) {
+      const winnerHtml = t.winner
+        ? `
+          <div class="tournament-card-winner">
+            <span class="tournament-card-winner-label">Winner: ${esc(t.winner.player_name || "Anonymous")}</span>
+            ${spriteRowHtml(t.winner.team)}
+          </div>`
+        : `<p class="muted">No teams submitted yet.</p>`;
+
+      return `
+        <a class="tournament-card" href="tournament.html?id=${encodeURIComponent(t.id)}">
+          <div class="tournament-card-head">
+            <span class="tournament-card-title">${esc(t.name)}</span>
+            ${typeBadgeHtml(t.tournament_type)}
+          </div>
+          <p class="tournament-card-meta">${esc(t.date)} &middot; ${t.number_of_players} players &rarr; top ${t.top_cut_size}</p>
+          ${winnerHtml}
+        </a>`;
+    }
+
+    function render() {
+      const q = document.getElementById("f-search").value.trim().toLowerCase();
+      const filtered = allTournaments.filter((t) => {
+        if (activeType && t.tournament_type !== activeType) return false;
+        if (q && !t.name.toLowerCase().includes(q)) return false;
+        return true;
+      });
+
+      const container = document.getElementById("tournament-list");
+      if (!filtered.length) {
+        container.innerHTML = allTournaments.length
+          ? '<p class="empty-state">No tournaments match those filters.</p>'
+          : '<p class="empty-state">No tournaments submitted yet - be the first!</p>';
+      } else {
+        container.innerHTML = filtered.map(tournamentCardHtml).join("");
+      }
+      document.getElementById("showing-note").textContent = allTournaments.length
+        ? `Showing ${filtered.length} of ${allTournaments.length} tournaments.`
+        : "";
+    }
+
+    document.getElementById("f-search").addEventListener("input", render);
+    document.getElementById("type-toggle").addEventListener("click", (e) => {
+      const btn = e.target.closest(".type-toggle-btn");
+      if (!btn) return;
+      activeType = btn.dataset.type;
+      document.querySelectorAll(".type-toggle-btn").forEach((b) => b.classList.toggle("active", b === btn));
+      render();
+    });
+
+    (async function () {
+      allTournaments = await fetchJSON("data/tournaments.json");
+      allTournaments.sort((a, b) => (a.date < b.date ? 1 : -1));
+      render();
+    })();
+  </script>
+</body>
+</html>

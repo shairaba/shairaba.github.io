@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tournament - VGC Locals Italia</title>
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <script>
+  (function () {
+    var m = document.cookie.match(/(?:^|; )theme=(dark|light)/);
+    var theme = m ? m[1] : (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", theme);
+  })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand-group" href="index.html">
+      <img class="logo" src="logo.svg" alt="">
+      <span class="brand">VGC Locals Italia</span>
+    </a>
+    <div class="topbar-controls">
+      <nav>
+        <a href="index.html">Tournaments</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="submit.html">Submit results</a>
+      </nav>
+      <button id="theme-toggle" type="button" aria-label="Toggle dark mode">
+        <span class="theme-switch-icon theme-switch-sun" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+          </svg>
+        </span>
+        <span class="theme-switch-icon theme-switch-moon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+            <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 1 0 10.5 10.5z"></path>
+          </svg>
+        </span>
+        <span class="theme-switch-knob"></span>
+      </button>
+    </div>
+  </header>
+  <main class="container" id="main">
+    <p class="breadcrumb"><a href="index.html">&larr; All tournaments</a></p>
+    <div id="content"><p class="loading">Loading&hellip;</p></div>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    function rosterCardHtml(r) {
+      const teamHtml = (r.team || [])
+        .map(
+          (mon) => `
+        <div class="mon-mini">
+          ${spriteChipHtml(mon.species_id, mon.species_name)}
+          <span class="truncate">${esc(mon.species_name)}</span>
+        </div>`
+        )
+        .join("");
+      return `
+        <div class="roster-card">
+          <div class="roster-card-head">
+            <span class="roster-place">${esc(r.placement || "-")}</span>
+            <span class="roster-player">${esc(r.player_name || "Anonymous")}</span>
+          </div>
+          <div class="mon-mini-grid">${teamHtml}</div>
+        </div>`;
+    }
+
+    (async function () {
+      const id = qs("id");
+      const content = document.getElementById("content");
+      if (!id) {
+        content.innerHTML = '<p class="empty-state">No tournament specified.</p>';
+        return;
+      }
+
+      let t;
+      try {
+        t = await fetchJSON(`data/tournaments/${encodeURIComponent(id)}.json`);
+      } catch (e) {
+        content.innerHTML = '<p class="empty-state">Tournament not found.</p>';
+        return;
+      }
+
+      document.title = `${t.name} - VGC Locals Italia`;
+
+      const rosters = (t.rosters || []).slice().sort((a, b) => {
+        const pa = parseInt(a.placement, 10) || 999;
+        const pb = parseInt(b.placement, 10) || 999;
+        return pa - pb;
+      });
+
+      content.innerHTML = `
+        <div class="detail-title-row">
+          <h1>${esc(t.name)}</h1>
+          ${typeBadgeHtml(t.tournament_type)}
+        </div>
+        <p class="lede">${esc(t.date)} &middot; ${t.number_of_players} players &rarr; top ${t.top_cut_size}</p>
+
+        <section class="panel">
+          <h2>All top-cut teams</h2>
+          <div class="roster-list">${rosters.map(rosterCardHtml).join("") || '<p class="empty-state">No teams submitted for this tournament yet.</p>'}</div>
+        </section>
+      `;
+    })();
+  </script>
+</body>
+</html>

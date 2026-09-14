@@ -14,3 +14,7 @@ pokemon-events-italia/tool/data/raw/
 pokemon-events-italia/tool/**/__pycache__/
 pokemon-events-italia/tool/.chrome-profile/
 pokemon-events-italia/tool/profile-seed/
+
+# vgc-locals-italia (Python tool - the published site's data/ dir IS tracked)
+vgc-locals-italia/tool/.venv/
+vgc-locals-italia/tool/**/__pycache__/

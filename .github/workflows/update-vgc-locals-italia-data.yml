@@ -1,0 +1,45 @@
+name: Update VGC Locals Italia data
+
+on:
+  schedule:
+    - cron: "47 4 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: vgc-locals-italia-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: vgc-locals-italia/tool
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Ingest Google Form responses and export static JSON
+        run: python ingest.py
+
+      - name: Commit and push updated data
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add vgc-locals-italia/data
+          if git diff --cached --quiet; then
+            echo "No data changes to commit."
+          else
+            git commit -m "Update Italian VGC locals data ($(date -u +%Y-%m-%d))"
+            git push
+          fi

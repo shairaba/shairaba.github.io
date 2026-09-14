@@ -1,0 +1,533 @@
+/* Matches the shared "periwinkle/indigo" identity used by
+   ../pokemon-events-italia and ../PokemonTeamListCreator-ChampionsBeta
+   (see pokemon-events-italia/style.css, which this is adapted from) rather
+   than vgc-tournament-explorer's separate dark-dashboard look - this app is
+   a community/TO-facing tool in the same family as those two, not a data
+   dashboard like that one. */
+
+:root {
+  --bg-a: #6b63e6;
+  --bg-b: #262456;
+
+  --panel: #f5f3fc;
+  --panel-2: #e9e6f8;
+  --border: #ded7f2;
+
+  --text: #ffffff;
+  --muted: #d6d3f7;
+  --muted-2: #c1bbe8;
+
+  --ink: #333a72;
+  --ink-dim: #6b6f9c;
+
+  --accent: #4a4fc9;
+  --accent-strong: #363aa0;
+  --badge-bg: #ece8fa;
+  --shadow: 0 16px 34px rgba(18, 14, 54, .28);
+  --radius: 22px;
+  --radius-sm: 10px;
+  --radius-btn: 999px;
+
+  --btn-bg: #ffffff;
+  --btn-text: #333a72;
+  --btn-hover-a: #abe049;
+  --btn-hover-b: #ecf461;
+
+  --err: #c22e2e;
+  --err-bg: rgba(194, 46, 46, .1);
+
+  /* Same VG Cup / Challenge color pairing convention as
+     pokemon-events-italia's --cup-color/--challenge-color. */
+  --cup-color: #a8710a;
+  --cup-bg: rgba(168, 113, 10, .12);
+  --challenge-color: #c22e83;
+  --challenge-bg: rgba(194, 46, 131, .1);
+}
+
+:root[data-theme="dark"] {
+  --bg-a: #38316e;
+  --bg-b: #100e26;
+
+  --panel: #1f1a30;
+  --panel-2: #241e3a;
+  --border: #322b4a;
+
+  --text: #f1eefc;
+  --muted: #a79bc9;
+  --muted-2: #7a6f96;
+
+  --ink: #ece9fb;
+  --ink-dim: #a6a3d4;
+
+  --accent: #9d6bff;
+  --accent-strong: #c4a6ff;
+  --badge-bg: #2a2244;
+  --shadow: 0 16px 34px rgba(4, 3, 18, .5);
+
+  --err: #ff7f7f;
+  --err-bg: rgba(255, 127, 127, .14);
+
+  --cup-color: #f0b429;
+  --cup-bg: rgba(240, 180, 41, .16);
+  --challenge-color: #ff7fc4;
+  --challenge-bg: rgba(255, 127, 196, .14);
+}
+
+* {
+  box-sizing: border-box;
+  transition: background-color .3s ease, color .3s ease, border-color .3s ease;
+}
+
+html, body { max-width: 100%; }
+html { background: var(--bg-b); }
+
+body {
+  margin: 0;
+  font-family: 'Montserrat', sans-serif;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, .05) 0 2px, transparent 2px 46px),
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, .05) 0 2px, transparent 2px 46px),
+    linear-gradient(160deg, var(--bg-a), var(--bg-b) 65%);
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { color: var(--accent-strong); text-decoration: underline; }
+button { font-family: inherit; }
+
+@keyframes fadeSlideDown {
+  from { opacity: 0; transform: translateY(-12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .topbar { animation: fadeSlideDown .5s ease both; }
+  .container { animation: fadeSlideUp .5s ease both; animation-delay: .08s; }
+}
+
+/* ---------- Topbar ---------- */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  background: color-mix(in srgb, var(--bg-b) 55%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 4px 16px -6px rgba(0, 0, 0, .35);
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.brand-group { display: flex; align-items: center; gap: 12px; min-width: 0; text-decoration: none; color: inherit; }
+.brand-group:hover { text-decoration: none; color: inherit; }
+
+.logo {
+  height: 40px;
+  width: 40px;
+  flex-shrink: 0;
+  object-fit: contain;
+  background: #fff;
+  border-radius: 50%;
+  padding: 5px;
+  box-shadow: 0 6px 14px rgba(10, 8, 40, .35);
+}
+
+.topbar .brand, h1 { color: var(--text); font-weight: 800; }
+.topbar .brand {
+  font-size: 1.06rem;
+  letter-spacing: -.01em;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.topbar-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.topbar nav { display: flex; align-items: center; gap: 4px; }
+.topbar nav a {
+  color: rgba(255, 255, 255, .8);
+  font-size: .86rem;
+  font-weight: 700;
+  padding: 7px 12px;
+  border-radius: var(--radius-btn);
+}
+.topbar nav a:hover { color: #fff; background: rgba(255, 255, 255, .14); text-decoration: none; }
+
+/* Light/dark toggle - a sliding day/night switch, identical component to
+   the sibling apps' (see pokemon-events-italia/app.js's initThemeToggle). */
+#theme-toggle {
+  position: relative;
+  flex-shrink: 0;
+  width: 52px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-btn);
+  cursor: pointer;
+  background: linear-gradient(90deg, #ffcf6b, #ff9a3c);
+  box-shadow: 0 6px 14px rgba(10, 8, 40, .35), inset 0 0 0 2px rgba(255, 255, 255, .3);
+  transition: background .3s ease, transform .15s ease;
+}
+:root[data-theme="dark"] #theme-toggle { background: linear-gradient(90deg, #2a2650, #100e26); }
+#theme-toggle:hover { transform: translateY(-2px); }
+#theme-toggle .theme-switch-icon {
+  position: absolute;
+  top: 50%;
+  width: 13px;
+  height: 13px;
+  transform: translateY(-50%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity .2s ease;
+}
+#theme-toggle .theme-switch-sun { right: 7px; opacity: 1; }
+#theme-toggle .theme-switch-moon { left: 7px; opacity: 0; }
+:root[data-theme="dark"] #theme-toggle .theme-switch-sun { opacity: 0; }
+:root[data-theme="dark"] #theme-toggle .theme-switch-moon { opacity: 1; }
+#theme-toggle .theme-switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, .3);
+  transition: transform .3s ease, width .15s ease;
+}
+:root[data-theme="dark"] #theme-toggle .theme-switch-knob { transform: translateX(24px); }
+
+/* ---------- Layout ---------- */
+
+.container { max-width: 900px; margin: 0 auto; padding: 24px 20px 72px; }
+
+h1 { margin: 0 0 6px; font-size: clamp(1.5rem, 4vw, 2.1rem); letter-spacing: -.01em; line-height: 1.1; }
+h2 {
+  font-size: .78rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  font-weight: 700;
+  margin: 0 0 12px;
+}
+.lede { color: var(--muted); margin-top: 0; }
+.meta { color: var(--muted); margin-top: -4px; font-size: .9rem; }
+.muted { color: var(--muted-2); }
+
+.notice {
+  background: rgba(255, 255, 255, .14);
+  border: 1px solid rgba(255, 255, 255, .22);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: .84rem;
+  margin-bottom: 18px;
+}
+
+/* Content panel - matches pokemon-events-italia's .detail-card. */
+.panel {
+  background: var(--panel);
+  color: var(--ink);
+  border-radius: var(--radius);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .8), var(--shadow);
+  padding: 20px 22px;
+  margin-bottom: 20px;
+}
+.panel h2 { color: var(--ink-dim); }
+
+/* ---------- Stat cards ---------- */
+
+.stat-row { display: flex; gap: 14px; margin: 22px 0 30px; flex-wrap: wrap; }
+.stat {
+  background: rgba(255, 255, 255, .12);
+  border: 1px solid rgba(255, 255, 255, .2);
+  border-radius: var(--radius);
+  padding: 16px 22px;
+}
+.stat-num { font-size: 1.7rem; font-weight: 800; letter-spacing: -.02em; color: var(--text); }
+.stat-label { color: var(--muted); font-size: .8rem; margin-top: 2px; }
+
+/* ---------- Buttons ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  letter-spacing: .02em;
+  font-size: .92rem;
+  padding: 11px 22px;
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border: 2px solid transparent;
+  border-radius: var(--radius-btn);
+  box-shadow: 0 4px 8px rgba(51, 58, 114, .25);
+  transition: background .2s ease, border-color .2s ease, color .2s ease, transform .15s ease;
+  text-decoration: none;
+}
+.btn:hover {
+  background: linear-gradient(90deg, var(--btn-hover-a), var(--btn-hover-b));
+  border-color: #fff;
+  color: #234;
+  transform: translateY(-2px);
+  text-decoration: none;
+}
+.btn:active { transform: scale(.97); }
+.btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+.btn-secondary {
+  background: rgba(255, 255, 255, .14);
+  color: var(--text);
+  border: 2px solid rgba(255, 255, 255, .3);
+  box-shadow: none;
+}
+.btn-secondary:hover { background: rgba(255, 255, 255, .24); color: var(--text); border-color: rgba(255, 255, 255, .3); transform: none; }
+
+/* Inside a .panel (pale surface), buttons need the panel's own ink tone for
+   secondary actions rather than the page-level white/translucent treatment. */
+.panel .btn-secondary {
+  background: var(--panel-2);
+  color: var(--ink);
+  border: 2px solid var(--border);
+}
+.panel .btn-secondary:hover { background: var(--border); }
+
+/* ---------- Form fields ---------- */
+
+.field-row { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+.field { flex: 1 1 200px; display: flex; flex-direction: column; gap: 5px; }
+.field label { font-size: .82rem; color: var(--ink-dim); font-weight: 700; }
+.field .hint { font-size: .76rem; color: var(--ink-dim); }
+
+input[type="text"], input[type="date"], input[type="number"], select {
+  background: #fff;
+  border: 1px solid var(--border);
+  color: var(--ink);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  font-size: .92rem;
+  font-family: inherit;
+  width: 100%;
+}
+:root[data-theme="dark"] input[type="text"],
+:root[data-theme="dark"] input[type="date"],
+:root[data-theme="dark"] input[type="number"],
+:root[data-theme="dark"] select {
+  background: var(--panel-2);
+}
+input:focus, select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+input.invalid, select.invalid { border-color: var(--err); }
+.field-error { color: var(--err); font-size: .78rem; display: none; }
+.field.has-error .field-error { display: block; }
+
+/* ---------- Badges ---------- */
+
+.badge {
+  display: inline-block;
+  background: var(--badge-bg);
+  color: var(--accent);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: .74rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.badge.type-cup { background: var(--cup-bg); color: var(--cup-color); }
+.badge.type-challenge { background: var(--challenge-bg); color: var(--challenge-color); }
+
+/* ---------- Sprite chip / row (usage meters, team previews, species picker) ---------- */
+
+.sprite-chip {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.sprite { width: 26px; height: 26px; object-fit: contain; image-rendering: pixelated; }
+.sprite-row { display: flex; gap: 3px; flex-wrap: wrap; align-items: center; }
+
+.truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- Filter bar ---------- */
+
+.filter-bar { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; align-items: center; }
+.filter-bar input[type="text"] {
+  flex: 1 1 200px;
+  min-width: 160px;
+  background: rgba(255, 255, 255, .14);
+  border: 1px solid rgba(255, 255, 255, .25);
+  color: var(--text);
+}
+.filter-bar input[type="text"]::placeholder { color: var(--muted); }
+.type-toggle { display: flex; gap: 3px; background: rgba(255, 255, 255, .14); border: 1px solid rgba(255, 255, 255, .2); border-radius: var(--radius-btn); padding: 3px; flex: 0 0 auto; }
+.type-toggle-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, .8);
+  font-size: .82rem;
+  font-weight: 700;
+  padding: 7px 14px;
+  border-radius: var(--radius-btn);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.type-toggle-btn.active { background: #fff; color: #17141f; box-shadow: var(--shadow); }
+
+/* ---------- Tournament list ---------- */
+
+.tournament-list { display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px; }
+.tournament-card {
+  display: block;
+  background: var(--panel);
+  color: var(--ink);
+  border-radius: var(--radius);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .8), var(--shadow);
+  padding: 16px 20px;
+  transition: transform .15s ease;
+}
+.tournament-card:hover { transform: translateY(-2px); text-decoration: none; }
+.tournament-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
+.tournament-card-title { font-weight: 800; font-size: 1.02rem; color: var(--ink); }
+.tournament-card-meta { color: var(--ink-dim); font-size: .84rem; margin-bottom: 10px; }
+.tournament-card-winner { display: flex; align-items: center; gap: 10px; }
+.tournament-card-winner-label { color: var(--ink-dim); font-size: .8rem; white-space: nowrap; }
+
+/* ---------- Tournament detail ---------- */
+
+.breadcrumb { margin: 0 0 12px; font-size: .88rem; }
+.breadcrumb a { color: var(--muted); font-weight: 600; }
+.breadcrumb a:hover { color: var(--text); }
+
+.detail-title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+.detail-title-row h1 { margin: 0; }
+
+.roster-list { display: flex; flex-direction: column; gap: 12px; }
+.roster-card {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+}
+.roster-card-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+.roster-place { font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; }
+.roster-player { font-weight: 700; color: var(--ink); }
+
+.mon-mini-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+@media (max-width: 700px) { .mon-mini-grid { grid-template-columns: repeat(2, 1fr); } }
+.mon-mini { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: .84rem; color: var(--ink); }
+
+/* ---------- Usage meters ---------- */
+
+.meter-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
+.meter-row { display: flex; align-items: center; gap: 10px; }
+.meter-body { flex: 1; min-width: 0; }
+.meter-label { display: flex; justify-content: space-between; gap: 10px; font-size: .86rem; margin-bottom: 4px; color: var(--ink); }
+.meter-value { color: var(--ink-dim); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.meter-track { height: 6px; border-radius: 3px; background: var(--panel-2); overflow: hidden; }
+.meter-fill { height: 100%; border-radius: 3px; background: var(--accent); }
+
+/* ---------- Species picker (custom sprite dropdown) ---------- */
+
+.species-picker { position: relative; }
+.species-picker input {
+  cursor: text;
+}
+.species-picker-panel {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 260px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  padding: 4px;
+  display: none;
+}
+:root[data-theme="dark"] .species-picker-panel { background: var(--panel-2); }
+.species-picker-panel.open { display: block; }
+.species-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--ink);
+  font-size: .88rem;
+}
+.species-option:hover, .species-option.active { background: var(--panel-2); }
+:root[data-theme="dark"] .species-option:hover, :root[data-theme="dark"] .species-option.active { background: var(--border); }
+.species-option .sprite-chip { width: 26px; height: 26px; border-radius: 6px; }
+.species-option .sprite { width: 20px; height: 20px; }
+.species-picker-empty { padding: 10px 8px; color: var(--ink-dim); font-size: .84rem; }
+
+/* ---------- Player cards ---------- */
+
+.player-card {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 16px 18px;
+  margin-bottom: 14px;
+}
+.player-card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.player-card-head h3 { margin: 0; font-size: .92rem; color: var(--ink); }
+
+.mon-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+@media (max-width: 700px) { .mon-grid { grid-template-columns: repeat(2, 1fr); } }
+
+.progress-line { color: var(--ink-dim); font-size: .88rem; margin: 14px 0; }
+.step-actions { display: flex; gap: 10px; margin-top: 18px; align-items: center; flex-wrap: wrap; }
+
+/* Page-level by default (sits on the gradient, like the tournament list's
+   own loading/empty states); .panel overrides to the pale-surface ink tone
+   for contexts nested inside one (e.g. the dashboard's meter list). */
+.loading, .empty-state { color: var(--muted); padding: 24px; text-align: center; }
+.panel .loading, .panel .empty-state { color: var(--ink-dim); }
+.showing-note { color: var(--muted); font-size: .82rem; margin: 0 0 14px; }
+.footnote { color: var(--muted-2); font-size: .78rem; margin-top: 28px; }
+
+/* ---------- Mobile ---------- */
+
+@media (max-width: 640px) {
+  .topbar { padding: 10px 16px; }
+  .topbar .brand { font-size: .95rem; }
+  .container { padding: 16px 14px 48px; }
+  .stat-row { gap: 10px; margin: 16px 0 24px; }
+  .stat { flex: 1 1 calc(50% - 5px); padding: 12px 16px; }
+  .stat-num { font-size: 1.4rem; }
+  .panel { padding: 16px 16px; }
+  .sprite-chip { width: 26px; height: 26px; border-radius: 6px; }
+  .sprite { width: 20px; height: 20px; }
+}
