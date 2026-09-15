@@ -28,10 +28,19 @@ const FORM_CONFIG = {
   // isn't guaranteed).
   entryIds: {
     tournament_id: "1052581828",
-    tournament_name: "2018702300",
+    // Same entry id the old single "Tournament Name" question used - it was
+    // renamed to "Tournament City" in place in the Form editor rather than
+    // deleted/recreated, which keeps a question's entry id (confirmed via
+    // FB_PUBLIC_LOAD_DATA_, same as every other id here).
+    tournament_city: "2018702300",
     tournament_date: "799155856",
     tournament_type: "831540127",
     number_of_players: "352098513",
+    // "Tournament Venue" on the live Form - shown as "Location" on this
+    // site (see labelLocation in app.js) and used as both the display
+    // name's venue part and the pokemon-events-italia link (see
+    // handleLocationMatch() below).
+    location: "585413590",
     to_name: "1016559905",
     player_name: "1338048164",
     placement: "260798448",
@@ -92,13 +101,13 @@ let tournamentInfo = null; // filled in once step 1 validates
 function validateStep1() {
   let ok = true;
 
-  const nameField = document.getElementById("f-tournament-name");
-  const nameVal = nameField.querySelector("input").value.trim();
-  if (!nameVal) {
-    setFieldError(nameField, t("fieldRequired"));
+  const cityField = document.getElementById("f-tournament-city");
+  const cityVal = cityField.querySelector("input").value.trim();
+  if (!cityVal) {
+    setFieldError(cityField, t("fieldRequired"));
     ok = false;
   } else {
-    setFieldError(nameField, "");
+    setFieldError(cityField, "");
   }
 
   const dateField = document.getElementById("f-tournament-date");
@@ -129,6 +138,15 @@ function validateStep1() {
     setFieldError(playersField, "");
   }
 
+  const locationField = document.getElementById("f-location");
+  const locationVal = locationField.querySelector("input").value.trim();
+  if (!locationVal) {
+    setFieldError(locationField, t("fieldRequired"));
+    ok = false;
+  } else {
+    setFieldError(locationField, "");
+  }
+
   const toField = document.getElementById("f-to-name");
   const toVal = toField.querySelector("input").value.trim();
   if (!toVal) {
@@ -140,12 +158,19 @@ function validateStep1() {
 
   if (!ok) return null;
 
+  // Just a preview for step 2's summary/step-done text - ingest.py computes
+  // the actual published display name server-side (build_tournament_name()
+  // in ingest.py, using the same "City - Location" shape).
+  const displayName = `${cityVal} - ${locationVal}`;
+
   return {
-    tournamentId: `${slugify(nameVal)}-${dateVal}`,
-    tournamentName: nameVal,
+    tournamentId: `${slugify(displayName)}-${dateVal}`,
+    tournamentCity: cityVal,
+    tournamentName: displayName,
     tournamentDate: dateVal,
     tournamentType: typeVal,
     numberOfPlayers: playersVal,
+    location: locationVal,
     toName: toVal,
     topCutSize: deriveTopCutSize(playersVal),
   };
@@ -354,10 +379,11 @@ function buildPayload(fields) {
 function submitOnePlayer(playerFields) {
   const payload = buildPayload({
     tournament_id: tournamentInfo.tournamentId,
-    tournament_name: tournamentInfo.tournamentName,
+    tournament_city: tournamentInfo.tournamentCity,
     tournament_date: tournamentInfo.tournamentDate,
     tournament_type: tournamentInfo.tournamentType,
     number_of_players: tournamentInfo.numberOfPlayers,
+    location: tournamentInfo.location,
     to_name: tournamentInfo.toName,
     ...playerFields,
   });
@@ -431,7 +457,52 @@ function resetAll() {
   tournamentInfo = null;
 }
 
+// locations-list.js (generated from tool/locations.py, sourced from
+// pokemon-events-italia's own venue data) defines LOCATIONS_LIST as
+// [{label, venue_name, vid, city}, ...]. "label" ("Venue (Region)") is only
+// shown in the suggestion dropdown, to disambiguate venues that share a
+// name across regions while a TO is still typing - once they pick one,
+// handleLocationMatch() below rewrites the field down to the plain
+// "venue_name" (no region), since that's what actually gets posted to the
+// Sheet (a TO should see a clean "Dark Comics" there, not "Dark Comics
+// (Piemonte)"). ingest.py's resolve_location() matches on that same plain
+// venue_name; typing something that doesn't match anything still works, it
+// just won't get a link (see hintLocation). "city" (best-effort, parsed
+// from that venue's street address - can be missing or occasionally off)
+// only drives the Tournament City auto-fill below, never validation.
+const LOCATIONS_BY_LABEL_LOWER =
+  typeof LOCATIONS_LIST === "undefined" ? new Map() : new Map(LOCATIONS_LIST.map((loc) => [loc.label.toLowerCase(), loc]));
+
+function populateLocationOptions() {
+  const datalist = document.getElementById("location-options");
+  if (!datalist || typeof LOCATIONS_LIST === "undefined") return;
+  datalist.innerHTML = LOCATIONS_LIST.map((loc) => `<option value="${esc(loc.label)}">`).join("");
+}
+
+// Once the Location field's value exactly matches a suggestion, this (a)
+// rewrites it down to the plain venue name (dropping "(Region)" - see the
+// LOCATIONS_BY_LABEL_LOWER comment above) and (b) fills in Tournament City
+// from that venue's parsed city, so a TO picking a known venue doesn't have
+// to type the same city twice. City is only overwritten when it's empty or
+// still holds a previous auto-fill (tracked via data-autofilled) - a value
+// the TO typed themselves is never clobbered.
+function handleLocationMatch(locationInput) {
+  const match = LOCATIONS_BY_LABEL_LOWER.get(locationInput.value.trim().toLowerCase());
+  if (!match) return;
+  locationInput.value = match.venue_name;
+
+  if (!match.city) return;
+  const cityInput = document.querySelector("#f-tournament-city input");
+  if (!cityInput) return;
+  if (cityInput.value.trim() === "" || cityInput.dataset.autofilled === "1") {
+    cityInput.value = match.city;
+    cityInput.dataset.autofilled = "1";
+    setFieldError(document.getElementById("f-tournament-city"), "");
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+  populateLocationOptions();
   document.getElementById("to-step-2-btn").addEventListener("click", goToStep2);
   document.getElementById("back-to-step-1-btn").addEventListener("click", backToStep1);
   document.getElementById("submit-all-btn").addEventListener("click", submitAll);
@@ -440,6 +511,16 @@ document.addEventListener("DOMContentLoaded", () => {
   // Delegated so dynamically-created player cards' species pickers work
   // without any per-card wiring call.
   document.addEventListener("input", (e) => {
+    if (e.target.matches("#f-location input")) {
+      handleLocationMatch(e.target);
+      return;
+    }
+    if (e.target.matches("#f-tournament-city input")) {
+      // A real keystroke from the TO - stop treating this field as ours to
+      // overwrite.
+      delete e.target.dataset.autofilled;
+      return;
+    }
     if (!e.target.matches("[data-mon-input]")) return;
     openAndFilterPanel(e.target);
     setFieldError(e.target.closest(".species-picker"), "");

@@ -117,6 +117,7 @@
             ${typeBadgeHtml(tourney.tournament_type)}
           </div>
           <p class="tournament-card-meta">${esc(t("cardMeta", tourney.date, tourney.number_of_players, tourney.top_cut_size))}</p>
+          ${locationLineHtml(tourney.location, { linked: false })}
           ${winnerHtml}
         </a>`;
     }

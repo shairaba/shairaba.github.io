@@ -41,14 +41,17 @@ const TRANSLATIONS = {
     submitNotice:
       "Questo invia i dati direttamente al foglio di calcolo dei risultati - non c'è login, quindi invia solo i tornei che hai davvero organizzato.",
     tournamentDetailsHeading: "Dettagli del torneo",
-    labelTournamentName: "Nome del torneo",
-    placeholderTournamentName: "es. Milano Winter Locals #3",
+    labelTournamentCity: "Città del torneo",
+    placeholderTournamentCity: "es. Milano",
     labelDate: "Data",
     labelTournamentType: "Tipo di torneo",
     selectPlaceholder: "Seleziona…",
     labelNumberOfPlayers: "Numero di giocatori",
     placeholderNumberOfPlayers: "es. 14",
     hintTopCutSize: "Determina la dimensione del top cut: <9 → top 2, 9-16 → top 4, 17+ → top 8.",
+    labelLocation: "Locale del torneo",
+    placeholderLocation: "Cerca un negozio/locale…",
+    hintLocation: "Usato anche per compilare la città. Non è in lista? Scrivilo comunque - verrà mostrato senza link a una pagina negozio.",
     labelToName: "Il tuo nome (organizzatore)",
     placeholderToName: "Solo per eventuali chiarimenti, non mostrato pubblicamente",
     continueBtn: "Continua con le squadre",
@@ -116,14 +119,17 @@ const TRANSLATIONS = {
     submitNotice:
       "This sends data straight to the results spreadsheet - there's no login, so please only submit tournaments you actually ran.",
     tournamentDetailsHeading: "Tournament details",
-    labelTournamentName: "Tournament name",
-    placeholderTournamentName: "e.g. Milano Winter Locals #3",
+    labelTournamentCity: "Tournament city",
+    placeholderTournamentCity: "e.g. Milano",
     labelDate: "Date",
     labelTournamentType: "Type of tournament",
     selectPlaceholder: "Select…",
     labelNumberOfPlayers: "Number of players",
     placeholderNumberOfPlayers: "e.g. 14",
     hintTopCutSize: "Determines top cut size: <9 → top 2, 9-16 → top 4, 17+ → top 8.",
+    labelLocation: "Location",
+    placeholderLocation: "Search for a store/venue…",
+    hintLocation: "Also fills in the city. Not listed? Type it in anyway - it'll just show without a link to a store page.",
     labelToName: "Your name (tournament organizer)",
     placeholderToName: "For follow-up only, not shown publicly",
     continueBtn: "Continue to team entry",
@@ -256,6 +262,11 @@ async function fetchJSON(path) {
 // fall back to pokestats' CDN on 404, same pattern as
 // vgc-tournament-explorer/dashboard.html's spriteChipHtml.
 function spriteChipHtml(speciesId, name) {
+  if (speciesId === "unknown") {
+    // A generic "?" icon (own artwork, not any Pokémon's design) - never
+    // fetched from a CDN, no onerror fallback needed.
+    return `<span class="sprite-chip"><img class="sprite" src="/vgc-locals-italia/unknown.svg" alt="${esc(name)}" title="${esc(name)}" loading="lazy"></span>`;
+  }
   const newCdn = newCdnSpriteUrl(speciesId);
   const primary = esc(newCdn || spriteUrl(speciesId, "limitless"));
   const fallback = esc(newCdn ? spriteUrl(speciesId, "limitless") : spriteUrl(speciesId, "pokestats"));
@@ -271,6 +282,22 @@ function spriteRowHtml(team) {
 function typeBadgeHtml(tournamentType) {
   const slug = tournamentType === "VG Cup" ? "cup" : "challenge";
   return `<span class="badge type-${slug}">${esc(tournamentType || "Unknown")}</span>`;
+}
+
+const VENUE_PAGE_BASE = "https://shairaba.github.io/pokemon-events-italia/venue.html";
+
+// location: {label, vid} | null, from a tournament's/index entry's own
+// "location" field (see tool/locations.py). linked:false renders plain text
+// - needed on the tournament-list cards, since they're each already one big
+// <a>, and a nested <a> would break/get silently unwrapped by the browser.
+function locationLineHtml(location, { linked = true } = {}) {
+  if (!location) return "";
+  const label = esc(location.label);
+  if (linked && location.vid) {
+    const href = `${VENUE_PAGE_BASE}?vid=${encodeURIComponent(location.vid)}`;
+    return `<p class="meta location-line">&#128205; <a href="${href}" target="_blank" rel="noopener">${label}</a></p>`;
+  }
+  return `<p class="meta location-line">&#128205; ${label}</p>`;
 }
 
 // Same light/dark toggle as ../pokemon-events-italia/app.js's

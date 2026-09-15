@@ -19,7 +19,8 @@ one `../data/tournaments/<id>.json` per tournament, one static
 tags - see `tournament_page.py`), and one `../data/og/<id>.png` social-
 preview image per tournament (see `og_image.py`; needs `fonts/Montserrat-
 Variable.ttf`, already committed - a variable font so one file covers every
-weight used). Warnings (bad rows, unrecognized species, a tournament with
+weight used), plus regenerates `../species-list.js` and `../locations-list.js`
+(the submission page's Pok&eacute;mon/Location pickers). Warnings (bad rows, unrecognized species, a tournament with
 more rows than its derived top cut size) print to stderr but don't stop the
 run - a single bad tournament shouldn't block publishing everyone else's
 data.
@@ -53,15 +54,16 @@ path a row came from.
 
    | # | Field | Type | Notes |
    |---|-------|------|-------|
-   | 1 | Tournament ID | Short answer, required | Stable grouping key - **the exact same value** for every player of one event. `submit.html` generates and fills this in automatically (slugified name + date); a TO using the raw Form directly would need to type it identically for every row. |
-   | 2 | Tournament Name | Short answer, required | Human-readable, e.g. "Milano Winter Locals #3". |
+   | 1 | Tournament ID | Short answer, required | Stable grouping key - **the exact same value** for every player of one event. `submit.html` generates and fills this in automatically (slugified "City - Location" + date); a TO using the raw Form directly would need to type it identically for every row. |
+   | 2 | Tournament City | Short answer, required | e.g. "Milano". `submit.html` auto-fills this from the Location field below when it matches a known venue (still editable/overridable) - see "Location list maintenance". Combined with Location as the display name, "City - Location" (see `build_tournament_name()` in `ingest.py`). |
    | 3 | Tournament Date | **Short answer** (not the Date question type), required | Use `YYYY-MM-DD`. Kept as plain text rather than a Date question so it maps to a single `entry.<id>` - Google's Date question type splits into separate year/month/day entry ids, which `submit.html`'s POST payload doesn't build. |
    | 4 | Type of Tournament | Dropdown: `VG Cup`, `VG Challenge`, required | |
    | 5 | Number of Players | Short answer or Number, required | Total entrants, not top cut size. Top cut size is derived from this (see below), not asked directly. |
-   | 6 | TO Name | Short answer, required | For following up on data issues; never published. |
-   | 7 | Player Name | Short answer, optional | Falls back to anonymous if left blank. |
-   | 8 | Placement | Short answer, optional | `submit.html` fills this in automatically from the order players are entered (1st, 2nd, ...) - a TO using the raw Form directly would need to type it themselves. |
-   | 9-14 | Pok&eacute;mon 1 .. Pok&eacute;mon 6 | **Short answer**, required, all six identical | Deliberately *not* a Dropdown: `species_reference.SPECIES_LIST` has 344 entries, which is both tedious to configure as Form choices and a bad dropdown UX for anyone using the raw Form. `submit.html` provides its own searchable picker instead (backed by `species-list.js`), and since Google doesn't enforce a Dropdown's configured choices on a direct `formResponse` POST anyway, a Dropdown here wouldn't add real protection - `ingest.py`'s `lookup_species()` is the actual gate either way, for rows from either path. |
+   | 6 | Location (titled "Tournament Venue" on the live Form) | Short answer, required | Store/venue name - also the second half of the tournament's display name (see Tournament City above). `submit.html` offers a searchable suggestion list (backed by `locations-list.js`, generated from `../../pokemon-events-italia/data/events.json`'s own venues) showing each venue as "Name (Region)" to disambiguate same-named venues in different regions, but once a TO picks one, only the plain venue name (no region) actually gets posted - `ingest.py`'s `resolve_location()` links the tournament page back to that venue's `pokemon-events-italia` page when the plain name matches one of those venues (case-insensitively); free text that doesn't match anything still works, it just won't get a link. |
+   | 7 | TO Name | Short answer, required | For following up on data issues; never published. |
+   | 8 | Player Name | Short answer, optional | Falls back to anonymous if left blank. |
+   | 9 | Placement | Short answer, optional | `submit.html` fills this in automatically from the order players are entered (1st, 2nd, ...) - a TO using the raw Form directly would need to type it themselves. |
+   | 10-15 | Pok&eacute;mon 1 .. Pok&eacute;mon 6 | **Short answer**, required, all six identical | Deliberately *not* a Dropdown: `species_reference.SPECIES_LIST` has 344 entries, which is both tedious to configure as Form choices and a bad dropdown UX for anyone using the raw Form. `submit.html` provides its own searchable picker instead (backed by `species-list.js`), and since Google doesn't enforce a Dropdown's configured choices on a direct `formResponse` POST anyway, a Dropdown here wouldn't add real protection - `ingest.py`'s `lookup_species()` is the actual gate either way, for rows from either path. |
 
    Keep each question's title exactly as above - `ingest.py`'s `HEADER_MAP`
    matches the Form's own question titles (which become the CSV's column
@@ -85,8 +87,9 @@ path a row came from.
 
 ## Configuring submit.html
 
-`../submit.js`'s `FORM_CONFIG` at the top of the file has two placeholders
-to fill in once the Form exists:
+`../submit.js`'s `FORM_CONFIG` at the top of the file needs two things once
+the Form exists (already filled in for the live Form as of this writing -
+this is how, for whenever the Form gets recreated or a question added):
 
 1. **`actionUrl`** - take the Form's own share URL
    (`https://docs.google.com/forms/d/e/<FORM_ID>/viewform`) and swap
@@ -110,7 +113,11 @@ to fill in once the Form exists:
      tells you which id belongs to which field.
 
    Either way, map them into `FORM_CONFIG.entryIds` by key (`tournament_id`,
-   `tournament_name`, ... `mon_1`..`mon_6`).
+   `tournament_city`, `location`, ... `mon_1`..`mon_6`). `location` maps to
+   whichever question is playing the Location role on the live Form - it's
+   titled "Tournament Venue" there as of this writing (see the field table
+   above); `HEADER_MAP` in `ingest.py` accepts either "Location" or
+   "Tournament Venue" as that column's title.
 
 After that, `submit.html` posts directly to the Form/Sheet - no further
 config needed. If you ever edit or reorder the Form's questions, re-check
@@ -142,6 +149,37 @@ client-side validation read from that generated file, not from
 `species_reference.py` directly (that's Python, not loadable in-browser) -
 forgetting this step means the submission page's picker/validation goes
 stale relative to what `ingest.py` will actually accept server-side.
+
+## Location list maintenance
+
+`locations-list.js` (the Location field's suggestion list on `submit.html`)
+is generated by `generate_locations_list_js.py` from `locations.py`, which
+in turn reads `../../pokemon-events-italia/data/events.json` directly -
+there's no separate hand-maintained venue list to keep in sync. `ingest.py`
+calls this itself at the end of every run, so it's normally already current;
+run it standalone only if you want to check the list without running the
+full pipeline:
+
+```
+python3 generate_locations_list_js.py
+```
+
+A handful of venues share the same name+region under more than one
+`pokemon-events-italia` listing id (a re-created listing, or a same-named
+chain branch) - `locations.py`'s `load_locations()` picks the id with the
+most events for those, so the Location link always points at that venue's
+main/longest-running page rather than a stale duplicate.
+
+Since only the plain venue name (no region) actually reaches the Sheet
+(see the Location row in the field table above), `ingest.py` doesn't match
+against `load_locations()`'s region-qualified list at all - it uses
+`load_locations_by_venue_name()` instead, which does the same "most events
+wins" reduction one level further, across regions too. That only matters
+for the small handful of venue names that repeat in more than one region
+(5, as of this writing, e.g. "Dadi E Mattoncini") - a plain-text submission
+can't disambiguate which branch was meant anyway, so this is the best a
+text match can do; the link just goes to that name's single most-active
+listing regardless of which actual branch the TO meant.
 
 ## Sprite source
 

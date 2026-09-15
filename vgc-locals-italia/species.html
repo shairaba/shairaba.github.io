@@ -86,6 +86,7 @@
             ${typeBadgeHtml(group.tournamentType)}
             <span class="muted">${esc(group.date)}</span>
           </div>
+          ${locationLineHtml(group.location)}
           <div class="roster-list">
             ${group.rosters.map((r) => teamRosterCardHtml(r.player_name || t("anonymous"), r.placement, r.team, group.tournamentType)).join("")}
           </div>
@@ -117,6 +118,7 @@
             name: detail.name,
             date: detail.date,
             tournamentType: detail.tournament_type,
+            location: detail.location,
             rosters,
           });
         }

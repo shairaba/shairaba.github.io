@@ -66,9 +66,11 @@
       <h2 data-i18n="tournamentDetailsHeading">Tournament details</h2>
 
       <div class="field-row">
-        <div class="field" id="f-tournament-name">
-          <label data-i18n="labelTournamentName">Tournament name</label>
-          <input type="text" autocomplete="off" data-i18n-placeholder="placeholderTournamentName" placeholder="e.g. Milano Winter Locals #3">
+        <div class="field" id="f-location">
+          <label data-i18n="labelLocation">Location</label>
+          <input type="text" autocomplete="off" list="location-options" data-i18n-placeholder="placeholderLocation" placeholder="Search for a store/venue…">
+          <datalist id="location-options"></datalist>
+          <span class="hint" data-i18n="hintLocation">Also fills in the city. Not listed? Type it in anyway - it'll just show without a link to a store page.</span>
           <span class="field-error"></span>
         </div>
         <div class="field" id="f-tournament-date">
@@ -79,6 +81,11 @@
       </div>
 
       <div class="field-row">
+        <div class="field" id="f-tournament-city">
+          <label data-i18n="labelTournamentCity">Tournament city</label>
+          <input type="text" autocomplete="off" data-i18n-placeholder="placeholderTournamentCity" placeholder="e.g. Milano">
+          <span class="field-error"></span>
+        </div>
         <div class="field" id="f-tournament-type">
           <label data-i18n="labelTournamentType">Type of tournament</label>
           <select>
@@ -88,15 +95,15 @@
           </select>
           <span class="field-error"></span>
         </div>
+      </div>
+
+      <div class="field-row">
         <div class="field" id="f-number-of-players">
           <label data-i18n="labelNumberOfPlayers">Number of players</label>
           <input type="number" min="1" step="1" data-i18n-placeholder="placeholderNumberOfPlayers" placeholder="e.g. 14">
           <span class="hint" data-i18n="hintTopCutSize">Determines top cut size: &lt;9 → top 2, 9-16 → top 4, 17+ → top 8.</span>
           <span class="field-error"></span>
         </div>
-      </div>
-
-      <div class="field-row">
         <div class="field" id="f-to-name">
           <label data-i18n="labelToName">Your name (tournament organizer)</label>
           <input type="text" autocomplete="off" data-i18n-placeholder="placeholderToName" placeholder="For follow-up only, not shown publicly">
@@ -146,6 +153,7 @@
   <script src="app.js"></script>
   <script src="sprite-map.js"></script>
   <script src="species-list.js"></script>
+  <script src="locations-list.js"></script>
   <script src="submit.js"></script>
 </body>
 </html>

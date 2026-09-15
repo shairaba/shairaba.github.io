@@ -19,6 +19,9 @@ from pathlib import Path
 
 import requests
 
+from generate_locations_list_js import write_locations_list_js
+from generate_species_list_js import write_species_list_js
+from locations import load_locations_by_venue_name
 from og_image import render_og_image
 from species_reference import lookup_species
 from tournament_page import write_tournament_page
@@ -43,10 +46,17 @@ VALID_TOURNAMENT_TYPES = {"vg cup", "vg challenge"}
 # ingestion.
 HEADER_MAP = {
     "tournament id": "tournament_id",
-    "tournament name": "tournament_name",
+    "tournament name": "tournament_name",  # legacy column - see build_tournament_name()
+    "tournament city": "tournament_city",
     "tournament date": "tournament_date",
     "type of tournament": "tournament_type",
     "number of players": "number_of_players",
+    # The live Form's question is titled "Tournament Venue" (its own site
+    # copy is "Location" - see submit.html's labelLocation) - both header
+    # spellings map to the same internal "location" field so either naming
+    # keeps working.
+    "location": "location",
+    "tournament venue": "location",
     "to name": "to_name",
     "player name": "player_name",
     "placement": "placement",
@@ -105,7 +115,51 @@ def fetch_rows(csv_url):
     return rows
 
 
-def validate_and_normalize(row, row_num, warnings):
+def build_tournament_name(row, tournament_id, venue_text):
+    """"City - Venue" - Venue comes from the Location field (venue_text,
+    the plain venue_name when Location matched a known
+    pokemon-events-italia listing, otherwise whatever the TO typed there
+    verbatim), not a separate Form question. Falls back to the old single
+    "Tournament Name" column for rows submitted before the Location field
+    existed (that column may still carry historical data in the Sheet even
+    after the Form question itself was removed), and finally to the
+    tournament_id if nothing else is available."""
+    city = (row.get("tournament_city") or "").strip()
+    if city and venue_text:
+        return f"{city} - {venue_text}"
+    legacy_name = (row.get("tournament_name") or "").strip()
+    return city or venue_text or legacy_name or tournament_id
+
+
+def resolve_location(raw_label, location_lookup, row_num, tournament_id, warnings):
+    """location_lookup: venue_name.lower() -> the dict from locations.py's
+    load_locations_by_venue_name() (venue_name, vid, city). The Form only
+    ever sees a plain venue name - submit.js strips any "(REGION)" suffix
+    before posting (see its maybeAutofillCityFromLocation()) - so matching
+    here is by plain name too, not the region-qualified "label" the picker
+    itself shows while a TO is still typing.
+    Returns (location, venue_text): location is the {"label", "vid"} pair
+    stored/displayed on the tournament, venue_text is the plain venue name
+    to use in build_tournament_name() - the resolved one when Location
+    matched a known venue, otherwise the TO's raw text as-is."""
+    raw_label = (raw_label or "").strip()
+    if not raw_label:
+        return None, ""
+    match = location_lookup.get(raw_label.lower())
+    if match is None:
+        # Not a hard failure - a TO may have typed a venue that isn't (yet)
+        # tracked in pokemon-events-italia, or typed something slightly off
+        # from the picker's suggestion. Still show the label, just without a
+        # link back to that app's venue page.
+        warnings.append(
+            f"row {row_num} ({tournament_id}): location {raw_label!r} doesn't "
+            f"match a known pokemon-events-italia venue, showing without a link"
+        )
+        return {"label": raw_label, "vid": None}, raw_label
+    return {"label": raw_label, "vid": match["vid"]}, match["venue_name"]
+
+
+def validate_and_normalize(row, row_num, warnings, location_lookup):
     tournament_id = row.get("tournament_id", "")
     if not tournament_id:
         warnings.append(f"row {row_num}: missing tournament_id, skipped")
@@ -132,6 +186,10 @@ def validate_and_normalize(row, row_num, warnings):
         return None
     top_cut_size = derive_top_cut_size(number_of_players)
 
+    location, venue_text = resolve_location(
+        row.get("location"), location_lookup, row_num, tournament_id, warnings
+    )
+
     team = []
     for mon_key in MON_KEYS:
         raw_species = row.get(mon_key, "")
@@ -146,11 +204,12 @@ def validate_and_normalize(row, row_num, warnings):
 
     return {
         "tournament_id": tournament_id,
-        "tournament_name": row.get("tournament_name") or tournament_id,
+        "tournament_name": build_tournament_name(row, tournament_id, venue_text),
         "tournament_date": row.get("tournament_date", ""),
         "tournament_type": "VG Cup" if tournament_type.strip().lower() == "vg cup" else "VG Challenge",
         "number_of_players": number_of_players,
         "top_cut_size": top_cut_size,
+        "location": location,
         "player_name": row.get("player_name") or None,
         "placement": row.get("placement") or None,
         "team": team,  # list of (species_id, species_name)
@@ -178,6 +237,8 @@ def usage_stats(players, denominator):
     for player in players:
         seen = set()
         for species_id, species_name in player["team"]:
+            if species_id == "unknown":
+                continue  # never counted - see species_reference.py's note on it
             if species_id in seen:
                 continue  # a species only counts once per team
             seen.add(species_id)
@@ -225,6 +286,7 @@ def build_tournament_json(tid, players):
         "tournament_type": players[0]["tournament_type"],
         "number_of_players": players[0]["number_of_players"],
         "top_cut_size": players[0]["top_cut_size"],
+        "location": players[0]["location"],
         "player_count": len(players),
         "top_pokemon": top_pokemon,
         "rosters": rosters,
@@ -236,9 +298,14 @@ def main():
     warnings = []
     raw_rows = fetch_rows(CSV_URL)
 
+    # Built once per run (not per row) - locations.py re-reads all of
+    # pokemon-events-italia/data/events.json, which is unnecessary work to
+    # repeat per submitted row.
+    location_lookup = load_locations_by_venue_name()
+
     entries = []
     for i, row in enumerate(raw_rows, start=2):  # row 1 is the header
-        normalized = validate_and_normalize(row, i, warnings)
+        normalized = validate_and_normalize(row, i, warnings, location_lookup)
         if normalized is not None:
             entries.append(normalized)
 
@@ -268,6 +335,7 @@ def main():
                 "tournament_type": detail["tournament_type"],
                 "number_of_players": detail["number_of_players"],
                 "top_cut_size": detail["top_cut_size"],
+                "location": detail["location"],
                 "player_count": detail["player_count"],
                 # Embedded (not just a reference) so the tournament list page
                 # can render winner + team from this one index fetch, without
@@ -299,6 +367,13 @@ def main():
     (DATA_DIR / "tournaments.json").write_text(
         json.dumps(tournaments_index, separators=(",", ":"), ensure_ascii=False)
     )
+
+    # Keeps the submission page's species picker ordered by current
+    # popularity automatically - see generate_species_list_js.py's docstring.
+    write_species_list_js([p["species_id"] for p in dashboard["top_pokemon"]])
+    # Keeps the submission page's Location picker in sync with
+    # pokemon-events-italia's own venue list - see generate_locations_list_js.py.
+    write_locations_list_js()
 
     for w in warnings:
         print(f"WARNING: {w}", file=sys.stderr)

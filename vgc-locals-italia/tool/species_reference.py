@@ -385,6 +385,11 @@ SPECIES_LIST = [
     ('Tyranitar-Mega', 'tyranitar-mega'),
     ('Tyrantrum', 'tyrantrum'),
     ('Umbreon', 'umbreon'),
+    # Not a real species - lets a TO record "a Pokémon was here, I just
+    # couldn't tell which one" instead of guessing or leaving a slot
+    # incomplete. ingest.py's usage_stats() explicitly excludes this id from
+    # every aggregate, so it never appears in usage %/rankings.
+    ('Unknown', 'unknown'),
     ('Vanilluxe', 'vanilluxe'),
     ('Vaporeon', 'vaporeon'),
     ('Venusaur', 'venusaur'),

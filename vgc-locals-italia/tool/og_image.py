@@ -50,9 +50,29 @@ def _font(weight, size):
     return f
 
 
+def _unknown_sprite():
+    # Same generic "?" glyph as unknown.svg (own artwork, not a real
+    # species) - drawn directly since Pillow can't open SVG, same way the
+    # brand pokeball mark below is drawn rather than loaded from a file.
+    size = 200
+    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    draw.ellipse([0, 0, size, size], fill=(226, 229, 236, 255))
+    font = _font("Bold", 130)
+    bbox = draw.textbbox((0, 0), "?", font=font)
+    w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
+    draw.text((size / 2 - w / 2 - bbox[0], size / 2 - h / 2 - bbox[1]), "?", font=font, fill=(139, 147, 163, 255))
+    return img
+
+
 def _fetch_sprite(species_id):
     if species_id in _sprite_cache:
         return _sprite_cache[species_id]
+
+    if species_id == "unknown":
+        img = _unknown_sprite()
+        _sprite_cache[species_id] = img
+        return img
 
     urls = []
     new_cdn = new_cdn_sprite_url(species_id)

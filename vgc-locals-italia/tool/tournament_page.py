@@ -18,6 +18,7 @@ from pathlib import Path
 from sprite_map import new_cdn_sprite_url
 
 SITE_BASE = "https://shairaba.github.io/vgc-locals-italia"
+VENUE_PAGE_BASE = "https://shairaba.github.io/pokemon-events-italia/venue.html"
 
 LIMITLESS_SPRITE_BASE = "https://r2.limitlesstcg.net/pokemon/gen9"
 POKESTATS_SPRITE_BASE = "https://pokestats.top/images/pokemon/imgs"
@@ -67,6 +68,18 @@ def esc(s):
 
 
 def sprite_chip_html(species_id, name):
+    if species_id == "unknown":
+        # Root-relative (not SITE_BASE) - unlike the CDN sprites below, this
+        # is a same-repo asset, so a relative path resolves correctly both
+        # in production and when testing locally off an unpushed working
+        # tree (a local server or live-preview extension serving the repo
+        # root) - an absolute production URL would 404 locally until this
+        # file is actually deployed.
+        src = "/vgc-locals-italia/unknown.svg"
+        return (
+            f'<span class="sprite-chip"><img class="sprite" src="{src}" '
+            f'alt="{esc(name)}" title="{esc(name)}" loading="lazy"></span>'
+        )
     new_cdn = new_cdn_sprite_url(species_id)
     primary = esc(new_cdn or f"{LIMITLESS_SPRITE_BASE}/{species_id}.png")
     fallback = esc(f"{LIMITLESS_SPRITE_BASE}/{species_id}.png" if new_cdn else f"{POKESTATS_SPRITE_BASE}/{species_id}.png")
@@ -75,6 +88,17 @@ def sprite_chip_html(species_id, name):
         f'alt="{esc(name)}" title="{esc(name)}" loading="lazy" '
         f'onerror="this.onerror=null;this.src=\'{fallback}\';"></span>'
     )
+
+
+def location_html(location):
+    if not location:
+        return ""
+    label = esc(location["label"])
+    if location.get("vid"):
+        vid = esc(location["vid"])
+        href = f"{VENUE_PAGE_BASE}?vid={vid}"
+        return f'<p class="meta location-line">&#128205; <a href="{href}" target="_blank" rel="noopener">{label}</a></p>'
+    return f'<p class="meta location-line">&#128205; {label}</p>'
 
 
 def type_badge_html(tournament_type):
@@ -158,6 +182,7 @@ def render_tournament_page(tournament):
       {type_badge_html(tournament["tournament_type"])}
     </div>
     <p class="lede" id="detail-meta"></p>
+    {location_html(tournament.get("location"))}
 
     <section class="panel">
       <h2 data-i18n="allTeamsHeading">All top-cut teams</h2>
