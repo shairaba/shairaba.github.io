@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { formatAdmission, formatAddress, formatEventBody, googleMapsDirectionsUrl, escapeHtml } from "../src/eventFormat.js";
+import { formatAdmission, formatAddress, formatEventBody, formatEventDate, googleMapsDirectionsUrl, escapeHtml } from "../src/eventFormat.js";
 
 test("formatAdmission: plain amount, with or without decimals", () => {
   assert.equal(formatAdmission({ admission: "5" }), "5€");
@@ -72,6 +72,18 @@ test("formatEventBody: stays well under Telegram's message cap even with every o
   };
   const body = formatEventBody(event);
   assert.ok(body.length < 1200, `expected a small bounded block, got ${body.length} chars`);
+});
+
+test("formatEventDate: prefixes the abbreviated Italian weekday (2026-09-20T18:00:00Z is a Sunday, 20:00 in Europe/Rome)", () => {
+  assert.equal(formatEventDate({ start_date: "2026-09-20T18:00:00Z" }), "Dom 20 set, 20:00");
+});
+
+test("formatEventDate: weekday is resolved in the event's own timezone, not UTC's", () => {
+  // 2026-10-10 is a Saturday; 15:00 UTC is 17:00 in Europe/Rome (CEST, +2) -
+  // same calendar day here, but exercises that the weekday lookup uses the
+  // same timeZone as the day/month/time formatting, not just new Date()'s
+  // own (UTC) getDay().
+  assert.equal(formatEventDate({ start_date: "2026-10-10T15:00:00Z", timezone: "Europe/Rome" }), "Sab 10 ott, 17:00");
 });
 
 test("googleMapsDirectionsUrl: builds a directions link from lat/long", () => {

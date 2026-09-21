@@ -13,15 +13,36 @@ export function escapeHtml(s) {
     .replace(/>/g, "&gt;");
 }
 
+/* en-US weekday abbreviation -> Italian, keyed off the ASCII "Sun".."Sat"
+   Intl always gives back for that locale, rather than asking Intl for
+   "it-IT" weekday text directly - Workers' JS runtime only guarantees full
+   ICU data for a handful of locales, and en-US is the safe one to depend
+   on (same reasoning as this file's other manual-formatting choices, e.g.
+   formatAdmission() not trusting locale-aware number parsing). */
+const WEEKDAY_IT = {
+  Sun: "Dom",
+  Mon: "Lun",
+  Tue: "Mar",
+  Wed: "Mer",
+  Thu: "Gio",
+  Fri: "Ven",
+  Sat: "Sab",
+};
+
 export function formatEventDate(event) {
   try {
-    return new Intl.DateTimeFormat("it-IT", {
+    const date = new Date(event.start_date);
+    const timeZone = event.timezone || "Europe/Rome";
+    const weekdayEn = new Intl.DateTimeFormat("en-US", { timeZone, weekday: "short" }).format(date);
+    const weekday = WEEKDAY_IT[weekdayEn] || weekdayEn;
+    const rest = new Intl.DateTimeFormat("it-IT", {
       day: "numeric",
       month: "short",
       hour: "2-digit",
       minute: "2-digit",
-      timeZone: event.timezone || "Europe/Rome",
-    }).format(new Date(event.start_date));
+      timeZone,
+    }).format(date);
+    return `${weekday} ${rest}`;
   } catch {
     return event.start_date;
   }
