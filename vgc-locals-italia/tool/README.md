@@ -54,7 +54,7 @@ path a row came from.
 
    | # | Field | Type | Notes |
    |---|-------|------|-------|
-   | 1 | Tournament ID | Short answer, required | Stable grouping key - **the exact same value** for every player of one event. `submit.html` generates and fills this in automatically (slugified "City - Location" + date); a TO using the raw Form directly would need to type it identically for every row. |
+   | 1 | Tournament ID | Short answer, required | Stable grouping key - **the exact same value** for every player of one event. `submit.html` generates and fills this in automatically (slugified "City - Location" + date + "-cup"/"-challenge" - the type suffix keeps a Cup and a Challenge at the same venue/date from colliding into one tournament); a TO using the raw Form directly would need to type it identically for every row. |
    | 2 | Tournament City | Short answer, required | e.g. "Milano". `submit.html` auto-fills this from the Location field below when it matches a known venue (still editable/overridable) - see "Location list maintenance". Combined with Location as the display name, "City - Location" (see `build_tournament_name()` in `ingest.py`). |
    | 3 | Tournament Date | **Short answer** (not the Date question type), required | Use `YYYY-MM-DD`. Kept as plain text rather than a Date question so it maps to a single `entry.<id>` - Google's Date question type splits into separate year/month/day entry ids, which `submit.html`'s POST payload doesn't build. |
    | 4 | Type of Tournament | Dropdown: `VG Cup`, `VG Challenge`, required | |

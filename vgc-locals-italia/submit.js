@@ -163,8 +163,14 @@ function validateStep1() {
   // in ingest.py, using the same "City - Location" shape).
   const displayName = `${cityVal} - ${locationVal}`;
 
+  // The type suffix keeps a VG Cup and a VG Challenge at the same
+  // venue/date from colliding into a single tournament_id (and so a single
+  // merged page) - without it, "same slug + same date" was the only
+  // uniqueness check, which two genuinely different events can easily share.
+  const typeSuffix = typeVal === "VG Cup" ? "cup" : "challenge";
+
   return {
-    tournamentId: `${slugify(displayName)}-${dateVal}`,
+    tournamentId: `${slugify(displayName)}-${dateVal}-${typeSuffix}`,
     tournamentCity: cityVal,
     tournamentName: displayName,
     tournamentDate: dateVal,
