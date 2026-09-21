@@ -27,17 +27,15 @@ const TRANSLATIONS = {
     anonymous: "Anonimo",
     cardMeta: (date, n, k) => `${date} · ${n} giocatori → top ${k}`,
 
-    dashboardH1: "Utilizzo nel Top Cut",
-    dashboardLede:
-      "Statistiche di utilizzo inviate dalla community, dai top cut dei tornei locali VGC italiani (top 2, 4 o 8, a seconda del numero di partecipanti - non l'intero campo di gioco), quindi questi numeri non sono direttamente confrontabili con siti di meta-utilizzo completo come pikalytics.",
+    dashboardH1: "Utilizzo nella Top Cut",
     statLocalsCounted: "Locals conteggiati",
     statTopCutTeams: "Squadre in top cut conteggiate",
-    mostUsedHeading: "Pokémon più usati nel top cut",
+    mostUsedHeading: "Pokémon più usati nella top cut",
     noDataYet: "Nessun dato ancora - torna quando saranno stati inviati dei locals.",
 
     submitH1: "Invia un torneo",
     submitLede:
-      "Per gli organizzatori: inserisci il tuo evento una volta, poi la squadra di 6 Pokémon di ogni giocatore in top cut. Includi solo i giocatori arrivati nel top cut ufficiale, non l'intera lista iscritti.",
+      "Per gli organizzatori: inserisci il tuo evento una volta, poi la squadra di 6 Pokémon di ogni giocatore in top cut. Includi solo i giocatori arrivati nella top cut ufficiale, non l'intera lista iscritti.",
     submitNotice:
       "Questo invia i dati direttamente al foglio di calcolo dei risultati - non c'è login, quindi invia solo i tornei che hai davvero organizzato.",
     tournamentDetailsHeading: "Dettagli del torneo",
@@ -48,16 +46,16 @@ const TRANSLATIONS = {
     selectPlaceholder: "Seleziona…",
     labelNumberOfPlayers: "Numero di giocatori",
     placeholderNumberOfPlayers: "es. 14",
-    hintTopCutSize: "Determina la dimensione del top cut: <9 → top 2, 9-16 → top 4, 17+ → top 8.",
+    hintTopCutSize: "Determina la dimensione della top cut: <9 → top 2, 9-16 → top 4, 17+ → top 8.",
     labelLocation: "Locale del torneo",
     placeholderLocation: "Cerca un negozio/locale…",
     hintLocation: "Usato anche per compilare la città. Non è in lista? Scrivilo comunque - verrà mostrato senza link a una pagina negozio.",
     labelToName: "Il tuo nome (organizzatore)",
     placeholderToName: "Solo per eventuali chiarimenti, non mostrato pubblicamente",
     continueBtn: "Continua con le squadre",
-    topCutTeamsHeading: "Squadre del top cut",
+    topCutTeamsHeading: "Squadre della top cut",
     stepTwoSummary: (name, type, n, k) =>
-      `${name} - ${type} - ${n} iscritti → top ${k}. Inserisci la squadra di ogni giocatore del top cut qui sotto.`,
+      `${name} - ${type} - ${n} iscritti → top ${k}. Inserisci la squadra di ogni giocatore della top cut qui sotto.`,
     playerNameLabel: "Nome giocatore (opzionale)",
     searchPlaceholderShort: "Cerca…",
     pokemonLabel: (n) => `Pokémon ${n}`,
@@ -80,7 +78,7 @@ const TRANSLATIONS = {
     speciesNoMatch: "Nessun risultato.",
 
     breadcrumbAllTournaments: "← Tutti i tornei",
-    allTeamsHeading: "Tutte le squadre del top cut",
+    allTeamsHeading: "Tutte le squadre della top cut",
     noTeamsForTournamentYet: "Nessuna squadra ancora inviata per questo torneo.",
 
     breadcrumbDashboard: "← Statistiche",
@@ -106,8 +104,6 @@ const TRANSLATIONS = {
     cardMeta: (date, n, k) => `${date} · ${n} players → top ${k}`,
 
     dashboardH1: "Top Cut Usage",
-    dashboardLede:
-      "Community-submitted usage stats from Italian VGC local tournaments' top cuts (top 2, 4, or 8, depending on turnout - not the full entrant field), so these numbers aren't directly comparable to full-meta usage sites like pikalytics.",
     statLocalsCounted: "Locals counted",
     statTopCutTeams: "Top-cut teams counted",
     mostUsedHeading: "Most used Pokémon in top cut",

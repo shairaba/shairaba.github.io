@@ -202,6 +202,7 @@ SPECIES_LIST = [
     ('Goodra', 'goodra'),
     ('Gothitelle', 'gothitelle'),
     ('Gourgeist', 'gourgeist'),
+    ('Grapploct', 'grapploct'),
     ('Greninja', 'greninja'),
     ('Greninja-Mega', 'greninja-mega'),
     ('Grimmsnarl', 'grimmsnarl'),
