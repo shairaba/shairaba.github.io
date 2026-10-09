@@ -107,7 +107,11 @@
        history of every event the store has ever run. */
     function applyVenueFilters(events, filterState) {
       const todayKey = localDateKey({ start_date: new Date().toISOString() });
+      // Same is_active check as index.html's applyFilters() - an event the
+      // official locator no longer lists doesn't belong in "what's coming
+      // up here" either.
       let rows = events.filter((e) => {
+        if (e.is_active === false) return false;
         const key = localDateKey(e);
         return key && key >= todayKey;
       });

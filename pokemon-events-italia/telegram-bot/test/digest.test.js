@@ -32,6 +32,11 @@ test("matchesChat: rejects events that already started", () => {
   assert.equal(matchesChat(event, defaultPrefs(), YESTERDAY, NOW), false);
 });
 
+test("matchesChat: rejects an event the locator no longer lists (is_active: false)", () => {
+  const event = makeEvent({ is_active: false });
+  assert.equal(matchesChat(event, defaultPrefs(), YESTERDAY, NOW), false);
+});
+
 test("matchesChat: accepts a new upcoming event with default (unfiltered) prefs", () => {
   const event = makeEvent();
   assert.equal(matchesChat(event, defaultPrefs(), YESTERDAY, NOW), true);

@@ -31,6 +31,16 @@ test("matchesListFilters: rejects events that already started", () => {
   assert.equal(matchesListFilters(event, defaultPrefs(), NOW), false);
 });
 
+test("matchesListFilters: rejects an event the locator no longer lists (is_active: false), even if it's still upcoming", () => {
+  const event = makeEvent({ is_active: false });
+  assert.equal(matchesListFilters(event, defaultPrefs(), NOW), false);
+});
+
+test("matchesListFilters: accepts an event with is_active explicitly true or simply absent", () => {
+  assert.equal(matchesListFilters(makeEvent({ is_active: true }), defaultPrefs(), NOW), true);
+  assert.equal(matchesListFilters(makeEvent({ is_active: undefined }), defaultPrefs(), NOW), true);
+});
+
 test("matchesListFilters: region filter", () => {
   const prefs = { ...defaultPrefs(), regions: ["LOMBARDIA"] };
   assert.equal(matchesListFilters(makeEvent({ region: "LAZIO" }), prefs, NOW), false);
@@ -53,13 +63,16 @@ test("matchesListFilters: type and game filters apply the same as the digest", (
   assert.equal(matchesListFilters(makeEvent({ products: ["vg", "tcg"] }), gamePrefs, NOW), true);
 });
 
-test("buildListTexts: a small result is a single page, no '(n/m)' tag, unfiltered scope in the header", () => {
+test("buildListTexts: a small result still produces exactly MAX_PAGES (2) messages - page 1 has the content, page 2 is a placeholder", () => {
   const later = makeEvent({ guid: "g2", start_date: "2026-10-01T00:00:00Z" });
   const sooner = makeEvent({ guid: "g3", start_date: "2026-09-15T00:00:00Z" });
   const pages = buildListTexts([makeEvent(), later, sooner], defaultPrefs(), NOW);
-  assert.equal(pages.length, 1);
+  assert.equal(pages.length, 2);
   assert.match(pages[0], /tutte le regioni/);
-  assert.ok(!pages[0].includes("("), "single-page output shouldn't show a page tag");
+  assert.match(pages[0], /\(1\/2\)/);
+  assert.match(pages[1], /\(2\/2\)/);
+  assert.match(pages[1], /Nessun altro torneo in programma/);
+  assert.match(pages[1], /Aggiornato: /, "the placeholder page is still a live standing message, not dead text");
   const posSooner = pages[0].indexOf("guid=g3");
   const posFirst = pages[0].indexOf("guid=g1");
   const posLater = pages[0].indexOf("guid=g2");
@@ -99,16 +112,33 @@ test("buildListTexts: shows address, price, and the directions/signup links only
   assert.match(rich, /<a href="https:\/\/example\.com\/signup">Preiscrizioni<\/a>/);
 });
 
-test("buildListTexts: empty result is a single page saying so instead of an empty list", () => {
+test("buildListTexts: an empty result still produces MAX_PAGES (2) messages, both saying so rather than an empty list", () => {
   const pages = buildListTexts([makeEvent({ region: "LAZIO" })], { ...defaultPrefs(), regions: ["SICILIA"] }, NOW);
-  assert.equal(pages.length, 1);
+  assert.equal(pages.length, 2);
   assert.match(pages[0], /Nessun torneo in programma/);
+  assert.match(pages[1], /Nessun altro torneo in programma/);
 });
 
 test("buildListTexts: header reflects a store-scoped selection over a region-scoped one", () => {
   const prefs = { ...defaultPrefs(), regions: ["LOMBARDIA"], stores: ["STORE1", "STORE2"] };
   const [page] = buildListTexts([makeEvent()], prefs, NOW);
   assert.match(page, /2 negozi selezionati/);
+});
+
+test("buildListTexts: page 2 turns from a placeholder into real content once a later refresh has enough events to need it", () => {
+  const [, placeholderPage2] = buildListTexts([makeEvent()], defaultPrefs(), NOW);
+  assert.match(placeholderPage2, /Nessun altro torneo in programma/);
+
+  const many = Array.from({ length: 35 }, (_, i) =>
+    makeEvent({
+      guid: `g${i}`,
+      start_date: `2026-09-${String(11 + (i % 18)).padStart(2, "0")}T18:00:00Z`,
+      full_address: `VIA DELLO SPORT ${i}, 20100 MILANO MI`,
+    })
+  );
+  const [, realPage2] = buildListTexts(many, defaultPrefs(), NOW);
+  assert.ok(!realPage2.includes("Nessun altro torneo in programma"));
+  assert.match(realPage2, /guid=g/, "page 2 now carries actual event links instead of the placeholder");
 });
 
 test("buildListTexts: a result too long for one message splits into a second, tagged and within the limit", () => {

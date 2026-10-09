@@ -320,7 +320,14 @@
 
     function applyFilters(events, filterState) {
       const todayKey = localDateKey({ start_date: new Date().toISOString() });
+      // An event the official locator no longer lists - cancelled, or (for
+      // a past one) simply expired off it - same reasoning/wording as the
+      // Telegram bot's matchesListFilters()/matchesChat(): not worth
+      // surfacing in any listing. event.html itself still shows one of
+      // these (dimmed, with inactiveNote) for anyone who lands there via a
+      // direct/shared link - this only affects list/calendar/map views.
       let rows = events.filter((e) => {
+        if (e.is_active === false) return false;
         const key = localDateKey(e);
         return key && key >= todayKey;
       });
@@ -655,6 +662,7 @@
     function updateMetaNote() {
       const todayKey = localDateKey({ start_date: new Date().toISOString() });
       const upcomingCount = allEvents.filter((e) => {
+        if (e.is_active === false) return false;
         const key = localDateKey(e);
         return key && key >= todayKey;
       }).length;

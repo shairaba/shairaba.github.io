@@ -18,7 +18,16 @@ import { formatEventBody } from "./eventFormat.js";
    dataset (recurring weekly leagues dominate), and even splitting THAT
    across as many messages as it takes would spam dozens of them on every
    refresh. Past the ceiling, the last page notes how many events were left
-   out and points at /settings to narrow down. */
+   out and points at /settings to narrow down.
+
+   buildListTexts() below always returns exactly MAX_PAGES texts, padding
+   with a placeholder page if there isn't enough content to fill them yet
+   - so a chat's /list message set has a fixed, predictable shape (always
+   both messages sent up front) instead of a second message that only
+   shows up once/if the result ever grows past one page. Since index.js's
+   sendOrEditPage() already edits-or-creates each page by index, that
+   placeholder message transparently turns into real content (and back)
+   on a later refresh with no separate logic needed there. */
 const MAX_PAGES = 2;
 const MESSAGE_LENGTH_CAP = 3900;
 
@@ -26,6 +35,13 @@ const MESSAGE_LENGTH_CAP = 3900;
    check" requirement - this mode always shows everything upcoming that
    matches, not just what's new. */
 export function matchesListFilters(event, prefs, nowMs) {
+  // An event the official locator no longer lists - cancelled, or (for a
+  // past one) simply expired off it. Either way, not worth telling anyone
+  // about; the site itself still shows these (dimmed, with a note - see
+  // app.js's inactiveNote), but this bot only ever surfaces events someone
+  // might actually go to.
+  if (event.is_active === false) return false;
+
   if (!event.start_date) return false;
   const start = new Date(event.start_date).getTime();
   if (isNaN(start) || start < nowMs) return false;
@@ -69,15 +85,15 @@ function formatUpdatedAt(nowMs) {
   }
 }
 
-/* Builds the standing "/list" message(s) as an array - one entry per
-   Telegram message, in order, up to MAX_PAGES. Every page repeats the
-   header (with a "(1/2)" tag once there's more than one, so a page makes
-   sense read on its own - these are standing messages someone might look
-   at independently, not a one-time notification read top to bottom) and
-   only the LAST page gets the omitted-count note and the "Aggiornato: ..."
-   timestamp, since the whole point of this mode is that the messages get
-   edited in place and that timestamp is the only visible sign a refresh
-   actually happened. */
+/* Builds the standing "/list" message(s) as an array - always exactly
+   MAX_PAGES entries, one per Telegram message, in order (see MAX_PAGES's
+   own comment above for why). Every page repeats the header with an
+   "(n/MAX_PAGES)" tag, so a page makes sense read on its own - these are
+   standing messages someone might look at independently, not a one-time
+   notification read top to bottom - and only the LAST page gets the
+   omitted-count note and the "Aggiornato: ..." timestamp, since the whole
+   point of this mode is that the messages get edited in place and that
+   timestamp is the only visible sign a refresh actually happened. */
 export function buildListTexts(events, prefs, nowMs) {
   const matched = events
     .filter((e) => matchesListFilters(e, prefs, nowMs))
@@ -85,10 +101,6 @@ export function buildListTexts(events, prefs, nowMs) {
 
   const scope = describeScope(prefs);
   const footer = `\n<i>Aggiornato: ${formatUpdatedAt(nowMs)}</i>`;
-
-  if (matched.length === 0) {
-    return [`📋 <b>Tornei in programma</b> — ${scope}\n\nNessun torneo in programma al momento con questi filtri.${footer}`];
-  }
 
   // Pack event blocks into pages, stopping once MAX_PAGES is full - the
   // event that would have started an (unwanted) MAX_PAGES+1th page just
@@ -116,13 +128,25 @@ export function buildListTexts(events, prefs, nowMs) {
   if (currentBlocks.length > 0 && pages.length < MAX_PAGES) pages.push(currentBlocks);
 
   const omitted = matched.length - shown;
-  const totalPages = pages.length;
+
+  // Pad out to exactly MAX_PAGES with empty pages (rendered as a
+  // placeholder below) - a page with nothing of its own yet still gets
+  // sent/edited, so the message set's shape never changes based on how
+  // many events currently match.
+  while (pages.length < MAX_PAGES) pages.push([]);
+
   return pages.map((blocks, i) => {
-    const pageTag = totalPages > 1 ? ` (${i + 1}/${totalPages})` : "";
+    const pageTag = ` (${i + 1}/${MAX_PAGES})`;
     const header = `📋 <b>Tornei in programma</b> — ${scope}${pageTag}\n\n`;
-    const isLastPage = i === totalPages - 1;
+    const isLastPage = i === MAX_PAGES - 1;
+    const body =
+      blocks.length > 0
+        ? blocks.join("")
+        : (i === 0
+            ? "Nessun torneo in programma al momento con questi filtri.\n\n"
+            : "Nessun altro torneo in programma al momento con questi filtri.\n\n");
     const omittedNote = isLastPage && omitted > 0 ? `\n… e altri ${omitted} eventi. Affina i filtri con /settings per vederli tutti.\n` : "";
     const trailer = isLastPage ? omittedNote + footer : "";
-    return (header + blocks.join("") + trailer).trim();
+    return (header + body + trailer).trim();
   });
 }

@@ -39,6 +39,10 @@ export function isNewEvent(event) {
    chat's last check, it hasn't already happened, and it clears all three
    filters (region/type/game - unset filters pass everything, see prefs.js). */
 export function matchesChat(event, prefs, sinceMs, nowMs) {
+  // See list.js's matchesListFilters() for why - same reasoning applies to
+  // the digest.
+  if (event.is_active === false) return false;
+
   const changedMs = lastChangeMs(event);
   if (isNaN(changedMs) || changedMs <= sinceMs) return false;
 

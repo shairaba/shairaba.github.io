@@ -5,9 +5,10 @@ Telegram bot with two workmodes, both driven by the same per-chat filters
 where a chat can also pick which mode(s) it actually wants:
 a **daily digest** (subscribers get a message when new events matching
 their filters show up in [`data/events.json`](../data/events.json)) and
-`/list`, a **standing set of messages** (up to 2) that always shows what's
+`/list`, a **standing set of 2 messages** that always shows what's
 currently upcoming and gets edited in place on refresh (on demand, or once
-a day) rather than resent. Fully self-service — no manual config file
+a day) rather than resent - both are sent right away even if the second
+one has nothing of its own yet. Fully self-service — no manual config file
 editing needed, aside from the optional owner-only allowlist below.
 
 ## How it works
@@ -26,10 +27,10 @@ editing needed, aside from the optional owner-only allowlist below.
   to just those keys. `mode` (`"both"` by default) lets a chat opt out of
   one of the two workmodes' proactive pushes via `/settings` without
   affecting on-demand commands - see "Bot commands" below. `listMessageIds`
-  are the ids of that chat's standing `/list` message(s), in page order,
-  once at least one has been sent - later refreshes know what to edit, and
-  if the result shrinks to fewer pages than before, the leftover trailing
-  messages get deleted instead of left behind showing stale content.
+  are the ids of that chat's 2 standing `/list` messages, in page order,
+  once they've been sent - later refreshes know what to edit in place,
+  turning a placeholder second message into real content (or back) as
+  what currently matches changes, with no new messages sent either way.
 - "New" means `first_seen_at` (set once by the scraper the first time it
   ever saw that event) is newer than the last time that chat was notified —
   not a diff between two `events.json` snapshots, and not "resend everything
@@ -200,14 +201,15 @@ still runs and is inspectable.
   both workmodes)
 - `/list` - a second, independent workmode from the daily digest above: shows
   every *currently upcoming* event matching the chat's filters (not just
-  what's new) as up to 2 standing messages (`MAX_PAGES` in `src/list.js`) -
-  whatever fits within that, each tagged `(1/2)` once there's more than
-  one, and the rest noted as "e altri N eventi" on the last one rather than
-  silently dropped. No in-message button - calling `/list` again or the
-  daily refresh cron both edit those same messages in place rather than
-  sending new ones - and if the result needs fewer pages than last time,
-  the leftover one gets deleted. Always works on demand regardless of the
-  `mode` setting below - that only gates the *proactive* refresh.
+  what's new) as always exactly 2 standing messages (`MAX_PAGES` in
+  `src/list.js`), tagged `(1/2)`/`(2/2)`, sent immediately even if the
+  second one isn't needed yet - it just says so as a placeholder until a
+  later refresh has enough events to fill it for real (or the "e altri N
+  eventi" note once there's more than 2 pages' worth, rather than silently
+  dropping the rest). No in-message button - calling `/list` again or the
+  daily refresh cron both edit those same 2 messages in place rather than
+  sending new ones. Always works on demand regardless of the `mode`
+  setting below - that only gates the *proactive* refresh.
 - `/settings` - filters (region/type/game/store, shared by both workmodes)
   plus which workmode(s) this chat actually wants pushed: the daily digest
   only, `/list` auto-refresh only, or both (the default).
