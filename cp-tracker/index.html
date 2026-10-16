@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CP Tracker</title>
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#262456">
+<script>
+(function () {
+  var m = document.cookie.match(/(?:^|; )theme=(dark|light)/);
+  var t = m ? m[1] : (window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  document.documentElement.setAttribute("data-theme", t);
+})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand-group">
+    <img class="logo" src="logo.svg" alt="">
+    <span class="brand">CP Tracker <small id="season"></small></span>
+  </div>
+  <div class="topbar-controls">
+    <div class="total"><span id="total">0</span><small>counted CP</small></div>
+    <button id="theme-toggle" type="button" aria-label="Toggle dark mode">
+      <span class="theme-switch-icon theme-switch-sun" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path></svg>
+      </span>
+      <span class="theme-switch-icon theme-switch-moon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 1 0 10.5 10.5z"></path></svg>
+      </span>
+      <span class="theme-switch-knob"></span>
+    </button>
+  </div>
+</header>
+
+<main class="container">
+  <section class="panel" id="groups"></section>
+
+  <section class="panel">
+    <h2>Results</h2>
+    <div id="results"></div>
+  </section>
+
+  <section class="panel">
+    <h2>CP by Pokémon</h2>
+    <div id="monchart" class="monchart"></div>
+  </section>
+
+  <section class="panel">
+    <h2>Add result</h2>
+    <form id="form">
+      <label>Event name <input name="name" required placeholder="Regional Baltimore"></label>
+      <div class="row">
+        <label>Date <input name="date" type="date" required></label>
+        <label>Type <select name="type" id="typeSel"></select></label>
+      </div>
+      <div class="row">
+        <label>Placement <input name="placement" type="number" min="1" required></label>
+        <label>Entrants <input name="entrants" type="number" min="1" required></label>
+      </div>
+      <label>CP override <input name="override" type="number" min="0" placeholder="auto from table"></label>
+      <div id="preview" class="preview"></div>
+      <label>Team</label>
+      <div id="slots" class="slots"></div>
+      <datalist id="species-dl"></datalist>
+      <details class="paste-box">
+        <summary>Or import from a Showdown paste</summary>
+        <textarea id="paste" rows="5" placeholder="Paste your team here"></textarea>
+        <button type="button" id="pasteBtn">Fill slots from paste</button>
+      </details>
+      <label>Notes <input name="notes"></label>
+      <button type="submit" id="saveBtn">Save result</button>
+      <button type="button" id="cancelBtn" hidden>Cancel edit</button>
+    </form>
+  </section>
+
+  <section class="tools">
+    <button id="exportBtn" type="button">Export JSON</button>
+    <label class="btn">Import JSON <input type="file" id="importFile" accept="application/json" hidden></label>
+  </section>
+</main>
+<script type="module" src="app.js"></script>
+</body>
+</html>
