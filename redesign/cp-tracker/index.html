@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CP Tracker</title>
+<meta name="description" content="Track your Pokémon VGC Championship Points for the season, with best finish limits worked out for you.">
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#f3f4f6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1012" media="(prefers-color-scheme: dark)">
+<script>
+(function () {
+  var m = document.cookie.match(/(?:^|; )theme=(dark|light)/);
+  var t = m ? m[1] : (window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  document.documentElement.setAttribute("data-theme", t);
+})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=2">
+</head>
+<body>
+<header class="top">
+  <a class="home" href="../index.html"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M10 3L5 8l5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>VGC tools</span></a>
+  <h1>CP Tracker</h1>
+  <button id="theme-toggle" class="icon-btn" type="button" aria-label="Switch between light and dark mode">
+    <svg class="sun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+    <svg class="moon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 1 0 10.5 10.5z"/></svg>
+  </button>
+  <button id="addBtn" class="primary" type="button">Add result</button>
+</header>
+
+<main class="wrap">
+  <section class="hero" aria-live="polite">
+    <p class="season" id="season"></p>
+    <p class="total"><b id="total">0</b> <span>CP</span></p>
+    <p class="sub" id="total-sub"></p>
+  </section>
+
+  <section class="limits" aria-labelledby="lim-h">
+    <div class="sec-head">
+      <h2 id="lim-h">What counts</h2>
+      <p>Only your best finishes of each kind count towards your total. Each box is one of those places.</p>
+    </div>
+    <div id="groups"></div>
+  </section>
+
+  <div class="split">
+    <section aria-labelledby="res-h">
+      <div class="sec-head"><h2 id="res-h">Results</h2></div>
+      <div id="results"></div>
+    </section>
+    <section aria-labelledby="mon-h">
+      <div class="sec-head"><h2 id="mon-h">CP by Pokémon</h2><p>Counted CP from every team a Pokémon was on.</p></div>
+      <div id="monchart" class="monchart"></div>
+    </section>
+  </div>
+
+  <footer class="backup">
+    <div>
+      <b>Your results stay on this device.</b>
+      <span>Save a backup file to move them to another phone or computer.</span>
+    </div>
+    <div class="backup-btns">
+      <button id="exportBtn" class="secondary" type="button">Save backup</button>
+      <label class="secondary file">Load backup<input type="file" id="importFile" accept="application/json" hidden></label>
+    </div>
+  </footer>
+</main>
+
+<dialog id="sheet" aria-labelledby="sheet-h">
+  <form id="form" method="dialog">
+    <div class="sheet-head">
+      <h2 id="sheet-h">Add result</h2>
+      <button type="button" class="icon-btn" id="closeBtn" aria-label="Close"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+    </div>
+
+    <div class="sheet-body">
+      <fieldset class="types">
+        <legend>Kind of event</legend>
+        <div id="typeSel" class="type-grid"></div>
+      </fieldset>
+
+      <label class="field">Event name<input name="name" required placeholder="Milan Regional Championships" autocomplete="off"></label>
+      <div class="three">
+        <label class="field">Date<input name="date" type="date" required></label>
+        <label class="field">Placed<input name="placement" type="number" min="1" inputmode="numeric" required placeholder="8"></label>
+        <label class="field">Players<input name="entrants" type="number" min="1" inputmode="numeric" required placeholder="512"></label>
+      </div>
+
+      <div class="readout" id="preview" aria-live="polite"></div>
+
+      <details class="more">
+        <summary>The CP is different from the table</summary>
+        <label class="field">CP you actually received<input name="override" type="number" min="0" inputmode="numeric" placeholder="Leave empty to use the table"></label>
+      </details>
+
+      <div class="field">
+        <span>Team <small>(optional)</small></span>
+        <div id="slots" class="slots"></div>
+        <datalist id="species-dl"></datalist>
+        <details class="more">
+          <summary>Fill from a Showdown paste</summary>
+          <textarea id="paste" rows="5" placeholder="Paste your team here" spellcheck="false"></textarea>
+          <button type="button" class="secondary" id="pasteBtn">Fill the team</button>
+        </details>
+      </div>
+
+      <label class="field">Notes <input name="notes" autocomplete="off" placeholder="Optional"></label>
+    </div>
+
+    <div class="sheet-foot">
+      <button type="button" class="danger" id="deleteBtn" hidden>Delete</button>
+      <button type="button" class="ghost" id="cancelBtn">Cancel</button>
+      <button type="submit" class="primary" id="saveBtn">Save result</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status"></div>
+<script type="module" src="app.js?v=2"></script>
+</body>
+</html>

@@ -1,0 +1,1314 @@
+@font-face {
+    font-family: Montserrat;
+    src: url(Montserrat-Medium.ttf);
+}
+
+:root {
+    /* Page background - a bright periwinkle-to-indigo wash echoing the
+       in-game dashboard's gradient, with a diamond lattice pattern layered
+       on top in body{} below (see the in-game Home/Box screens' subtle
+       geometric texture). */
+    --bg-a: #6b63e6;
+    --bg-b: #262456;
+
+    /* Card panels - the game's own UI (Box screen, Pokemon detail, team
+       list) uses pale near-white lavender cards, not a saturated gradient,
+       so every .panel below sits on this instead. */
+    --panel-bg: #f5f3fc;
+    --panel-bg-soft: #e9e6f8;
+    --panel-shadow: 0 16px 34px rgba(18, 14, 54, 0.28);
+
+    /* Text on the dark page background (header title, etc). */
+    --text: #ffffff;
+    --text-dim: #d6d3f7;
+
+    /* Text on the light card background - everything inside .panel. */
+    --ink: #333a72;
+    --ink-dim: #6b6f9c;
+    --link: #4a4fc9;
+
+    --accent-a: #ecf461;
+    --accent-b: #8c82e4;
+    --accent-gradient: linear-gradient(90deg, #abe049, #ecf461);
+
+    --danger: #d1495b;
+    --success: #2f9e63;
+    --info: #5b52c9;
+
+    /* Light lavender "well" look for form controls sunk into a white card. */
+    --field-bg: #e6e3f9;
+    --field-text: #333a72;
+
+    /* The signature Champions button - a fully-rounded white pill with dark
+       navy text and a green/yellow gradient glow on hover, matching "Box
+       Menu" / "Check summary" / "Train Pokemon" in the reference
+       screenshots. Kept identical between light/dark mode - the game's own
+       buttons read as a consistently pale pill regardless of the screen
+       around them, so this doesn't get a dark-mode override below. */
+    --btn-bg: #ffffff;
+    --btn-text: #333a72;
+    --btn-hover-a: #abe049;
+    --btn-hover-b: #ecf461;
+    --radius-btn: 999px;
+
+    /* The team-list "selected slot" look - a lime-green border and pale
+       green tint (see "El Rocón" highlighted in the Box screen sidebar) -
+       reused here for any selected chip/option. */
+    --select-border: #7fd13b;
+    --select-bg: #eef8dc;
+
+    --radius-lg: 22px;
+    --radius-md: 14px;
+    --radius-sm: 10px;
+}
+
+/* Dark mode - same shapes/layout, re-themed to a deep indigo card surface
+   with light lavender text instead of the light-card/navy-text default
+   above. Toggled via [data-theme] on <html> (see the inline script in
+   index.html's <head>, which applies this before first paint from a saved
+   cookie, and the #theme-toggle handler in script.js, which flips it and
+   saves the cookie back). */
+:root[data-theme="dark"] {
+    --bg-a: #38316e;
+    --bg-b: #100e26;
+
+    --panel-bg: #221f42;
+    --panel-bg-soft: #2a2650;
+    --panel-shadow: 0 16px 34px rgba(4, 3, 18, 0.5);
+
+    --text: #ffffff;
+    --text-dim: #c3c0ea;
+
+    --ink: #ece9fb;
+    --ink-dim: #a6a3d4;
+    --link: #b3aeff;
+
+    --danger: #ff8a8a;
+    --success: #7cffb2;
+    --info: #b3aeff;
+
+    --field-bg: #302c5c;
+    --field-text: #ece9fb;
+
+    --select-border: #7fd13b;
+    --select-bg: rgba(127, 209, 59, 0.16);
+}
+
+* {
+    box-sizing: border-box;
+    /* Smooths the light/dark toggle - any element with its own explicit
+       transition (buttons, chips, etc) simply overrides this for itself,
+       since a more specific selector's transition list wins outright
+       rather than merging with this one. */
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+body {
+    background:
+        repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0 2px, transparent 2px 46px),
+        repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.05) 0 2px, transparent 2px 46px),
+        linear-gradient(160deg, var(--bg-a), var(--bg-b) 65%);
+    background-attachment: fixed;
+    color: var(--text);
+    font-family: Montserrat, sans-serif;
+    font-size: 15px;
+    margin: 0;
+    min-height: 100vh;
+}
+
+.page {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 24px 24px 64px;
+}
+
+/* ---------- Entrance animations ---------- */
+
+@keyframes fadeSlideDown {
+    from { opacity: 0; transform: translateY(-12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes ctaGlow {
+    0%, 100% { box-shadow: 0 4px 8px rgba(51, 58, 114, 0.25); }
+    50% { box-shadow: 0 4px 18px rgba(171, 224, 73, 0.55); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .site-header {
+        animation: fadeSlideDown 0.5s ease both;
+    }
+
+    .panel {
+        animation: fadeSlideUp 0.5s ease both;
+    }
+
+    #area1 { animation-delay: 0.05s; }
+    #area2 { animation-delay: 0.14s; }
+
+    #print {
+        animation: ctaGlow 2.6s ease-in-out infinite;
+    }
+
+    #print:hover {
+        animation: none;
+    }
+}
+
+/* ---------- Header ---------- */
+
+/* No enclosing bar, unlike the old solid-navy banner - the reference
+   screenshots' own top bars are loose floating pieces (a round icon badge,
+   a title, a small status pill) directly over the gradient background, not
+   one big solid block, so this drops the bar and echoes that instead. */
+.site-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin: 4px 0 28px;
+}
+
+.site-header .logo {
+    height: 72px;
+    width: 72px;
+    flex-shrink: 0;
+    object-fit: contain;
+    background: #fff;
+    border-radius: 50%;
+    padding: 10px;
+    box-shadow: 0 10px 22px rgba(10, 8, 40, 0.35);
+}
+
+/* Light/dark toggle - a sliding day/night switch (orange track + sun icon
+   in light mode, dark track + moon icon in dark mode), knob on the left
+   for light mode and the right for dark mode, pinned to the far end of the
+   header row. */
+#theme-toggle {
+    position: relative;
+    margin-left: auto;
+    flex-shrink: 0;
+    width: 64px;
+    height: 34px;
+    padding: 0;
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+    background: linear-gradient(90deg, #ffcf6b, #ff9a3c);
+    box-shadow: 0 8px 18px rgba(10, 8, 40, 0.35), inset 0 0 0 2px rgba(255, 255, 255, 0.3);
+    transition: background 0.3s ease, transform 0.15s ease;
+}
+
+:root[data-theme="dark"] #theme-toggle {
+    background: linear-gradient(90deg, #2a2650, #100e26);
+}
+
+#theme-toggle:hover {
+    transform: translateY(-2px);
+}
+
+#theme-toggle:active .theme-switch-knob {
+    width: 32px;
+}
+
+:root[data-theme="dark"] #theme-toggle:active .theme-switch-knob {
+    transform: translateX(26px);
+}
+
+#theme-toggle .theme-switch-icon {
+    position: absolute;
+    top: 50%;
+    width: 16px;
+    height: 16px;
+    transform: translateY(-50%);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.2s ease;
+}
+
+/* The sun sits in the track's right-hand zone, which is only uncovered
+   while the knob is resting on the left (light mode) - and vice versa for
+   the moon on the left once the knob slides right for dark mode. */
+#theme-toggle .theme-switch-sun {
+    right: 9px;
+    opacity: 1;
+}
+
+#theme-toggle .theme-switch-moon {
+    left: 9px;
+    opacity: 0;
+}
+
+:root[data-theme="dark"] #theme-toggle .theme-switch-sun {
+    opacity: 0;
+}
+
+:root[data-theme="dark"] #theme-toggle .theme-switch-moon {
+    opacity: 1;
+}
+
+#theme-toggle .theme-switch-knob {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+    transition: transform 0.3s ease, width 0.15s ease;
+}
+
+:root[data-theme="dark"] #theme-toggle .theme-switch-knob {
+    transform: translateX(30px);
+}
+
+@media (max-width: 640px) {
+    #theme-toggle {
+        margin-left: 0;
+    }
+}
+
+@media (max-width: 640px) {
+    .site-header {
+        flex-direction: column;
+        align-items: flex-start;
+        text-align: left;
+    }
+}
+
+.header-text h1 {
+    margin: 0 0 8px;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-shadow: 0 2px 10px rgba(10, 8, 40, 0.4);
+}
+
+.header-text .badge {
+    display: inline-block;
+    margin: 0 0 4px;
+    padding: 4px 12px;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--text);
+    background: rgba(20, 16, 56, 0.35);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+    border-radius: 999px;
+}
+
+.header-text .badge a {
+    color: var(--accent-a);
+}
+
+.header-text .note {
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--text-dim);
+}
+
+/* ---------- Layout ---------- */
+
+.layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+    padding-top: 4px;
+}
+
+@media (max-width: 900px) {
+    .layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* The desktop no-scroll/compact layout override lives at the very end of
+   this file, not here - it re-declares several selectors (#paste, .panel,
+   #print, etc) that are also defined later in this stylesheet with equal
+   specificity, and CSS resolves same-specificity ties by source order, so
+   placing it here would just lose to those later base rules regardless of
+   the media query matching. See the bottom of the file. */
+
+.panel {
+    background: var(--panel-bg);
+    border: none;
+    border-radius: var(--radius-lg);
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    row-gap: 18px;
+    color: var(--ink);
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.8),
+        var(--panel-shadow);
+}
+
+.panel-title {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--ink-dim);
+}
+
+.panel-title:not(:first-child) {
+    margin-top: 4px;
+    padding-top: 18px;
+    border-top: 1px solid rgba(51, 58, 114, 0.14);
+}
+
+/* ---------- URL import ---------- */
+
+.url-import {
+    display: flex;
+    flex-direction: column;
+    row-gap: 6px;
+}
+
+.url-import label {
+    font-size: 11px;
+    color: var(--ink-dim);
+}
+
+.url-import-row {
+    display: flex;
+    gap: 8px;
+}
+
+.url-import-row input[type="text"] {
+    flex: 1;
+    min-width: 0;
+    background: var(--field-bg);
+    color: var(--field-text);
+    border: 0;
+    border-radius: var(--radius-sm);
+    padding: 9px 10px;
+    font-family: inherit;
+    font-size: 13px;
+}
+
+.url-import-row input[type="text"]:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--accent-b);
+}
+
+.url-import-row button {
+    padding: 9px 18px;
+    background: var(--btn-bg);
+    color: var(--btn-text);
+    border: 2px solid transparent;
+    border-radius: var(--radius-btn);
+    box-shadow: 0 4px 8px rgba(51, 58, 114, 0.25);
+    cursor: pointer;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    font-family: inherit;
+    white-space: nowrap;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
+}
+
+.url-import-row button:hover {
+    background: linear-gradient(90deg, var(--btn-hover-a), var(--btn-hover-b));
+    border-color: #fff;
+    color: #234;
+    transform: translateY(-2px);
+}
+
+.url-import-row button:active {
+    transform: scale(0.97);
+}
+
+/* ---------- Status text (shared: URL import + screenshot parser) ---------- */
+
+.status-text {
+    font-size: 12px;
+    font-weight: 600;
+    min-height: 16px;
+    color: var(--ink-dim);
+}
+
+.status-text.status-error {
+    color: var(--danger);
+}
+
+.status-text.status-success {
+    color: var(--success);
+}
+
+.status-text.status-info {
+    color: var(--info);
+}
+
+/* ---------- Screenshot parser ---------- */
+
+.screenshot-parser {
+    padding: 16px;
+    border: 1.5px dashed rgba(51, 58, 114, 0.25);
+    border-radius: var(--radius-md);
+    background: var(--panel-bg-soft);
+    display: flex;
+    flex-direction: column;
+    row-gap: 12px;
+}
+
+.screenshot-parser-title {
+    margin: 0;
+    font-weight: 700;
+    color: var(--ink);
+    font-size: 14px;
+}
+
+.screenshot-parser-title span {
+    font-weight: 400;
+    color: var(--ink-dim);
+}
+
+.screenshot-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+@media (max-width: 520px) {
+    .screenshot-inputs {
+        grid-template-columns: 1fr;
+    }
+}
+
+.file-field, .lang-field {
+    display: flex;
+    flex-direction: column;
+    row-gap: 5px;
+}
+
+.file-field label, .lang-field label {
+    font-size: 11px;
+    color: var(--ink-dim);
+}
+
+.file-field input[type="file"] {
+    font-family: inherit;
+    font-size: 11.5px;
+    color: var(--ink-dim);
+    max-width: 100%;
+}
+
+.file-field input[type="file"]::file-selector-button,
+.file-field input[type="file"]::-webkit-file-upload-button {
+    margin-right: 8px;
+    padding: 7px 14px;
+    border: 2px solid transparent;
+    border-radius: var(--radius-btn);
+    background: var(--btn-bg);
+    color: var(--btn-text);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    /* No box-shadow here, unlike the site's other pill buttons - Chromium
+       doesn't clip a ::file-selector-button/::-webkit-file-upload-button
+       pseudo-element's shadow to its own border-radius, so it renders as a
+       hard rectangular smear instead of a soft glow. */
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.file-field input[type="file"]:hover::file-selector-button,
+.file-field input[type="file"]:hover::-webkit-file-upload-button {
+    background: linear-gradient(90deg, var(--btn-hover-a), var(--btn-hover-b));
+    border-color: #fff;
+    color: #234;
+}
+
+.lang-field select {
+    /* Plain white, not --field-bg - that well color is nearly identical to
+       the screenshot-parser box it sits inside (both pale lavender), so
+       the dropdown was blending straight into its own container. Text uses
+       --btn-text (not --field-text) to match - --field-text flips to a
+       light color in dark mode, which would land as near-invisible light
+       text on this always-white background. --btn-text is deliberately
+       theme-invariant (same reasoning as the Choose File/Print Selected
+       buttons, which stay a consistent white pill either way), so it stays
+       readable in both themes. */
+    background: #ffffff;
+    color: var(--btn-text);
+    border: 1px solid rgba(51, 58, 114, 0.18);
+    border-radius: var(--radius-sm);
+    padding: 7px 8px;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.lang-field select:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--accent-b);
+}
+
+.lang-field select option {
+    background: #ffffff;
+    color: var(--btn-text);
+}
+
+.screenshot-parser button {
+    width: 100%;
+    padding: 10px;
+    background: var(--btn-bg);
+    color: var(--btn-text);
+    border: 2px solid transparent;
+    border-radius: var(--radius-btn);
+    box-shadow: 0 4px 8px rgba(51, 58, 114, 0.25);
+    cursor: pointer;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    font-family: inherit;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
+}
+
+.screenshot-parser button:hover {
+    background: linear-gradient(90deg, var(--btn-hover-a), var(--btn-hover-b));
+    border-color: #fff;
+    color: #234;
+    transform: translateY(-2px);
+}
+
+.screenshot-parser button:active {
+    transform: scale(0.97);
+}
+
+/* ---------- Manual-review popup (low-confidence OCR fields) ---------- */
+
+/* The dimmed, fixed-to-viewport overlay - shown/hidden by toggling this
+   element's own inline display (see script.js) between "none" and "" (the
+   empty string falls back to this class's own display:flex declaration,
+   which is what actually centers .review-panel below). Sits above
+   everything else on the page including the desktop no-scroll layout,
+   since position:fixed is relative to the viewport regardless of where in
+   the document it's nested. */
+.review-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(10, 8, 40, 0.6);
+}
+
+/* The actual floating card - a solid panel like the rest of the site
+   (unlike its old dashed-well look, which made sense sitting inside
+   another card but not floating on its own), capped in size with its own
+   internal scroll so a long list of uncertain fields never has to push
+   past the viewport. */
+.review-panel {
+    background: var(--panel-bg);
+    border-radius: var(--radius-lg);
+    padding: 22px;
+    width: 100%;
+    max-width: 640px;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: var(--panel-shadow);
+    display: flex;
+    flex-direction: column;
+    row-gap: 12px;
+    color: var(--ink);
+}
+
+.review-item {
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(51, 58, 114, 0.14);
+}
+
+.review-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.review-item-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 8px;
+}
+
+.review-choices {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.review-choice-btn {
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    font-family: inherit;
+    background: var(--btn-bg);
+    color: var(--btn-text);
+    border: 2px solid transparent;
+    border-radius: var(--radius-btn);
+    box-shadow: 0 3px 7px rgba(51, 58, 114, 0.2);
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+}
+
+.review-choice-btn:hover {
+    background: linear-gradient(90deg, var(--btn-hover-a), var(--btn-hover-b));
+    transform: translateY(-1px);
+}
+
+.review-choice-btn.selected {
+    border-color: var(--select-border);
+    background: var(--select-bg);
+    color: var(--ink);
+}
+
+.review-manual-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 6px 8px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: var(--field-bg);
+    color: var(--field-text);
+    font-family: inherit;
+    font-size: 12px;
+}
+
+/* Custom-styled stand-in for a native <input list>/<datalist> popup (see
+   main.mjs's attachCombobox) - appended to <body> and positioned via JS
+   rather than nested under .review-item, so its position:fixed placement
+   floats above review-panel's own overflow-y:auto instead of being
+   clipped by it. z-index sits above .review-backdrop's 1000. */
+.review-combobox-list {
+    position: fixed;
+    z-index: 1001;
+    max-height: 220px;
+    overflow-y: auto;
+    background: var(--panel-bg-soft);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--panel-shadow);
+    padding: 4px;
+    box-sizing: border-box;
+}
+
+.review-combobox-option {
+    padding: 6px 8px;
+    font-size: 12px;
+    font-family: inherit;
+    color: var(--ink);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+}
+
+.review-combobox-option:hover,
+.review-combobox-option.highlighted {
+    background: var(--select-bg);
+    color: var(--ink);
+}
+
+.review-combobox-empty {
+    padding: 6px 8px;
+    font-size: 12px;
+    color: var(--ink-dim);
+}
+
+#review-confirm {
+    width: 100%;
+    padding: 10px;
+    background: var(--btn-bg);
+    color: var(--btn-text);
+    border: 2px solid transparent;
+    border-radius: var(--radius-btn);
+    box-shadow: 0 4px 8px rgba(51, 58, 114, 0.25);
+    cursor: pointer;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    font-family: inherit;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
+}
+
+#review-confirm:hover {
+    background: linear-gradient(90deg, var(--btn-hover-a), var(--btn-hover-b));
+    border-color: #fff;
+    color: #234;
+    transform: translateY(-2px);
+}
+
+#review-confirm:active {
+    transform: scale(0.97);
+}
+
+/* ---------- Paste textarea ---------- */
+
+/* The actual flex:1/min-height sizing lives on .paste-wrap, not this
+   textarea directly - it needs a position:relative wrapper to anchor the
+   copy-to-clipboard button in its bottom-right corner, and that wrapper is
+   what has to be the .panel's flex child for the sizing to still work. */
+.paste-wrap {
+    position: relative;
+    flex: 1;
+    min-height: 480px;
+    display: flex;
+}
+
+#paste {
+    width: 100%;
+    flex: 1;
+    resize: vertical;
+    background: var(--field-bg);
+    color: var(--field-text);
+    border: 0;
+    border-radius: var(--radius-md);
+    font-family: Montserrat, monospace;
+    font-size: 13.5px;
+    padding: 12px;
+}
+
+#copy-paste-btn {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    padding: 7px 14px;
+    background: var(--btn-bg);
+    color: var(--btn-text);
+    border: 2px solid transparent;
+    border-radius: var(--radius-btn);
+    box-shadow: 0 3px 7px rgba(51, 58, 114, 0.25);
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    font-family: inherit;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
+}
+
+#copy-paste-btn:hover {
+    background: linear-gradient(90deg, var(--btn-hover-a), var(--btn-hover-b));
+    border-color: #fff;
+    color: #234;
+    transform: translateY(-2px);
+}
+
+#copy-paste-btn:active {
+    transform: scale(0.96);
+}
+
+#paste:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--accent-b);
+}
+
+/* ---------- Field grid / floating labels ---------- */
+
+.field-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 22px 20px;
+}
+
+@media (max-width: 640px) {
+    .field-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.Dcontainer {
+    position: relative;
+}
+
+#data input {
+    width: 100%;
+    border: none;
+    border-bottom: 2px solid rgba(51, 58, 114, 0.3);
+    outline: 0;
+    font-size: 15px;
+    font-weight: 500;
+    font-family: inherit;
+    background: transparent;
+    color: var(--ink);
+    padding: 6px 4px 9px;
+}
+
+label.info {
+    position: absolute;
+    color: var(--ink-dim);
+    top: 9px;
+    left: 4px;
+    font-size: 15px;
+    display: block;
+    pointer-events: none;
+    transition: 0.15s ease;
+    z-index: 0;
+}
+
+input.info {
+    position: relative;
+    z-index: 1;
+}
+
+input.info:not(:placeholder-shown) ~ label.info {
+    font-size: 11px;
+    top: -12px;
+    left: 2px;
+    color: var(--ink-dim);
+}
+
+input.info:focus ~ label.info {
+    font-size: 11px;
+    top: -12px;
+    left: 2px;
+    color: var(--link);
+}
+
+input.info:focus {
+    border-bottom-color: var(--link);
+}
+
+.Dcontainer a {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    margin-top: 3px;
+    font-size: 11px;
+    color: var(--link);
+}
+
+/* ---------- Option pickers ---------- */
+
+.bot {
+    display: flex;
+    flex-direction: column;
+    row-gap: 16px;
+}
+
+.optionsContainer input {
+    display: none !important;
+}
+
+.optionsContainer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    background: rgba(51, 58, 114, 0.05);
+    border: 1px solid rgba(51, 58, 114, 0.14);
+    justify-content: stretch;
+    padding: 7px;
+    border-radius: var(--radius-md);
+}
+
+#division.optionsContainer label,
+#teamlist.optionsContainer label {
+    flex: 1 1 0;
+    min-width: 100px;
+}
+
+#listLang.optionsContainer {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+}
+
+@media (max-width: 560px) {
+    #listLang.optionsContainer {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.optionsContainer label {
+    display: block;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+.optionsContainer .option {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    border-radius: var(--radius-sm);
+    padding: 2px;
+    background: transparent;
+    border: 2px solid transparent;
+    transition: background ease 0.2s, border-color ease 0.2s, transform ease 0.15s;
+}
+
+.optionsContainer label:hover .option {
+    transform: translateY(-1px);
+}
+
+.optionsContainer .option .chroma {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: calc(var(--radius-sm) - 3px);
+    padding: 8px 6px;
+    background-color: var(--field-bg);
+    transition: background-color 0.2s ease;
+    text-align: center;
+}
+
+.optionsContainer .option .chroma:hover {
+    /* Deliberately always this light lavender, not a theme variable - same
+       reasoning as the Screenshot-language dropdown's always-white
+       background: it's a fixed-light hover highlight in both themes, so
+       its text below is pinned to --btn-text (always-dark) rather than
+       --ink (which flips light in dark mode and would go near-invisible
+       against this same light background). */
+    background-color: #dcd8f4;
+}
+
+.optionsContainer label:hover .option .chroma span {
+    color: var(--btn-text);
+}
+
+.optionsContainer label:hover {
+    opacity: 1;
+}
+
+/* Multi-select ("Multi Language List") mode - every checkbox chip reads as
+   permanently on, same lime-green "selected" look the :checked chain below
+   applies to a single active radio chip. */
+.optionsContainer .option.cb {
+    border-color: var(--select-border);
+    background: var(--select-bg);
+}
+
+.optionsContainer .option.cb .chroma {
+    background-color: transparent;
+}
+
+.chroma span {
+    color: var(--ink-dim);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* Selected chip - the lime-green border + pale tint used to highlight the
+   active team slot in the Box screen sidebar, reused here for whichever
+   radio option is currently checked. */
+#Junior:checked ~ label .option,
+#Senior:checked ~ label .option,
+#Master:checked ~ label .option,
+#close:checked ~ label .option,
+#open:checked ~ label .option,
+#reg:checked ~ label .option,
+#sprites:checked ~ label .option,
+#chs:checked ~ label .option,
+#cht:checked ~ label .option,
+#es:checked ~ label .option,
+#en:checked ~ label .option,
+#fre:checked ~ label .option,
+#ger:checked ~ label .option,
+#jpn:checked ~ label .option,
+#kor:checked ~ label .option,
+#ita:checked ~ label .option {
+    border-color: var(--select-border);
+    background: var(--select-bg);
+}
+
+#Junior:checked ~ label .option .chroma,
+#Senior:checked ~ label .option .chroma,
+#Master:checked ~ label .option .chroma,
+#close:checked ~ label .option .chroma,
+#open:checked ~ label .option .chroma,
+#reg:checked ~ label .option .chroma,
+#sprites:checked ~ label .option .chroma,
+#chs:checked ~ label .option .chroma,
+#cht:checked ~ label .option .chroma,
+#es:checked ~ label .option .chroma,
+#en:checked ~ label .option .chroma,
+#fre:checked ~ label .option .chroma,
+#ger:checked ~ label .option .chroma,
+#jpn:checked ~ label .option .chroma,
+#kor:checked ~ label .option .chroma,
+#ita:checked ~ label .option .chroma {
+    background-color: transparent;
+}
+
+#Junior:checked ~ label .option .chroma span,
+#Senior:checked ~ label .option .chroma span,
+#Master:checked ~ label .option .chroma span,
+#open:checked ~ label .option .chroma span,
+#close:checked ~ label .option .chroma span,
+#reg:checked ~ label .option .chroma span,
+#sprites:checked ~ label .option .chroma span,
+#chs:checked ~ label .option .chroma span,
+#cht:checked ~ label .option .chroma span,
+#es:checked ~ label .option .chroma span,
+#en:checked ~ label .option .chroma span,
+#fre:checked ~ label .option .chroma span,
+#ger:checked ~ label .option .chroma span,
+#jpn:checked ~ label .option .chroma span,
+#kor:checked ~ label .option .chroma span,
+#ita:checked ~ label .option .chroma span {
+    color: var(--ink);
+    font-weight: 700;
+}
+
+#open:checked ~ label[for="open"],
+#close:checked ~ label[for="close"],
+#reg:checked ~ label[for="reg"],
+#sprites:checked ~ label[for="sprites"],
+#Junior:checked ~ label[for="Junior"],
+#Senior:checked ~ label[for="Senior"],
+#Master:checked ~ label[for="Master"],
+#chs:checked ~ label[for="chs"],
+#cht:checked ~ label[for="cht"],
+#es:checked ~ label[for="es"],
+#en:checked ~ label[for="en"],
+#fre:checked ~ label[for="fre"],
+#ger:checked ~ label[for="ger"],
+#jpn:checked ~ label[for="jpn"],
+#kor:checked ~ label[for="kor"],
+#ita:checked ~ label[for="ita"] {
+    opacity: 1;
+}
+
+/* ---------- Action / footer ---------- */
+
+.end {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    row-gap: 8px;
+    padding-top: 4px;
+}
+
+#print {
+    width: 100%;
+    max-width: 320px;
+    height: 54px;
+    border-radius: var(--radius-btn);
+    border: 2px solid transparent;
+    color: var(--btn-text);
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    font-family: inherit;
+    background: var(--btn-bg);
+    box-shadow: 0 4px 8px rgba(51, 58, 114, 0.25);
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
+}
+
+#print:hover {
+    background: linear-gradient(90deg, var(--btn-hover-a), var(--btn-hover-b));
+    border-color: #fff;
+    color: #234;
+    transform: translateY(-2px);
+}
+
+#print:active {
+    transform: scale(0.98);
+}
+
+#error {
+    margin: 0;
+    min-height: 18px;
+    color: var(--danger);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* A page-level footer now, not a panel-internal block - sits directly on
+   the dark gradient page background rather than a light card, so (unlike
+   most of this stylesheet) it uses the "text on dark background" variables
+   (--text-dim, --accent-a) instead of --ink-dim/--link, which are
+   calibrated for the light card surfaces. */
+.tips {
+    display: flex;
+    flex-direction: column;
+    row-gap: 8px;
+    margin-top: 20px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.tips p {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-dim);
+}
+
+.tips a {
+    color: var(--accent-a);
+}
+
+@media (min-width: 901px) {
+    /* Laid out as a row instead of stacked, and pinned to its own natural
+       height at the bottom of the fixed-viewport column (see .page's
+       desktop rules above) - much cheaper on vertical space than three
+       stacked paragraphs, which is the whole point on a screen that isn't
+       allowed to scroll. */
+    .tips {
+        flex-direction: row;
+        column-gap: 28px;
+        flex-shrink: 0;
+        margin-top: 8px;
+        padding-top: 8px;
+    }
+
+    .tips p {
+        flex: 1;
+        min-width: 0;
+        font-size: 10.5px;
+        line-height: 1.35;
+    }
+}
+
+/* ---------- Desktop no-scroll layout (see the note near .layout's mobile
+   breakpoint for why this has to live down here) ---------- */
+
+/* Desktop only (matches the breakpoint where the two-column layout is
+   actually in effect) - locks the whole app to one viewport-height
+   "screen" instead of letting the page grow taller and scroll. The header
+   keeps its natural size and every section below is sized to actually fit
+   the remaining space rather than relying on internal scrolling - the
+   overflow-y on .panel is kept only as a safety net for unusually short
+   windows, not the expected everyday case. Left untouched below 900px,
+   where scrolling the whole page is still the right call for a single
+   stacked column. */
+@media (min-width: 901px) {
+    body {
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    .page {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        /* The general 24/24/64 padding is sized for a normally-scrolling
+           page with room to breathe past the last element - on a fixed-
+           height screen that space is budget better spent on actual
+           content, and the .tips footer's own top border already provides
+           a visual stopping point. */
+        padding: 14px 24px 8px;
+    }
+
+    .site-header {
+        flex-shrink: 0;
+        margin-bottom: 12px;
+    }
+
+    .layout {
+        flex: 1;
+        min-height: 0;
+        align-items: stretch;
+        gap: 20px;
+    }
+
+    .panel {
+        min-height: 0;
+        overflow-y: auto;
+        padding: 16px;
+        row-gap: 10px;
+    }
+
+    .site-header .logo {
+        height: 52px;
+        width: 52px;
+        padding: 8px;
+    }
+
+    .header-text h1 {
+        font-size: 20px;
+        margin-bottom: 4px;
+    }
+
+    .header-text .badge {
+        padding: 3px 11px;
+        font-size: 10.5px;
+        margin-bottom: 0;
+    }
+
+    .panel-title:not(:first-child) {
+        padding-top: 12px;
+    }
+
+    .url-import-row input[type="text"] {
+        padding: 6px 10px;
+    }
+
+    .url-import-row button {
+        padding: 6px 16px;
+    }
+
+    .screenshot-parser {
+        padding: 10px;
+        row-gap: 8px;
+    }
+
+    .screenshot-parser button {
+        padding: 7px;
+    }
+
+    /* The one deliberately-shrunk element - #area1's other content (URL
+       import, screenshot upload) stays a fixed, comfortable size, and this
+       textarea's own flex:1 (see .paste-wrap) absorbs whatever height is
+       left over instead. Since both panels are stretched to equal height
+       (.layout's align-items: stretch), that leftover amount is set by how
+       tall #area2's own comfortably-sized content needs to be - not
+       independently, so this floor only matters on unusually short
+       windows where even that isn't enough room. Only shrunk on desktop -
+       mobile has room to scroll, so its taller default is left alone. */
+    .paste-wrap {
+        min-height: 70px;
+    }
+
+    #paste {
+        padding: 8px 10px;
+    }
+
+    .field-grid {
+        gap: 12px 16px;
+    }
+
+    #data input {
+        padding: 5px 4px 6px;
+        font-size: 14px;
+    }
+
+    label.info {
+        font-size: 14px;
+        top: 7px;
+    }
+
+    .bot {
+        row-gap: 12px;
+    }
+
+    .optionsContainer {
+        padding: 6px;
+    }
+
+    .optionsContainer .option .chroma {
+        padding: 7px 5px;
+    }
+
+    .chroma span {
+        font-size: 12.5px;
+    }
+
+    .end {
+        row-gap: 6px;
+        padding-top: 0;
+    }
+
+    #print {
+        height: 42px;
+        font-size: 15px;
+    }
+}

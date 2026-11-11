@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Team List Generator</title>
+<meta name="description" content="Printable Pokémon Champions team list PDFs from a paste, a Poképaste link or screenshots. Made in your browser.">
+<script>
+(function () {
+  var m = document.cookie.match(/(?:^|; )theme=(dark|light)/);
+  var theme = m ? m[1] : (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  document.documentElement.setAttribute("data-theme", theme);
+})();
+</script>
+<link rel="icon" href="logo-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="studio.css?v=4">
+<!-- Needed for the in-browser screenshot-to-pokepaste OCR (client-ocr/) -->
+<script type="importmap">
+{
+  "imports": {
+    "ppu-paddle-ocr/web": "https://esm.sh/ppu-paddle-ocr/web"
+  }
+}
+</script>
+<script src="./coi-serviceworker.js"></script>
+</head>
+<body>
+
+<header class="top">
+  <a class="home" href="../index.html"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M10 3L5 8l5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>VGC tools</span></a>
+  <div class="title"><h1>Team List Generator</h1><span class="beta">Beta</span></div>
+  <button id="theme-toggle" class="icon-btn" type="button" aria-label="Switch between light and dark mode">
+    <svg class="sun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+    <svg class="moon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 1 0 10.5 10.5z"/></svg>
+  </button>
+  <button id="print" class="primary" type="button">Download PDF</button>
+</header>
+
+<div class="layout">
+  <main class="form">
+    <p class="intro">Printable team list PDFs for Pokémon Champions. Fill in your team and details; the sheet on the right updates as you type.</p>
+
+    <!-- TEAM -->
+    <section class="block" aria-labelledby="team-h">
+      <div class="block-head">
+        <h2 id="team-h">Your team</h2>
+        <span class="count" id="team-count" aria-live="polite"></span>
+      </div>
+      <ol class="slots" id="slots" aria-label="Your team at a glance"></ol>
+      <div class="paste-wrap">
+        <label for="paste" class="k-hidden">Team in Showdown format</label>
+        <textarea id="paste" spellcheck="false" placeholder="Paste your team from Showdown or Poképaste&#10;&#10;Incineroar @ Sitrus Berry&#10;Ability: Intimidate&#10;Level: 50&#10;Careful Nature&#10;- Fake Out&#10;- ..."></textarea>
+        <button id="copy-paste-btn" class="ghost small" type="button">Copy</button>
+      </div>
+
+      <div class="helpers">
+        <details class="helper">
+          <summary>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>
+            <span><b>Import from a link</b><small>pokepast.es or vrpastes.com</small></span>
+          </summary>
+          <div class="helper-body">
+            <label for="paste-url">Paste link</label>
+            <div class="row">
+              <input type="text" id="paste-url" placeholder="https://pokepast.es/…" autocomplete="off" inputmode="url">
+              <button id="btn-import-url" class="secondary" type="button">Import</button>
+            </div>
+            <div id="url-import-status" class="status-text" aria-live="polite"></div>
+          </div>
+        </details>
+
+        <details class="helper" id="screenshot-parser-container">
+          <summary>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3.2"/><path d="M8 5l1.5-2h5L16 5"/></svg>
+            <span><b>Read from screenshots</b><small>Two in-game screens. Read on your device, never uploaded.</small></span>
+          </summary>
+          <div class="helper-body">
+            <div class="files">
+              <label class="drop">
+                <input type="file" id="img-moves" accept="image/*">
+                <span class="drop-thumb" aria-hidden="true"></span>
+                <span class="drop-text"><b>Moves and items</b><small data-empty="Choose or drop the screen">Choose or drop the screen</small></span>
+              </label>
+              <label class="drop">
+                <input type="file" id="img-stats" accept="image/*">
+                <span class="drop-thumb" aria-hidden="true"></span>
+                <span class="drop-text"><b>Stats and natures</b><small data-empty="Choose or drop the screen">Choose or drop the screen</small></span>
+              </label>
+            </div>
+            <label for="screenshot-lang">Game language in the screenshots</label>
+            <select id="screenshot-lang">
+              <option value="en" selected>English</option>
+              <option value="fr">French</option>
+              <option value="de">German</option>
+              <option value="it">Italian</option>
+              <option value="es">Spanish</option>
+              <option value="ja">Japanese</option>
+              <option value="ko">Korean</option>
+              <option value="zh-Hans">Chinese (Simplified)</option>
+              <option value="zh-Hant">Chinese (Traditional)</option>
+            </select>
+            <button id="btn-parse-screens" class="secondary" type="button">Read screenshots</button>
+            <div id="parser-status" class="status-text" aria-live="polite"></div>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- PLAYER -->
+    <section class="block" aria-labelledby="you-h">
+      <div class="block-head"><h2 id="you-h">You</h2></div>
+      <div id="data" class="fields">
+        <div class="f"><label for="playerName">Player name</label><input id="playerName" type="text" maxlength="45" autocomplete="name"></div>
+        <div class="f"><label for="trainerName">Trainer name in game</label><input id="trainerName" type="text"></div>
+        <div class="f"><label for="teamName">Battle Team number or name</label><input id="teamName" type="text"></div>
+        <div class="f"><label for="switchName">Switch profile name</label><input id="switchName" type="text"></div>
+        <div class="f"><label for="playerId">Player ID</label><input id="playerId" type="text" inputmode="numeric"><a class="hint-link" target="_blank" href="https://play.pokemon.com/en-us/resources/documents/player-id-generation-article/">What is my Player ID?</a></div>
+        <div class="f"><label for="birth">Date of birth</label><input id="birth" type="text" autocomplete="bday"></div>
+        <div class="f"><label for="supportId">Support ID</label><input id="supportId" type="text"></div>
+      </div>
+      <p class="privacy">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+        Nothing you type is saved or sent anywhere. The PDF is made in your browser.
+      </p>
+    </section>
+
+    <!-- SHEET -->
+    <section class="block" aria-labelledby="sheet-h">
+      <div class="block-head"><h2 id="sheet-h">The sheet</h2></div>
+
+      <fieldset class="group">
+        <legend>Which list</legend>
+        <div class="cards" id="teamlist">
+          <label class="card"><input type="radio" id="close" name="sheet" value="close"><span class="option"><b>Staff team list</b><small>Page 1 of 2. Handed to event staff, with stats, Player ID and date of birth.</small></span></label>
+          <label class="card"><input type="radio" id="open" name="sheet" value="open" checked><span class="option"><b>Open team list</b><small>Page 2 of 2. Shown to your opponent each round.</small></span></label>
+          <label class="card"><input type="radio" id="reg" name="sheet" value="reg"><span class="option"><b>Multi-language list</b><small>Your team in every language you pick below, on one sheet.</small></span></label>
+          <input type="radio" id="sprites" name="sheet" value="sprites" hidden>
+        </div>
+        <p class="note" id="sheet-note">Most events want both pages: download the staff list and the open list.</p>
+      </fieldset>
+
+      <fieldset class="group">
+        <legend>Age division</legend>
+        <div class="boxes" id="division">
+          <label><input type="radio" id="Junior" name="ageDivision" value="0"><span class="option">Junior</span></label>
+          <label><input type="radio" id="Senior" name="ageDivision" value="1"><span class="option">Senior</span></label>
+          <label><input type="radio" id="Master" name="ageDivision" value="2" checked><span class="option">Master</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="group">
+        <legend id="lang-legend">Language of the sheet</legend>
+        <div class="boxes" id="listLang">
+          <label><input type="radio" id="en" name="radioLang" value="En" checked><span class="option">English</span></label>
+          <label><input type="radio" id="ita" name="radioLang" value="Ita"><span class="option">Italian</span></label>
+          <label><input type="radio" id="es" name="radioLang" value="Es"><span class="option">Spanish</span></label>
+          <label><input type="radio" id="fre" name="radioLang" value="Fre"><span class="option">French</span></label>
+          <label><input type="radio" id="ger" name="radioLang" value="Ger"><span class="option">German</span></label>
+          <label><input type="radio" id="jpn" name="radioLang" value="Jpn"><span class="option">Japanese</span></label>
+          <label><input type="radio" id="kor" name="radioLang" value="Kor"><span class="option">Korean</span></label>
+          <label><input type="radio" id="chs" name="radioLang" value="Chs"><span class="option">Simplified Chinese</span></label>
+          <label><input type="radio" id="cht" name="radioLang" value="Cht"><span class="option">Traditional Chinese</span></label>
+        </div>
+      </fieldset>
+    </section>
+
+    <footer class="tips">
+      <p id="tip1">Not sure which lists to submit? Ask the event organiser.</p>
+      <p id="tip2">List every Pokémon exactly as it appears in your Battle Team, at the level it is in the game.</p>
+      <p id="tip3">Open source: <a target="_blank" href="https://github.com/shairaba/shairaba.github.io/tree/main/PokemonTeamListCreator-ChampionsBeta">see the code</a>. Champions update of the <a target="_blank" href="https://github.com/DhSufi/PokemonTeamListCreator">original project</a> by <a href="https://x.com/DhSufi">DhSufi</a>.</p>
+    </footer>
+  </main>
+
+  <aside class="desk" aria-label="Sheet preview">
+    <div class="paper" id="paper">
+      <iframe id="pdf" title="PDF preview" hidden></iframe>
+      <div class="paper-empty" id="paper-empty">
+        <svg viewBox="0 0 64 80" width="54" height="68" aria-hidden="true"><rect x="2" y="2" width="60" height="76" rx="4" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M14 20h36M14 32h36M14 44h24M14 56h30" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+        <p id="paper-msg">Add your team to see the sheet.</p>
+      </div>
+    </div>
+    <p class="sheet-status" id="sheet-status" aria-live="polite"></p>
+  </aside>
+</div>
+
+<h5 id="error" class="k-hidden" aria-hidden="true"> </h5>
+
+<div id="review-card" class="review-backdrop" style="display:none">
+  <div class="review-panel" role="dialog" aria-modal="true" aria-labelledby="review-h">
+    <h2 id="review-h">Check a few reads</h2>
+    <p class="review-lede">These came out unclear in the screenshots. Pick the right value for each.</p>
+    <div id="review-list"></div>
+    <button id="review-confirm" class="primary" type="button">Use these and continue</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script type="text/javascript" src="Resources/Pokes/TranslatorPokes.js?v=2026-11-11"></script>
+<script type="text/javascript" src="Resources/Abilities/TranslatorAbilities.js?v=2026-11-11"></script>
+<script type="text/javascript" src="Resources/Items/TranslatorItems.js?v=2026-11-11"></script>
+<script type="text/javascript" src="Resources/Moves/TranslatorMoves.js?v=2026-11-11"></script>
+<script type="text/javascript" src="Resources/Natures/TranslatorNatures.js?v=2026-11-11"></script>
+<script type="text/javascript" src="Resources/PrintLabels.js?v=2026-11-11"></script>
+<script type="text/javascript" src="Resources/Showdown/pokedex.js?v=2026-11-11"></script>
+<script type="text/javascript" src="Resources/Showdown/natures.js?v=2026-11-11"></script>
+<script src="../../PokemonTeamListCreator-ChampionsBeta/fontChs.js"></script>
+<script src="../../PokemonTeamListCreator-ChampionsBeta/fontCht.js"></script>
+<script src="../../PokemonTeamListCreator-ChampionsBeta/fontJpn.js"></script>
+<script src="../../PokemonTeamListCreator-ChampionsBeta/fontKor.js"></script>
+<script src="../../PokemonTeamListCreator-ChampionsBeta/fontLatin.js"></script>
+<script src="../../PokemonTeamListCreator-ChampionsBeta/font1.js"></script>
+<script src="../../PokemonTeamListCreator-ChampionsBeta/font2.js"></script>
+<script src="../../PokemonTeamListCreator-ChampionsBeta/font3.js"></script>
+<script src="../../PokemonTeamListCreator-ChampionsBeta/fontSymbols.js"></script>
+<script src="script.js?v=7" type="module"></script>
+<script src="jspdf.js" type="text/javascript"></script>
+<script src="sprites.js?v=1"></script>
+<script src="studio.js?v=4"></script>
+</body>
+</html>

@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+<meta name="robots" content="noindex">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pok&eacute;mon Event Locator but better</title>
+  <!-- Static, non-dynamic OG tags: crawlers for WhatsApp/Telegram/etc. don't
+       run JavaScript, so they can't see the actual venue this page renders
+       client-side from ?vid= - every shared venue link gets this same
+       generic branded preview rather than nothing. -->
+  <meta name="description" content="Cerca i prossimi eventi Pok&eacute;mon ufficiali (VGC, GCC, GO) in tutta Italia: elenco, calendario e mappa, con tutti i dettagli.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://shairaba.github.io/pokemon-events-italia/venue.html">
+  <meta property="og:title" content="Pok&eacute;mon Event Locator but better">
+  <meta property="og:description" content="Cerca i prossimi eventi Pok&eacute;mon ufficiali (VGC, GCC, GO) in tutta Italia: elenco, calendario e mappa, con tutti i dettagli.">
+  <meta property="og:image" content="https://shairaba.github.io/pokemon-events-italia/social-preview.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:locale" content="it_IT">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Pok&eacute;mon Event Locator but better">
+  <meta name="twitter:description" content="Cerca i prossimi eventi Pok&eacute;mon ufficiali (VGC, GCC, GO) in tutta Italia: elenco, calendario e mappa, con tutti i dettagli.">
+  <meta name="twitter:image" content="https://shairaba.github.io/pokemon-events-italia/social-preview.png">
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <!-- Applied before the stylesheet/first paint, from a saved cookie (or the
+       OS preference on a first visit) - so a returning dark-mode user never
+       sees a flash of the light theme while the page loads. The toggle
+       button's own click handler (app.js) keeps this in sync afterward and
+       re-saves the cookie. -->
+  <script>
+  (function () {
+    var m = document.cookie.match(/(?:^|; )theme=(dark|light)/);
+    var theme = m ? m[1] : (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", theme);
+  })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rethink+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=20">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+</head>
+<body>
+  <header class="top">
+    <a class="home" href="../index.html"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M10 3L5 8l5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="homeLink">Strumenti VGC</span></a>
+    <a class="tool-name" href="index.html">Event Locator</a>
+    <div class="lang-toggle" role="group" aria-label="Lingua / Language">
+      <button class="lang-btn" data-lang="it" type="button">IT</button>
+      <button class="lang-btn" data-lang="en" type="button">EN</button>
+    </div>
+    <button id="theme-toggle" class="icon-btn" type="button" aria-label="Tema chiaro o scuro / Light or dark mode">
+      <svg class="sun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      <svg class="moon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 1 0 10.5 10.5z"/></svg>
+    </button>
+  </header>
+  <main class="container" id="main-content">
+    <p class="loading" data-i18n="loading">Caricamento&hellip;</p>
+  </main>
+
+  <div id="cookie-banner" class="cookie-banner" style="display:none">
+    <p data-i18n="cookieNotice">Questo sito salva solo le tue preferenze di tema e lingua sul tuo dispositivo (un cookie tecnico e il local storage del browser). Nessun dato viene inviato a terzi o usato per tracciamento.</p>
+    <button id="cookie-accept" type="button" data-i18n="cookieAccept">Ho capito</button>
+  </div>
+
+  <button id="back-to-top" class="back-to-top" type="button" data-i18n-aria-label="backToTop" aria-label="Torna in cima">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="12" y1="19" x2="12" y2="5"></line>
+      <polyline points="5 12 12 5 19 12"></polyline>
+    </svg>
+  </button>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="app.js?v=20"></script>
+  <script>
+    let venueEvents = [];
+    let currentVenue = null;
+
+    function currentFilterState() {
+      const games = ["vg", "tcg", "pgo"].filter((g) => document.getElementById(`game-${g}`).checked);
+      const types = ["cup", "challenge", "tournament", "league"].filter((ty) => document.getElementById(`type-${ty}`).checked);
+      return { types, games };
+    }
+
+    /* Same upcoming-only convention as the list/calendar views - a venue
+       page is meant to answer "what's coming up here", not serve as a full
+       history of every event the store has ever run. */
+    function applyVenueFilters(events, filterState) {
+      const todayKey = localDateKey({ start_date: new Date().toISOString() });
+      // Same is_active check as index.html's applyFilters() - an event the
+      // official locator no longer lists doesn't belong in "what's coming
+      // up here" either.
+      let rows = events.filter((e) => {
+        if (e.is_active === false) return false;
+        const key = localDateKey(e);
+        return key && key >= todayKey;
+      });
+      if (filterState.types && filterState.types.length < 4)
+        rows = rows.filter((e) => filterState.types.includes(eventTypeKey(e)));
+      if (filterState.games && filterState.games.length < 3)
+        rows = rows.filter((e) => (e.products || []).some((p) => filterState.games.includes(p)));
+      return rows.slice().sort((a, b) => (a.start_date || "").localeCompare(b.start_date || ""));
+    }
+
+    function render() {
+      const filtered = applyVenueFilters(venueEvents, currentFilterState());
+      const container = document.getElementById("rows");
+      if (!filtered.length) {
+        container.innerHTML = `<p class="empty-state">${esc(t("noEventsFound"))}</p>`;
+      } else {
+        container.innerHTML = filtered.map((e) => eventCardHtml(e, { showDate: true })).join("");
+        wireEventCardClicks(container);
+        wireFavoriteButtons(container);
+      }
+      document.getElementById("venue-count").textContent = t("venueUpcomingCount", filtered.length);
+    }
+
+    function renderVenuePage() {
+      const main = document.getElementById("main-content");
+      document.title = `${currentVenue.name} - ${t("brand")}`;
+
+      main.innerHTML = `
+        <a class="back-link" href="index.html">${esc(t("backToList"))}</a>
+        <h1 class="detail-title">${esc(currentVenue.name)}</h1>
+        ${currentVenue.address ? `<p class="detail-subtitle">${esc(currentVenue.address)}</p>` : ""}
+        <div class="detail-actions">
+          ${currentVenue.latitude && currentVenue.longitude ? `<a class="btn btn-secondary" href="${esc(googleMapsDirectionsUrl(currentVenue))}" target="_blank" rel="noopener">${esc(t("takeMeThere"))}</a>` : ""}
+          <button type="button" id="share-btn" class="btn btn-secondary">${SHARE_ICON_SVG}<span>${esc(t("share"))}</span></button>
+        </div>
+        ${currentVenue.latitude && currentVenue.longitude ? `<div id="venue-map"></div>` : ""}
+
+        <div class="venue-filters" id="filter-form">
+          <div class="filter-group">
+            <span class="filter-label" data-i18n="types">Tipo</span>
+            <label class="toggle-chip type-toggle-cup">
+              <input type="checkbox" id="type-cup" checked>
+              <span data-i18n="typeCup">Coppa di Lega</span>
+            </label>
+            <label class="toggle-chip type-toggle-challenge">
+              <input type="checkbox" id="type-challenge" checked>
+              <span data-i18n="typeChallenge">Sfida di Lega</span>
+            </label>
+            <label class="toggle-chip type-toggle-tournament">
+              <input type="checkbox" id="type-tournament" checked>
+              <span data-i18n="typeTournament">Torneo</span>
+            </label>
+            <label class="toggle-chip type-toggle-league">
+              <input type="checkbox" id="type-league" checked>
+              <span data-i18n="typeLeague">Lega</span>
+            </label>
+          </div>
+          <div class="filter-group">
+            <span class="filter-label" data-i18n="games">Giochi</span>
+            <label class="toggle-chip game-toggle-vg">
+              <input type="checkbox" id="game-vg" checked>
+              <span data-i18n="gameVg">Video Game</span>
+            </label>
+            <label class="toggle-chip game-toggle-tcg">
+              <input type="checkbox" id="game-tcg" checked>
+              <span data-i18n="gameTcg">GCC</span>
+            </label>
+            <label class="toggle-chip game-toggle-pgo">
+              <input type="checkbox" id="game-pgo" checked>
+              <span data-i18n="gamePgo">GO</span>
+            </label>
+          </div>
+        </div>
+
+        <p class="showing-note" id="venue-count"></p>
+        <div class="event-list" id="rows"></div>
+      `;
+      applyTranslations(main);
+
+      if (currentVenue.latitude && currentVenue.longitude) {
+        const map = L.map("venue-map", { zoomControl: false, dragging: false, scrollWheelZoom: false, touchZoom: false })
+          .setView([currentVenue.latitude, currentVenue.longitude], 15);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 19,
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        }).addTo(map);
+        L.marker([currentVenue.latitude, currentVenue.longitude]).addTo(map);
+      }
+
+      document.getElementById("share-btn").addEventListener("click", async () => {
+        const btn = document.getElementById("share-btn");
+        const result = await shareOrCopy({ title: currentVenue.name, text: currentVenue.name, url: location.href });
+        if (result === "copied") {
+          const original = btn.innerHTML;
+          btn.innerHTML = esc(t("linkCopied"));
+          setTimeout(() => { btn.innerHTML = original; }, 2000);
+        }
+      });
+
+      ["cup", "challenge", "tournament", "league"].forEach((ty) => document.getElementById(`type-${ty}`).addEventListener("change", render));
+      ["vg", "tcg", "pgo"].forEach((g) => document.getElementById(`game-${g}`).addEventListener("change", render));
+
+      render();
+    }
+
+    (async function main() {
+      initThemeToggle();
+      initCookieConsent();
+      initBackToTop();
+      initLangToggle(() => currentVenue && renderVenuePage());
+
+      const main = document.getElementById("main-content");
+      const vid = qs("vid");
+      if (!vid) {
+        main.innerHTML = `<p class="empty-state">${esc(t("venueNotFound"))}</p>`;
+        return;
+      }
+
+      let events;
+      try {
+        events = await loadEvents();
+      } catch (err) {
+        main.innerHTML = `<p class="empty-state">${esc(t("loadError"))}</p>`;
+        console.error(err);
+        return;
+      }
+
+      venueEvents = events.filter((e) => e.activity_group_display_id === vid);
+      if (!venueEvents.length) {
+        main.innerHTML = `<p class="empty-state">${esc(t("venueNotFound"))}</p>`;
+        return;
+      }
+
+      const sample = venueEvents[0];
+      currentVenue = {
+        name: sample.activity_group_name || sample.venue_name || t("venueNotFound"),
+        address: sample.full_address || "",
+        latitude: sample.latitude,
+        longitude: sample.longitude,
+      };
+
+      renderVenuePage();
+    })();
+  </script>
+</body>
+</html>

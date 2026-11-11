@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+<meta name="robots" content="noindex">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard - VGC Locals Italia</title>
+  <link rel="icon" href="logo.svg" type="image/svg+xml">
+  <script>
+  (function () {
+    var m = document.cookie.match(/(?:^|; )theme=(dark|light)/);
+    var theme = m ? m[1] : (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", theme);
+  })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="style.css?v=20">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand-group" href="index.html">
+      <img class="logo" src="logo.svg" alt="">
+      <span class="brand">VGC Locals Italia</span>
+    </a>
+    <div class="topbar-controls">
+      <nav>
+        <a href="index.html" data-i18n="navTournaments">Tournaments</a>
+      </nav>
+      <div class="lang-toggle">
+        <button class="lang-btn" data-lang="it" type="button">IT</button>
+        <button class="lang-btn" data-lang="en" type="button">EN</button>
+      </div>
+      <button id="theme-toggle" type="button" data-i18n-aria-label="themeToggleLabel" aria-label="Toggle dark mode">
+        <span class="theme-switch-icon theme-switch-sun" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+          </svg>
+        </span>
+        <span class="theme-switch-icon theme-switch-moon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+            <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 1 0 10.5 10.5z"></path>
+          </svg>
+        </span>
+        <span class="theme-switch-knob"></span>
+      </button>
+    </div>
+  </header>
+  <main class="container">
+    <h1 data-i18n="dashboardH1">Top Cut Usage</h1>
+
+    <div class="stat-row">
+      <div class="stat">
+        <div class="stat-num" id="stat-tournaments">-</div>
+        <div class="stat-label" data-i18n="statLocalsCounted">Locals counted</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" id="stat-players">-</div>
+        <div class="stat-label" data-i18n="statTopCutTeams">Top-cut teams counted</div>
+      </div>
+    </div>
+
+    <section class="panel">
+      <h2 data-i18n="mostUsedHeading">Most used Pok&eacute;mon in top cut</h2>
+      <div class="meter-list" id="top-pokemon"><p class="loading" data-i18n="loading">Loading&hellip;</p></div>
+    </section>
+
+    <p class="footnote" data-i18n="footnoteDisclaimer">Not affiliated with The Pok&eacute;mon Company International.</p>
+  </main>
+
+  <script src="app.js?v=20"></script>
+  <script src="sprite-map.js"></script>
+  <script>
+    function renderMeters(list) {
+      const container = document.getElementById("top-pokemon");
+      if (!list.length) {
+        container.innerHTML = `<p class="empty-state">${esc(t("noDataYet"))}</p>`;
+        return;
+      }
+      const max = list[0].count;
+      container.innerHTML = list
+        .map(
+          (p) => `
+        <a class="meter-row" href="species.html?id=${encodeURIComponent(p.species_id)}">
+          ${spriteChipHtml(p.species_id, p.species_name)}
+          <div class="meter-body">
+            <div class="meter-label"><span class="truncate">${esc(p.species_name)}</span><span class="meter-value">${p.usage_pct}%</span></div>
+            <div class="meter-track"><div class="meter-fill" style="width:${(100 * p.count) / max}%"></div></div>
+          </div>
+          <span class="meter-chevron" aria-hidden="true">&rsaquo;</span>
+        </a>`
+        )
+        .join("");
+    }
+
+    (async function () {
+      const dashboard = await fetchJSON("data/dashboard.json");
+      document.getElementById("stat-tournaments").textContent = dashboard.meta.total_tournaments.toLocaleString();
+      document.getElementById("stat-players").textContent = dashboard.meta.total_top_cut_players.toLocaleString();
+      renderMeters(dashboard.top_pokemon);
+      initLangToggle(() => renderMeters(dashboard.top_pokemon));
+    })();
+  </script>
+</body>
+</html>

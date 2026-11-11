@@ -127,6 +127,23 @@ a { color: var(--accent); text-decoration: none; }
   box-shadow: 0 4px 16px -6px rgba(0, 0, 0, .35);
 }
 
+/* Link to the redesign preview (redesign/), while both layouts are tested. */
+.try-new {
+  margin-right: auto;
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: #fff;
+  color: #333a72;
+  font-weight: 700;
+  font-size: .85rem;
+  box-shadow: 0 6px 14px rgba(10, 8, 40, .3);
+  transition: transform .15s ease;
+}
+.try-new:hover { transform: translateY(-2px); }
+
 /* Light/dark toggle - a sliding day/night switch. */
 #theme-toggle {
   position: relative;
@@ -259,6 +276,7 @@ a { color: var(--accent); text-decoration: none; }
 </head>
 <body>
   <header class="topbar">
+    <a class="try-new" href="redesign/index.html">Try the new layout</a>
     <button id="theme-toggle" type="button" aria-label="Toggle dark mode">
       <span class="theme-switch-icon theme-switch-sun" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">

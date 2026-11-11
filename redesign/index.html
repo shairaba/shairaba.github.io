@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>VGC tools</title>
+<meta name="description" content="Six free tools for Pokémon VGC players: team graphics, printable team lists, EV conversion, events and local results in Italy, CP tracking.">
+<link rel="icon" href="kit/icon.svg">
+<script>
+(function () {
+  var m = document.cookie.match(/(?:^|; )theme=(dark|light)/);
+  var theme = m ? m[1] : (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  document.documentElement.setAttribute("data-theme", theme);
+})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* VGC tools: the front door. Neutral ink and grey, so each tool can bring
+   its own colour: every card shows a tiny version of that tool's
+   signature (EV pips, a ticket stub, CP boxes...), so the page previews
+   the tools instead of only naming them.                                */
+:root {
+  --ground: #f3f4f6;
+  --panel: #ffffff;
+  --ink: #131417;
+  --soft: #555a63;
+  --faint: #8a8f98;
+  --line: #e2e4e8;
+  --hover: #f0f1f3;
+  --field: #f7f8f9;
+  --lit: #131417;
+  --shadow: 0 1px 2px rgba(19, 20, 23, .05), 0 3px 10px rgba(19, 20, 23, .04);
+  --lift: 0 6px 16px rgba(19, 20, 23, .08), 0 22px 44px -18px rgba(19, 20, 23, .28);
+  --font: "Geist", system-ui, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --ease: cubic-bezier(.23, 1, .32, 1);
+  /* each tool's own accent, matching its page */
+  --c-ev: #0b7a70;      --c-ev-weak: #dff3ef;
+  --c-tlg: #a81e2e;     --c-tlg-2: #fdc447;
+  --c-pdf: #2347c7;     --c-pdf-weak: #e7edfd;
+  --c-events: #d6392b;  --c-stub: #f6c445; --c-stub-ink: #2b1f00;
+  --c-locals: #6b3fd6;  --c-locals-weak: #f4f0fe;
+  --c-cp: #f4b400;      --c-cp-ink: #241a00;
+  --pip-off: #e3e8ec;
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --ground: #0f1012;
+  --panel: #18191c;
+  --ink: #eceef1;
+  --soft: #a6abb3;
+  --faint: #737881;
+  --line: #2a2c31;
+  --hover: #212226;
+  --field: #131417;
+  --lit: #eceef1;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .45);
+  --lift: 0 6px 16px rgba(0, 0, 0, .5), 0 22px 44px -18px rgba(0, 0, 0, .85);
+  --c-ev: #4fd1bf;      --c-ev-weak: #12302c;
+  --c-tlg: #c8303f;     --c-tlg-2: #fdc447;
+  --c-pdf: #8fa8ff;     --c-pdf-weak: #1f2a52;
+  --c-events: #ff6f5e;  --c-stub: #e9b634; --c-stub-ink: #241a00;
+  --c-locals: #a98bff;  --c-locals-weak: #1f1a30;
+  --c-cp: #f7c548;      --c-cp-ink: #241a00;
+  --pip-off: #2a3138;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--ground); }
+body { margin: 0; font: 400 15px/1.5 var(--font); color: var(--ink); background: var(--ground); -webkit-font-smoothing: antialiased; }
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* top bar: same pattern as every tool, minus the back link */
+.top { position: sticky; top: 0; z-index: 20; height: 60px; display: flex; align-items: center; gap: 12px; padding: 0 16px 0 20px;
+  background: color-mix(in srgb, var(--panel) 92%, transparent); backdrop-filter: saturate(1.4) blur(10px); border-bottom: 1px solid var(--line); }
+.top .name { margin-right: auto; font-size: 18px; font-weight: 700; letter-spacing: -.015em; }
+.old { color: var(--soft); font-size: 14px; font-weight: 600; text-decoration: none; padding: 8px 10px; border-radius: 9px; }
+.old:hover { color: var(--ink); background: var(--hover); }
+.icon-btn { width: 40px; height: 40px; display: grid; place-items: center; border: 0; border-radius: 10px; background: none; color: var(--soft); box-shadow: inset 0 0 0 1px var(--line); }
+.icon-btn:hover { color: var(--ink); background: var(--hover); }
+.icon-btn .moon, :root[data-theme="dark"] .icon-btn .sun { display: none; }
+:root[data-theme="dark"] .icon-btn .moon { display: block; }
+
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px 56px; }
+.hero { padding: 48px 0 26px; }
+.hero h1 { margin: 0; font-size: clamp(40px, 7vw, 72px); line-height: 1; letter-spacing: -.045em; font-weight: 800; }
+.hero p { margin: 12px 0 0; color: var(--soft); font-size: 17px; max-width: 52ch; }
+
+/* the field that reads what you give it */
+.router { background: var(--panel); border-radius: 18px; padding: 16px; box-shadow: var(--shadow), inset 0 0 0 1px var(--line); }
+.router label { display: block; font-weight: 700; margin: 0 0 8px 2px; }
+.ask { display: flex; gap: 8px; }
+#q { flex: 1; min-width: 0; height: 52px; padding: 0 16px; border: 0; border-radius: 12px; background: var(--field); font-size: 16px; box-shadow: inset 0 0 0 1px var(--line); outline: none; }
+#q:focus { box-shadow: inset 0 0 0 2px var(--ink); background: var(--panel); }
+#q::placeholder { color: var(--faint); }
+.near { flex: none; height: 52px; padding: 0 18px; display: inline-flex; align-items: center; gap: 8px; border: 0; border-radius: 12px; background: var(--ink); color: var(--panel); font-weight: 700; }
+.near:hover { opacity: .88; }
+.near.on { background: var(--c-events); color: #fff; }
+.verdict { margin: 10px 2px 0; font-weight: 600; min-height: 1.5em; }
+.verdict span { font-weight: 400; color: var(--soft); }
+.verdict button { border: 0; padding: 0; background: none; font-weight: 600; text-decoration: underline; text-underline-offset: .18em; color: var(--ink); }
+.out:empty { display: none; }
+.out { display: grid; gap: 14px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn { display: inline-flex; align-items: center; height: 40px; padding: 0 16px; border: 0; border-radius: 10px; background: var(--ink); color: var(--panel); font-weight: 700; font-size: 14px; text-decoration: none; }
+.btn:hover { opacity: .88; }
+.aside { margin: 0; color: var(--soft); font-size: 14px; }
+.aside a { font-weight: 600; }
+
+/* upcoming tournaments: the same ticket as the Event Locator */
+.tickets { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
+.ticket { display: flex; min-height: 84px; border-radius: 14px; background: var(--panel); color: var(--ink); text-decoration: none; box-shadow: inset 0 0 0 1px var(--line); overflow: hidden; transition: transform 160ms var(--ease), box-shadow 160ms; }
+.ticket:hover { transform: translateY(-2px); box-shadow: var(--lift), inset 0 0 0 1px var(--line); }
+.ticket .stub { flex: none; width: 62px; display: grid; place-content: center; text-align: center; line-height: 1.05; background: var(--c-stub); color: var(--c-stub-ink); border-right: 2px dashed rgba(43, 31, 0, .22); }
+.ticket.challenge .stub { background: #d7dee7; color: #1b2430; border-right-color: rgba(27, 36, 48, .2); }
+:root[data-theme="dark"] .ticket.challenge .stub { background: #3b4757; color: #e6edf5; }
+.ticket .stub b { font-size: 24px; font-weight: 800; letter-spacing: -.03em; }
+.ticket .stub small { font-size: 11px; font-weight: 700; }
+.t-body { flex: 1; min-width: 0; padding: 10px 12px; display: grid; align-content: center; gap: 1px; }
+.t-kind { font-size: 12px; font-weight: 600; color: var(--soft); }
+.t-body b { font-size: 15px; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.t-body small { font-size: 13px; color: var(--soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.t-cp { flex: none; width: 58px; display: grid; place-content: center; text-align: center; font-size: 11px; font-weight: 600; color: var(--soft); line-height: 1.1; }
+.t-cp b { font-size: 20px; font-weight: 800; color: var(--ink); }
+.stats { display: flex; gap: 28px; align-items: center; flex-wrap: wrap; }
+.stats b { display: block; font-size: 30px; font-weight: 800; letter-spacing: -.03em; line-height: 1; }
+.stats small { color: var(--soft); font-size: 13px; }
+.spr { width: 64px; height: 64px; object-fit: contain; }
+.spr-s { width: 30px; height: 30px; object-fit: contain; }
+.hits { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.hits li { display: grid; gap: 1px; }
+.hits b { font-size: 15px; }
+.hits small { color: var(--soft); font-size: 13px; }
+.hits .team { display: flex; gap: 1px; flex-wrap: wrap; }
+
+/* tools, grouped by what you are trying to do */
+.groups { display: grid; grid-template-columns: 3fr 2fr; gap: 36px 28px; margin-top: 40px; }
+.group h2 { margin: 0 0 12px; font-size: 18px; letter-spacing: -.015em; }
+.group ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+.g-ready { grid-column: 1 / -1; }
+.g-ready ul { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.g-play ul { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.g-season ul { grid-template-columns: minmax(0, 1fr); }
+
+.tool { display: flex; flex-direction: column; height: 100%; text-decoration: none; color: var(--ink); background: var(--panel); border-radius: 16px; overflow: hidden;
+  box-shadow: var(--shadow), inset 0 0 0 1px var(--line); transition: transform 180ms var(--ease), box-shadow 180ms var(--ease); }
+.tool:hover { transform: translateY(-3px); box-shadow: var(--lift), inset 0 0 0 1px var(--line); }
+.tool.lit { box-shadow: var(--lift), inset 0 0 0 1px var(--line); outline: 2px solid var(--lit); outline-offset: 2px; }
+.tool-body { padding: 14px 16px 16px; display: grid; gap: 3px; }
+.tool b { font-size: 17px; letter-spacing: -.015em; }
+.tool b small { font-size: 12px; font-weight: 600; color: var(--soft); padding: 1px 7px; border-radius: 99px; box-shadow: inset 0 0 0 1px var(--line); margin-left: 6px; vertical-align: 2px; }
+.tool span { color: var(--soft); font-size: 14px; }
+.takes { display: none; margin-top: 6px; width: fit-content; padding: 2px 9px; border-radius: 99px; background: var(--lit); color: var(--panel); font-size: 12.5px; font-weight: 700; }
+.tool.lit .takes { display: block; }
+
+/* the miniatures: each tool's signature, small */
+.mini { height: 96px; display: grid; place-items: center; background: var(--field); border-bottom: 1px solid var(--line); overflow: hidden; }
+.mini-ev { display: grid; gap: 5px; width: 70%; }
+.mini-ev i { display: grid; grid-template-columns: repeat(32, 1fr); gap: 2px; height: 9px; }
+.mini-ev i::before, .mini-ev i::after { content: none; }
+.mini-ev s { border-radius: 1.5px; background: var(--pip-off); text-decoration: none; }
+.mini-ev s.on { background: var(--c-ev); }
+.mini-tlg { width: 74%; display: grid; gap: 5px; }
+.mini-tlg .plate { height: 18px; border-radius: 6px; background: var(--c-tlg); display: flex; align-items: center; padding: 0 8px; }
+.mini-tlg .plate::before { content: ""; width: 40%; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, .75); }
+.mini-tlg .mons { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+.mini-tlg .mons i { aspect-ratio: 1; border-radius: 6px; background: var(--c-tlg); box-shadow: inset 0 -5px 0 var(--c-tlg-2); }
+.mini-pdf { width: 92px; height: 112px; margin-top: 22px; background: #fff; border-radius: 3px; box-shadow: 0 2px 8px rgba(0, 0, 0, .14); padding: 10px 10px 0; display: grid; gap: 5px; align-content: start; }
+.mini-pdf i { height: 4px; border-radius: 2px; background: #d9dde4; }
+.mini-pdf i:nth-child(2) { width: 70%; }
+.mini-pdf .boxes { display: flex; gap: 5px; margin-top: 3px; }
+.mini-pdf .boxes u { width: 13px; height: 13px; border: 1.5px solid #9aa3b2; border-radius: 2px; position: relative; text-decoration: none; }
+.mini-pdf .boxes u.x::after { content: ""; position: absolute; inset: -2px; background: var(--c-pdf); -webkit-mask: var(--cross) center / contain no-repeat; mask: var(--cross) center / contain no-repeat; }
+:root { --cross: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5.2 4.6c3.4 4.3 8.1 9.6 13.7 15.1M18.6 4.2C14 8.3 9.6 13.4 5.3 19.6' fill='none' stroke='black' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E"); }
+:root[data-theme="dark"] .mini-pdf .boxes u.x::after { background: #2347c7; }
+.mini-events { width: 76%; height: 58px; display: flex; border-radius: 10px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); overflow: hidden; }
+.mini-events .stub { width: 46px; background: var(--c-stub); color: var(--c-stub-ink); display: grid; place-content: center; text-align: center; line-height: 1; border-right: 2px dashed rgba(43, 31, 0, .25); }
+.mini-events .stub b { font-size: 20px; font-weight: 800; }
+.mini-events .stub small { font-size: 10px; font-weight: 700; }
+.mini-events .lines { flex: 1; display: grid; align-content: center; gap: 6px; padding: 0 10px; }
+.mini-events .lines i { height: 5px; border-radius: 3px; background: var(--line); }
+.mini-events .lines i:first-child { width: 80%; background: var(--soft); opacity: .5; }
+.mini-events .lines i:last-child { width: 50%; }
+.mini-locals { width: 100%; height: 100%; display: grid; align-content: end; }
+.mini-locals .band { background: var(--c-locals-weak); padding: 6px 12px 4px; display: flex; justify-content: center; gap: 2px; min-height: 58px; align-items: end; }
+.mini-locals .band img { width: 46px; height: 46px; object-fit: contain; }
+.mini-locals .band::before { content: "Winner"; position: absolute; }
+.mini-locals .band { position: relative; }
+.mini-locals .band::before { top: -20px; left: 12px; font-size: 11px; font-weight: 700; color: var(--c-locals); }
+.mini-cp { display: flex; gap: 6px; }
+.mini-cp i { width: 48px; height: 50px; border-radius: 9px; background: var(--c-cp); color: var(--c-cp-ink); font-style: normal; font-weight: 800; font-size: 16px; padding: 5px 7px; }
+.mini-cp i.open { background: none; border: 1.5px dashed var(--faint); opacity: .7; }
+
+.foot { margin-top: 48px; color: var(--faint); font-size: 13px; }
+
+@media (max-width: 900px) {
+  .groups { grid-template-columns: minmax(0, 1fr); }
+  .g-ready ul { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .top { padding: 0 12px 0 16px; }
+  .wrap { padding: 0 16px 44px; }
+  .hero { padding: 30px 0 20px; }
+  .g-ready ul, .g-play ul { grid-template-columns: minmax(0, 1fr); }
+  .mini { height: 84px; }
+  .ask { flex-wrap: wrap; }
+  #q { flex-basis: 100%; }
+  .near { flex: 1; justify-content: center; }
+  .tickets { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; }
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <span class="name">VGC tools</span>
+  <a class="old" href="../index.html">Current layout</a>
+  <button id="theme-toggle" class="icon-btn" type="button" aria-label="Switch between light and dark mode">
+    <svg class="sun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+    <svg class="moon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 1 0 10.5 10.5z"/></svg>
+  </button>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <h1>VGC tools</h1>
+    <p>Six free tools for Pokémon VGC players. No sign-up, nothing to install.</p>
+  </section>
+
+  <section class="router" id="router">
+    <label for="q">Find your next tournament</label>
+    <div class="ask">
+      <input id="q" type="text" spellcheck="false" autocomplete="off" placeholder="Type a city or region, or a Pokémon">
+      <button type="button" class="near" id="near"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l18-8-8 18-2-8-8-2z"/></svg>Near me</button>
+    </div>
+    <p class="verdict" id="verdict" aria-live="polite"><span>Upcoming League Cups and Challenges in Italy, the events that earn CP. Try <button type="button" data-try="Milano">Milano</button>, <button type="button" data-try="Lazio">Lazio</button> or a Pokémon like <button type="button" data-try="Incineroar">Incineroar</button>.</span></p>
+    <div class="out" id="out"></div>
+  </section>
+
+  <div class="groups">
+    <section class="group g-ready" aria-labelledby="g1">
+      <h2 id="g1">Get your team ready</h2>
+      <ul>
+        <li><a class="tool" data-tool="ev" href="ev-converter/index.html">
+          <div class="mini" aria-hidden="true"><div class="mini-ev" id="mini-ev"></div></div>
+          <div class="tool-body"><b>EV Converter</b><span>Showdown EVs to Champions stat points and back, for a whole team.</span><em class="takes">Takes this</em></div></a></li>
+        <li><a class="tool" data-tool="teamlist" href="vgc-teamlist-generator/index.html">
+          <div class="mini" aria-hidden="true"><div class="mini-tlg"><div class="plate"></div><div class="mons"><i></i><i></i><i></i><i></i><i></i><i></i></div></div></div>
+          <div class="tool-body"><b>Teamlist Generator</b><span>Team graphics for streams and broadcasts, from Poképaste links, pastes or a CSV.</span><em class="takes">Takes this</em></div></a></li>
+        <li><a class="tool" data-tool="print" href="PokemonTeamListCreator-ChampionsBeta/index.html">
+          <div class="mini" aria-hidden="true"><div class="mini-pdf"><i></i><i></i><div class="boxes"><u></u><u></u><u class="x"></u></div><i></i></div></div>
+          <div class="tool-body"><b>Team List Generator<small>Beta</small></b><span>The printable PDF team list you hand in at events, in nine languages.</span><em class="takes">Takes this</em></div></a></li>
+      </ul>
+    </section>
+    <section class="group g-play" aria-labelledby="g2">
+      <h2 id="g2">Find somewhere to play</h2>
+      <ul>
+        <li><a class="tool" data-tool="events" href="pokemon-events-italia/index.html">
+          <div class="mini" aria-hidden="true"><div class="mini-events"><div class="stub"><small>Sat</small><b>14</b><small>Nov</small></div><div class="lines"><i></i><i></i><i></i></div></div></div>
+          <div class="tool-body"><b>Event Locator</b><span>Official VGC, TCG and GO events in Italy, near you or anywhere.</span><em class="takes">Takes this</em></div></a></li>
+        <li><a class="tool" data-tool="locals" href="vgc-locals-italia/index.html">
+          <div class="mini" aria-hidden="true"><div class="mini-locals"><div class="band" id="mini-locals"></div></div></div>
+          <div class="tool-body"><b>VGC Locals Italia</b><span>Who won Italian locals, with which teams, and what’s popular.</span><em class="takes">Takes this</em></div></a></li>
+      </ul>
+    </section>
+    <section class="group g-season" aria-labelledby="g3">
+      <h2 id="g3">Track your season</h2>
+      <ul>
+        <li><a class="tool" data-tool="cp" href="cp-tracker/index.html">
+          <div class="mini" aria-hidden="true"><div class="mini-cp"><i>50</i><i>40</i><i>32</i><i class="open"></i></div></div>
+          <div class="tool-body"><b>CP Tracker</b><span>Your Championship Points, with best finish limits worked out. Saved on your device.</span><em class="takes">Takes this</em></div></a></li>
+      </ul>
+    </section>
+  </div>
+
+  <p class="foot">Made for Pokémon VGC players. Not affiliated with The Pokémon Company International.</p>
+</main>
+
+<script src="vgc-locals-italia/sprite-map.js"></script>
+<script>
+(function () {
+  var root = document.documentElement;
+  document.getElementById('theme-toggle').addEventListener('click', function () {
+    var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    document.cookie = 'theme=' + next + '; max-age=' + (60 * 60 * 24 * 365) + '; path=/; SameSite=Lax';
+  });
+
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; };
+  var DATA = { dash: null, tours: [] };
+
+  /* miniatures */
+  $('mini-ev').innerHTML = [32, 1, 32].map(function (n) {
+    var s = ''; for (var i = 0; i < 32; i++) s += '<s' + (i < n ? ' class="on"' : '') + '></s>'; return '<i>' + s + '</i>';
+  }).join('');
+
+  function spriteSrc(id) {
+    var dex = typeof SPECIES_TO_DEX !== 'undefined' ? SPECIES_TO_DEX[id] : null;
+    return dex ? NEW_SPRITE_CDN_BASE + '/' + dex + '.png' : '';
+  }
+  function sprite(id, name, cls) {
+    var s = spriteSrc(id);
+    return s ? '<img class="' + (cls || 'spr') + '" src="' + s + '" alt="' + esc(name) + '" loading="lazy" onerror="this.style.visibility=\'hidden\'">' : '';
+  }
+  function tourItem(t) {
+    var w = t.winner || {};
+    return '<li><b>' + esc(t.name) + '</b><small>' + esc(t.date) + ', ' + esc(t.number_of_players) + ' players, won by ' + esc(w.player_name || 'unknown') + '</small>' +
+      '<span class="team">' + (w.team || []).map(function (m) { return sprite(m.species_id, m.species_name, 'spr-s'); }).join('') + '</span></li>';
+  }
+
+  /* ---------- upcoming CP events (Event Locator's data) ----------
+     Only League Cups and League Challenges for the video game: the events
+     that earn Championship Points. Loaded the first time the box is used,
+     since the full event file is large.                                 */
+  var CP_MAX = { cup: 50, challenge: 15 };   // winner's CP, from cp-tracker/rules.js
+  var events = null, eventsLoading = null, here = null;
+  function kindOf(e) {
+    var s = e.series_name || '';
+    return /league cup/i.test(s) ? 'cup' : /league challenge/i.test(s) ? 'challenge' : null;
+  }
+  function loadEvents() {
+    if (events) return Promise.resolve(events);
+    if (!eventsLoading) eventsLoading = fetch('../pokemon-events-italia/data/events.json').then(function (r) { return r.json(); }).then(function (d) {
+      var now = new Date().toISOString();
+      events = Object.values(d.events || {}).filter(function (e) {
+        return e.is_active !== false && (e.start_date || '') >= now.slice(0, 10) && (e.products || []).indexOf('vg') !== -1 && kindOf(e);
+      }).map(function (e) {
+        e._kind = kindOf(e);
+        e._text = norm([cityOf(e), e.region, e.activity_group_name, e.venue_name].join(' '));   // not the street: "Via Roma" is everywhere
+        return e;
+      }).sort(function (a, b) { return a.start_date < b.start_date ? -1 : 1; });
+      return events;
+    });
+    return eventsLoading;
+  }
+  function norm(s) { return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
+  function km(a, b, c, d) {
+    var r = function (x) { return x * Math.PI / 180; }, R = 6371;
+    var h = Math.pow(Math.sin(r(c - a) / 2), 2) + Math.cos(r(a)) * Math.cos(r(c)) * Math.pow(Math.sin(r(d - b) / 2), 2);
+    return 2 * R * Math.asin(Math.sqrt(h));
+  }
+  function datePart(e, o) {
+    try { return new Intl.DateTimeFormat('en-GB', Object.assign({ timeZone: e.timezone || 'Europe/Rome' }, o)).format(new Date(e.start_date)); } catch (x) { return ''; }
+  }
+  /* Addresses come in two shapes: "..., 25047 DARFO BOARIO TERME BS, ITALY"
+     and "..., EMPOLI, ITALIA 50053, IT". */
+  function cityOf(e) {
+    var a = e.full_address || '', c = '';
+    var m = a.match(/\b\d{5}\s+([^,\d]+?)(?:\s+[A-Z]{2})?\s*,\s*ITAL/i);
+    if (m) c = m[1];
+    else {
+      var parts = a.split(',').map(function (x) { return x.trim(); });
+      var i = parts.findIndex(function (x) { return /\b\d{5}\b/.test(x); });
+      if (i > 0) c = parts[i - 1];
+    }
+    if (!c || /\d/.test(c)) c = e.region || '';
+    return c.toLowerCase().replace(/(^|[\s'-])\S/g, function (x) { return x.toUpperCase(); });
+  }
+  function eventItem(e, dist) {
+    return '<li><a class="ticket ' + e._kind + '" href="pokemon-events-italia/event.html?guid=' + encodeURIComponent(e.guid) + '">' +
+      '<span class="stub"><small>' + esc(datePart(e, { weekday: 'short' })) + '</small><b>' + esc(datePart(e, { day: 'numeric' })) + '</b><small>' + esc(datePart(e, { month: 'short' })) + '</small></span>' +
+      '<span class="t-body"><span class="t-kind">' + (e._kind === 'cup' ? 'League Cup' : 'League Challenge') + '</span>' +
+      '<b>' + esc(e.activity_group_name || e.venue_name || e.name) + '</b>' +
+      '<small>' + esc(cityOf(e)) + (dist != null ? ', ' + (dist < 10 ? dist.toFixed(1) : Math.round(dist)) + ' km away' : '') + ', ' + esc(datePart(e, { hour: '2-digit', minute: '2-digit' })) + '</small></span>' +
+      '<span class="t-cp">up to<b>' + CP_MAX[e._kind] + '</b>CP</span></a></li>';
+  }
+  var ALL_LINK = 'pokemon-events-italia/index.html?type=cup,challenge&games=vg';
+  function eventsHtml(list, dist) {
+    return '<ul class="tickets">' + list.slice(0, 5).map(function (e) { return eventItem(e, dist ? dist(e) : null); }).join('') + '</ul>' +
+      '<div class="row"><a class="btn" href="' + ALL_LINK + '">See all Cups and Challenges</a></div>';
+  }
+
+  function teamLike(q) { return /^EVs:/im.test(q) || /^Ability:/im.test(q) || /^[^\n]+ @ [^\n]+/.test(q) || /(pokepast\.es|vrpastes\.com)\/\S+/i.test(q); }
+
+  /* Returns what to show for q. Events need data, so `later` fills them in. */
+  function route(q) {
+    q = q.trim();
+    if (!q) return null;
+    if (teamLike(q))
+      return { tools: ['teamlist', 'print', 'ev'], verdict: 'That’s a team. <span>The team tools take it as it is; they’re outlined below.</span>', html: '' };
+    var id = q.toLowerCase().replace(/[’']/g, '').replace(/\s+/g, '-');
+    if (typeof SPECIES_TO_DEX !== 'undefined' && SPECIES_TO_DEX[id]) {
+      var use = DATA.dash && DATA.dash.top_pokemon.find(function (p) { return p.species_id === id; });
+      var wins = DATA.tours.filter(function (t) { return ((t.winner || {}).team || []).some(function (m) { return m.species_id === id; }); });
+      var n = DATA.dash ? DATA.dash.meta.total_tournaments : 0;
+      var name = use ? use.species_name : q.charAt(0).toUpperCase() + q.slice(1);
+      return { tools: ['locals'], verdict: esc(name) + '. <span>How it’s doing at Italian locals.</span>',
+        html: '<div class="stats">' + sprite(id, name) +
+          '<div><b>' + (use ? use.usage_pct.toFixed(1) + '%' : '0%') + '</b><small>of top-cut teams across ' + n + ' locals</small></div>' +
+          '<div><b>' + wins.length + '</b><small>local wins</small></div></div>' +
+          (wins.length ? '<ul class="hits">' + wins.slice(0, 2).map(tourItem).join('') + '</ul>' : '') +
+          '<div class="row"><a class="btn" href="vgc-locals-italia/species.html?id=' + encodeURIComponent(id) + '">See it in VGC Locals Italia</a></div>' };
+    }
+    if (q.length < 2) return null;
+    return { tools: ['events'], verdict: 'Looking for tournaments in ' + esc(q) + '…', html: '', later: function () {
+      var re = new RegExp('\\b' + norm(q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b');
+      var found = events.filter(function (e) { return re.test(e._text); });
+      var ql = norm(q);
+      var locals = DATA.tours.filter(function (t) { return norm(t.name + ' ' + ((t.location || {}).label || '')).indexOf(ql) !== -1; });
+      var localsLine = locals.length ? '<p class="aside">' + locals.length + ' recent local' + (locals.length === 1 ? '' : 's') + ' there in <a href="vgc-locals-italia/index.html">VGC Locals Italia</a>, latest won by ' + esc((locals[0].winner || {}).player_name || 'unknown') + '.</p>' : '';
+      if (!found.length) return { verdict: 'No League Cups or Challenges announced in ' + esc(q) + ' yet. <span>Try a nearby city, or use your location.</span>',
+        html: localsLine + '<div class="row"><a class="btn" href="' + ALL_LINK + '">See all Cups and Challenges</a></div>', tools: ['events', 'locals'] };
+      var FOUND = found.length;
+      return { verdict: found.length + ' upcoming ' + (found.length === 1 ? 'tournament' : 'tournaments') + ' in ' + esc(q) + '. <span>League Cups and Challenges, soonest first' + (FOUND > 5 ? '; the next 5 are below.' : '.') + '</span>',
+        html: eventsHtml(found) + localsLine, tools: locals.length ? ['events', 'locals'] : ['events'] };
+    } };
+  }
+
+  var tools = Array.prototype.slice.call(document.querySelectorAll('.tool'));
+  var q = $('q'), box = $('router'), hint = $('verdict').innerHTML, seq = 0;
+  function show(r) {
+    tools.forEach(function (a) { a.classList.toggle('lit', !!r && (r.tools || []).indexOf(a.dataset.tool) !== -1); });
+    $('verdict').innerHTML = r ? r.verdict : hint;
+    $('out').innerHTML = r ? r.html : '';
+  }
+  function render() {
+    here = null; $('near').classList.remove('on');
+    var text = q.value, r = route(text), mine = ++seq;
+    show(r);
+    if (r && r.later) loadEvents().then(function () {
+      if (mine === seq) { var r2 = r.later(); show(r2); }
+    }).catch(function () { if (mine === seq) show({ verdict: 'The event list didn’t load. <span>Try again, or open the Event Locator.</span>', html: '', tools: ['events'] }); });
+  }
+  q.addEventListener('input', render);
+  q.addEventListener('focus', function () { loadEvents().catch(function () {}); }, { once: true });
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-try]');
+    if (t) { q.value = t.dataset.try; render(); q.focus(); }
+  });
+
+  /* Near me: the device's location, nothing sent anywhere */
+  $('near').addEventListener('click', function () {
+    var btn = $('near');
+    if (!navigator.geolocation) return show({ verdict: 'This browser can’t share your location. <span>Type a city instead.</span>', html: '' });
+    q.value = ''; seq++;
+    show({ verdict: 'Finding tournaments near you…', html: '', tools: ['events'] });
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      here = { lat: pos.coords.latitude, lon: pos.coords.longitude }; btn.classList.add('on');
+      loadEvents().then(function () {
+        var dist = function (e) { return e.latitude != null ? km(here.lat, here.lon, e.latitude, e.longitude) : Infinity; };
+        var near = events.filter(function (e) { return dist(e) <= 100; });
+        if (!near.length) near = events.slice().sort(function (a, b) { return dist(a) - dist(b); }).slice(0, 5);
+        var FOUND = near.length;
+        show({ verdict: near.length + ' upcoming ' + (near.length === 1 ? 'tournament' : 'tournaments') + ' within 100 km. <span>League Cups and Challenges, soonest first' + (FOUND > 5 ? '; the next 5 are below.' : '.') + '</span>',
+          html: eventsHtml(near, dist), tools: ['events'] });
+      });
+    }, function () {
+      show({ verdict: 'Location not shared. <span>Type a city instead.</span>', html: '' });
+    }, { timeout: 10000 });
+  });
+
+  Promise.all([
+    fetch('../vgc-locals-italia/data/dashboard.json').then(function (r) { return r.json(); }),
+    fetch('../vgc-locals-italia/data/tournaments.json').then(function (r) { return r.json(); })
+  ]).then(function (res) {
+    DATA.dash = res[0];
+    DATA.tours = res[1].slice().sort(function (a, b) { return a.date < b.date ? 1 : -1; });
+    // the Locals miniature shows the latest real winning team
+    var latest = DATA.tours.find(function (t) { return t.winner && t.winner.team && t.winner.team.length; });
+    if (latest) $('mini-locals').innerHTML = latest.winner.team.slice(0, 6).map(function (m) { return sprite(m.species_id, '', ''); }).join('');
+    if (q.value) render();
+  }).catch(function () { /* the event search still works without the locals data */ });
+})();
+</script>
+</body>
+</html>

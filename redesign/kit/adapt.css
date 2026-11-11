@@ -1,0 +1,194 @@
+/* ==========================================================================
+   Adapter: puts the older tools (Event Locator, Locals Italia,
+   TeamlistCreator) on the kit without rewriting their layout CSS.
+
+   Each tool's original stylesheet is imported as  @layer legacy , so every
+   rule in this file (unlayered) wins over it regardless of specificity.
+   Rules here change looks only: colour, type, surfaces, radii, shadows.
+   They never touch display/open/hidden states, which stay in legacy.
+   ========================================================================== */
+
+/* ---------- 1. the old token names, pointed at the kit ---------- */
+:root, :root[data-theme="dark"] {
+  --bg-a: var(--k-band); --bg-b: var(--k-band);
+  --panel: var(--k-surface); --panel-2: var(--k-made); --border: var(--k-line);
+  --text: var(--k-ink); --muted: var(--k-soft); --muted-2: var(--k-soft);
+  --ink: var(--k-ink); --ink-dim: var(--k-soft);
+  --accent: var(--k-accent); --accent-strong: var(--k-accent); --badge-bg: var(--k-accent-weak);
+  --shadow: var(--k-shadow);
+  --radius: var(--k-r-surface); --radius-sm: var(--k-r-field); --radius-btn: 999px;
+  --btn-bg: var(--k-band); --btn-text: #fff; --btn-hover-a: var(--k-band); --btn-hover-b: var(--k-band);
+  /* TeamlistCreator's names */
+  --panel-bg: var(--k-surface); --panel-bg-soft: var(--k-made); --panel-shadow: var(--k-shadow);
+  --field-bg: var(--k-surface); --field-text: var(--k-ink); --text-dim: var(--k-soft);
+  --select-bg: var(--k-surface); --select-border: var(--k-line); --link: var(--k-accent);
+  --radius-lg: var(--k-r-surface); --radius-md: var(--k-r-field);
+  --accent-a: var(--k-accent); --accent-b: var(--k-accent); --accent-gradient: var(--k-accent);
+}
+:root[data-theme="dark"] { --btn-bg: var(--k-accent); --btn-text: #14123a; }
+
+/* ---------- 2. base ---------- */
+html { background: var(--k-ground); }
+body {
+  background: var(--k-ground) !important;
+  color: var(--k-ink);
+  font-family: var(--k-text) !important;
+  font-size: var(--k-16);
+  line-height: 1.55;
+}
+body::before { content: none !important; display: none !important; }
+a { color: var(--k-accent); }
+:focus-visible { outline: 2px solid var(--k-accent); outline-offset: 2px; }
+::selection { background: var(--k-accent); color: #fff; }
+h1, h2, h3 { font-family: var(--k-display); font-variation-settings: "wdth" 88; letter-spacing: -.015em; line-height: 1.12; color: var(--k-ink); text-wrap: balance; }
+main h1, .container > h1 { font-size: var(--k-36); font-weight: 700; text-transform: none; }
+main h2, .panel h2 { font-size: var(--k-24); font-weight: 700; text-transform: none; letter-spacing: -.01em; color: var(--k-ink); }
+input, select, textarea, button { font-family: var(--k-text); }
+textarea { font-family: var(--k-paste); }
+.container { max-width: var(--k-max); padding-inline: var(--k-gutter); }
+
+/* ---------- 3. the topbar becomes the band ---------- */
+.topbar {
+  --text: var(--k-band-ink); --muted: var(--k-band-soft); --ink: var(--k-band-ink);
+  position: relative !important; top: auto;
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-rows: 2.6rem auto auto;
+  grid-template-areas: "home team theme" "brand brand brand" "views views lang";
+  align-items: center; gap: .9rem 1rem;
+  padding: .9rem max(var(--k-gutter), calc((100vw - var(--k-max)) / 2 + var(--k-gutter))) clamp(1.5rem, 4vw, 2.5rem) !important;
+  background:
+    repeating-linear-gradient(135deg, rgba(255,255,255,.055) 0 1.5px, transparent 1.5px 44px),
+    repeating-linear-gradient(45deg, rgba(255,255,255,.055) 0 1.5px, transparent 1.5px 44px),
+    var(--k-band) !important;
+  color: var(--k-band-ink);
+  box-shadow: none !important;
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+}
+.topbar-controls { display: contents !important; }
+.topbar .k-home { grid-area: home; color: var(--k-band-ink); }
+.topbar .k-team { grid-area: team; justify-self: end; margin: 0; max-width: 100%; }
+.topbar #theme-toggle { grid-area: theme; }
+.topbar .brand-group { grid-area: brand; display: block; margin-top: clamp(.75rem, 3vw, 1.75rem); color: var(--k-band-ink); text-decoration: none; }
+.topbar .brand-group:hover { opacity: 1; }
+.topbar .logo { display: none !important; }
+.topbar .brand {
+  display: block; font-family: var(--k-display); font-size: clamp(2.2rem, 6.4vw, var(--k-60)); font-weight: 760;
+  font-variation-settings: "wdth" 80, "opsz" 72; letter-spacing: -.03em; line-height: .98; color: var(--k-band-ink);
+  white-space: normal; text-wrap: balance; max-width: 18ch;
+}
+.topbar .brand small { font-size: .45em; font-weight: 500; color: var(--k-band-soft); letter-spacing: 0; }
+.topbar .brand-text { display: grid; gap: .5rem; }
+.topbar .brand-tagline { display: block !important; background: none !important; padding: 0 !important; border-radius: 0; font-family: var(--k-text); font-size: var(--k-18) !important; font-weight: 400 !important; color: var(--k-band-soft) !important; letter-spacing: 0 !important; text-transform: none !important; }
+.topbar .view-toggle, .topbar nav:not(.k-team) { grid-area: views; justify-self: start; }
+.topbar .lang-toggle { grid-area: lang; justify-self: end; }
+.topbar nav:not(.k-team) { display: flex; gap: 1.25rem; }
+.topbar nav:not(.k-team) a { color: var(--k-band-ink); font-weight: 700; text-decoration: underline; text-underline-offset: .25em; text-decoration-color: rgba(255,255,255,.35); padding: 0; background: none; }
+.topbar nav:not(.k-team) a:hover { text-decoration-color: currentColor; }
+.topbar .k-team a { text-decoration: none !important; font-weight: 500; }
+.topbar .k-team a[aria-current="page"] { font-weight: 700; }
+/* Locals' list page repeats the tool name as its h1: keep it for screen readers only */
+.container > h1:has(+ #filter-form) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.view-toggle, .lang-toggle { background: rgba(255,255,255,.1) !important; border: 0 !important; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.16); }
+.toggle-btn, .lang-btn { color: var(--k-band-soft) !important; font: 500 var(--k-14)/1 var(--k-text) !important; padding: .55rem 1rem !important; }
+.toggle-btn.active, .lang-btn.active { background: var(--k-band-ink) !important; color: var(--k-band) !important; font-weight: 700 !important; box-shadow: none !important; }
+/* the kit's theme switch */
+.topbar #theme-toggle { width: 50px; height: 28px; border-radius: 999px; background: rgba(255,255,255,.14) !important; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.22) !important; transform: none !important; }
+.topbar #theme-toggle .theme-switch-icon { color: var(--k-band-ink); }
+.topbar #theme-toggle .theme-switch-sun { opacity: 1; }
+.topbar #theme-toggle .theme-switch-moon { opacity: .55; }
+:root[data-theme="dark"] .topbar #theme-toggle .theme-switch-sun { opacity: .55; }
+:root[data-theme="dark"] .topbar #theme-toggle .theme-switch-moon { opacity: 1; }
+.topbar #theme-toggle .theme-switch-knob { top: 4px; left: 4px; width: 20px; height: 20px; background: var(--k-band-ink); box-shadow: none; }
+:root[data-theme="dark"] .topbar #theme-toggle .theme-switch-knob { transform: translateX(22px); }
+
+@media (max-width: 720px) {
+  .topbar {
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto auto auto;
+    grid-template-areas: "home theme" "team team" "brand brand" "views lang";
+  }
+  .topbar .k-team { justify-self: stretch; }
+  .topbar .view-toggle { max-width: 100%; overflow-x: auto; }
+}
+
+/* ---------- 4. surfaces: white = you edit, tinted = the tool made it ---------- */
+.panel, .detail-card, .player-card, .roster-card, .cookie-banner, .card {
+  box-shadow: var(--k-shadow) !important;
+  border-radius: var(--k-r-surface) !important;
+}
+.event-card, .tournament-card {
+  background: var(--k-surface) !important;
+  box-shadow: 0 1px 2px rgba(34,31,85,.08) !important;
+  border-radius: 14px !important;
+  transform: none !important;
+}
+.event-card:hover, .tournament-card:hover { box-shadow: 0 0 0 2px var(--k-accent) !important; }
+.player-card, .roster-card { background: var(--k-made) !important; box-shadow: none !important; border: 0 !important; }
+.cal-grid-cell, .cal-day-chip { box-shadow: none !important; }
+.cal-grid-cell.selected, .cal-day-chip.selected { background: var(--k-band) !important; color: #fff !important; }
+:root[data-theme="dark"] .cal-grid-cell.selected, :root[data-theme="dark"] .cal-day-chip.selected { background: var(--k-accent) !important; color: #14123a !important; }
+
+/* ---------- 5. controls ---------- */
+input[type="text"], input[type="date"], input[type="number"], input[type="url"], input[type="search"], input:not([type]), select, textarea {
+  border: 1.5px solid var(--k-line) !important;
+  border-radius: var(--k-r-field) !important;
+  background-color: var(--k-surface) !important;
+  color: var(--k-ink) !important;
+  box-shadow: none;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--k-accent) !important; box-shadow: 0 0 0 3px var(--k-accent-weak) !important; outline: none; }
+
+/* Primary action: indigo pill. Everything else is excluded here and gets
+   its own rule below, so no specificity contest decides how a button looks. */
+.btn:not(.btn-secondary),
+.filter-bar button:not(.toggle-chip, .location-clear-btn, .filter-toggle, .type-toggle-btn, .btn-reset, .sort-toggle-btn, .near-me-btn),
+.cookie-banner button {
+  background: var(--k-band) !important; color: #fff !important; border: 0 !important; border-radius: 999px !important;
+  box-shadow: none !important; font-family: var(--k-text) !important; font-weight: 700 !important; letter-spacing: 0 !important;
+  transform: none !important; text-transform: none !important;
+}
+:root[data-theme="dark"] :is(.btn:not(.btn-secondary), .filter-bar button:not(.toggle-chip, .location-clear-btn, .filter-toggle, .type-toggle-btn, .btn-reset, .sort-toggle-btn, .near-me-btn), .cookie-banner button) { background: var(--k-accent) !important; color: #14123a !important; }
+
+/* Secondary: outlined */
+.btn-secondary, .filter-bar button.btn-reset, .filter-bar button.near-me-btn, .filter-bar button.filter-toggle {
+  background: var(--k-surface) !important; color: var(--k-ink) !important; border: 0 !important; border-radius: 999px !important;
+  box-shadow: inset 0 0 0 1.5px var(--k-line) !important; font-weight: 700 !important; letter-spacing: 0 !important; transform: none !important;
+}
+.btn-secondary:hover, .filter-bar button.btn-reset:hover, .filter-bar button.near-me-btn:hover { box-shadow: inset 0 0 0 1.5px var(--k-accent) !important; }
+.filter-bar button.near-me-btn.active { background: var(--k-accent-weak) !important; box-shadow: inset 0 0 0 1.5px var(--k-accent) !important; }
+
+/* Segmented toggles (sort order, event type): the chosen one is raised */
+.filter-bar button.sort-toggle-btn, .type-toggle-btn {
+  background: transparent !important; color: var(--k-soft) !important; border: 0 !important; box-shadow: none !important;
+  font-weight: 500 !important; letter-spacing: 0 !important; transform: none !important;
+}
+.filter-bar button.sort-toggle-btn.active, .type-toggle-btn.active {
+  background: var(--k-surface) !important; color: var(--k-ink) !important; font-weight: 700 !important; box-shadow: 0 1px 3px rgba(34,31,85,.18) !important;
+}
+.sort-toggle { background: var(--k-made) !important; border: 0 !important; }
+
+/* filter chips: state shown by fill and border, no glow */
+.toggle-chip { border-radius: 999px !important; background: var(--k-surface) !important; color: var(--k-soft) !important; font-weight: 500 !important; }
+.toggle-chip:has(input:checked) {
+  box-shadow: none !important; font-weight: 700 !important; color: var(--k-ink) !important;
+  background: color-mix(in oklab, var(--toggle-color, var(--k-accent)) 18%, var(--k-surface)) !important;
+}
+.type-toggle, .cal-mode-toggle { background: var(--k-made) !important; border: 0 !important; }
+.species-filter-btn { background: var(--k-surface) !important; border: 1.5px solid var(--k-line) !important; color: var(--k-ink) !important; box-shadow: none !important; }
+.species-filter-btn.active { border-color: var(--k-accent) !important; background: var(--k-accent-weak) !important; }
+
+.badge { font-family: var(--k-text) !important; font-weight: 700 !important; letter-spacing: 0 !important; text-transform: none !important; }
+
+/* ---------- 6. quiet text ---------- */
+.showing-note, .matches-summary, .footnote, .lede, .meta, .muted { color: var(--k-soft) !important; }
+.footnote { font-size: var(--k-14) !important; }
+.breadcrumb a, .back-link { color: var(--k-accent) !important; font-weight: 700; }
+.back-to-top { background: var(--k-band) !important; color: #fff !important; box-shadow: var(--k-shadow) !important; }
+.meter-fill, .g .bar i { background: var(--k-accent) !important; }
+.meter-track { background: var(--k-made) !important; }
+
+/* ---------- 7. motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

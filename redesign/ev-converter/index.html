@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EV Converter</title>
+<meta name="description" content="Convert Pokémon Showdown EV spreads to Pokémon Champions stat points and back, for a whole team at once.">
+<script>
+(function () {
+  var m = document.cookie.match(/(?:^|; )theme=(dark|light)/);
+  var theme = m ? m[1] : (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  document.documentElement.setAttribute("data-theme", theme);
+})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* EV Converter: a calculator, not a form. Text in, text out, live.
+   The one loud thing is the point grid: Champions counts stats in whole
+   points (32 per stat, 66 in all), so every spread is drawn as countable pips. */
+:root {
+  --ground: #f4f6f8;
+  --panel: #ffffff;
+  --ink: #0f1a24;
+  --soft: #4f5d6b;
+  --faint: #8794a1;
+  --line: #e1e6eb;
+  --hover: #f1f4f7;
+  --well: #f7f9fa;
+  --acc: #0b7a70;
+  --acc-ink: #ffffff;
+  --acc-weak: #dff3ef;
+  --pip-off: #e3e8ec;
+  --warn: #a35a00;
+  --warn-weak: #fdf0dc;
+  --err: #c0262d;
+  --err-weak: #fbe6e7;
+  --shadow: 0 1px 2px rgba(15, 26, 36, .05), 0 2px 6px rgba(15, 26, 36, .04);
+  --font: "Instrument Sans", system-ui, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --ease: cubic-bezier(.23, 1, .32, 1);
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --ground: #0d1115;
+  --panel: #151b21;
+  --ink: #e6ecf1;
+  --soft: #a2adb8;
+  --faint: #6f7b87;
+  --line: #262e36;
+  --hover: #1c232a;
+  --well: #11161b;
+  --acc: #4fd1bf;
+  --acc-ink: #04201c;
+  --acc-weak: #12302c;
+  --pip-off: #232b33;
+  --warn: #f2b65a;
+  --warn-weak: #33260f;
+  --err: #ff8085;
+  --err-weak: #3a1a1d;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .4);
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--ground); }
+body { margin: 0; font: 400 15px/1.55 var(--font); color: var(--ink); background: var(--ground); -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+a { color: var(--acc); text-underline-offset: .18em; }
+:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+[hidden] { display: none !important; }
+.sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* top bar */
+.top { position: sticky; top: 0; z-index: 20; height: 60px; display: flex; align-items: center; gap: 16px; padding: 0 16px 0 20px;
+  background: color-mix(in srgb, var(--panel) 92%, transparent); backdrop-filter: saturate(1.4) blur(10px); border-bottom: 1px solid var(--line); }
+.home { display: inline-flex; align-items: center; gap: 6px; color: var(--soft); text-decoration: none; font-size: 14px; font-weight: 500; }
+.home:hover { color: var(--ink); }
+.top h1 { margin: 0 auto 0 0; font-size: 18px; font-weight: 700; letter-spacing: -.015em; white-space: nowrap; }
+.icon-btn { width: 40px; height: 40px; display: grid; place-items: center; border: 0; border-radius: 10px; background: none; color: var(--soft); box-shadow: inset 0 0 0 1px var(--line); }
+.icon-btn:hover { color: var(--ink); background: var(--hover); }
+.icon-btn .moon, :root[data-theme="dark"] .icon-btn .sun { display: none; }
+:root[data-theme="dark"] .icon-btn .moon { display: block; }
+
+.wrap { max-width: 1180px; margin: 0 auto; padding: 28px 20px 72px; }
+.lede { margin: 0 0 22px; color: var(--soft); max-width: 62ch; }
+
+/* direction */
+.dir { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.dir-pair { display: inline-flex; align-items: center; gap: 4px; padding: 4px; border-radius: 12px; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); }
+.dir-pair span { padding: 6px 12px; border-radius: 8px; font-weight: 600; font-size: 14px; white-space: nowrap; }
+.dir-pair .from { color: var(--soft); }
+.dir-pair .to { background: var(--acc-weak); color: var(--acc); }
+.swap { width: 34px; height: 34px; display: grid; place-items: center; border: 0; border-radius: 8px; background: none; color: var(--soft); transition: transform 300ms var(--ease); }
+.swap:hover { color: var(--ink); background: var(--hover); }
+.swap.turned { transform: rotate(180deg); }
+.dir-note { font-size: 13px; color: var(--faint); }
+.dir-note button { border: 0; background: none; padding: 0; color: var(--acc); font-weight: 600; font-size: 13px; text-decoration: underline; text-underline-offset: .18em; }
+
+/* the two panes */
+.panes { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+.pane { background: var(--panel); border-radius: 14px; box-shadow: var(--shadow), inset 0 0 0 1px var(--line); display: flex; flex-direction: column; min-height: 360px; min-width: 0; }
+.pane-head { display: flex; align-items: center; gap: 10px; padding: 12px 12px 12px 16px; border-bottom: 1px solid var(--line); min-height: 58px; }
+.pane-head h2 { margin: 0 auto 0 0; font-size: 15px; font-weight: 700; }
+.pane-head small { color: var(--faint); font-size: 13px; font-weight: 500; margin-left: 6px; }
+textarea, .out { flex: 1; width: 100%; margin: 0; border: 0; padding: 14px 16px; background: none; font: 13px/1.65 var(--mono); color: var(--ink); white-space: pre-wrap; word-break: break-word; tab-size: 2; }
+textarea { resize: none; outline: none; min-height: 320px; }
+textarea:focus-visible { outline: none; }
+.pane:focus-within:has(textarea:focus-visible) { box-shadow: var(--shadow), inset 0 0 0 2px var(--acc); }
+textarea::placeholder { color: var(--faint); }
+.out { overflow: auto; min-height: 320px; }
+.out:empty::before { content: attr(data-empty); color: var(--faint); font-family: var(--font); font-size: 14px; }
+.out mark { background: var(--acc-weak); color: var(--acc); font-weight: 700; border-radius: 4px; padding: 1px 3px; margin: 0 -3px; }
+
+.link-bar { display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 16px; border-top: 1px solid var(--line); background: var(--acc-weak); border-radius: 0 0 14px 14px; font-size: 14px; }
+.link-bar span { margin-right: auto; color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.primary { height: 38px; padding: 0 16px; border: 0; border-radius: 10px; background: var(--acc); color: var(--acc-ink); font-weight: 700; white-space: nowrap; transition: filter 140ms var(--ease); }
+.primary:hover { filter: brightness(1.08); }
+.primary:active { transform: translateY(1px); }
+.primary:disabled { opacity: .5; cursor: default; }
+.ghost { height: 34px; padding: 0 12px; border: 0; border-radius: 8px; background: none; color: var(--soft); font-weight: 600; font-size: 14px; }
+.ghost:hover { color: var(--ink); background: var(--hover); }
+.ghost:disabled { opacity: .45; cursor: default; background: none; }
+
+/* team cards: the point grid */
+.team-head { display: flex; align-items: baseline; gap: 12px; margin: 34px 0 14px; }
+.team-head h2 { margin: 0; font-size: 20px; letter-spacing: -.015em; }
+.team-head p { margin: 0; color: var(--soft); font-size: 14px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 14px; }
+.mon { background: var(--panel); border-radius: 14px; box-shadow: var(--shadow), inset 0 0 0 1px var(--line); padding: 14px 16px 16px; min-width: 0; animation: rise 360ms var(--ease) both; }
+.mon:nth-child(2) { animation-delay: 40ms; } .mon:nth-child(3) { animation-delay: 80ms; } .mon:nth-child(4) { animation-delay: 120ms; } .mon:nth-child(5) { animation-delay: 160ms; } .mon:nth-child(6) { animation-delay: 200ms; }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } }
+.mon-top { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.mon-top img, .mon-top .ph { width: 44px; height: 44px; flex: none; object-fit: contain; image-rendering: auto; }
+.mon-top .ph { display: grid; place-items: center; border-radius: 10px; background: var(--well); color: var(--faint); font-weight: 700; }
+.mon-name { min-width: 0; margin-right: auto; }
+.mon-name b { display: block; font-size: 16px; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mon-name small { color: var(--faint); font-size: 13px; }
+.total { text-align: right; line-height: 1.15; }
+.total b { font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
+.total small { display: block; color: var(--faint); font-size: 12px; }
+.total.over b { color: var(--err); }
+
+.rows { display: grid; gap: 7px; }
+.row { display: grid; grid-template-columns: 38px minmax(0, 1fr) 30px 36px; align-items: center; gap: 10px; font-size: 13px; }
+.row .stat { color: var(--soft); font-weight: 600; }
+.pips { display: grid; grid-template-columns: repeat(32, 1fr); gap: 2px; height: 12px; }
+.pips i { border-radius: 2px; background: var(--pip-off); }
+.pips i.on { background: var(--acc); }
+.row .pts { text-align: right; font-weight: 700; }
+.row .ev { text-align: right; color: var(--faint); }
+.row.zero .pts { color: var(--faint); font-weight: 500; }
+.legend { display: grid; grid-template-columns: 38px minmax(0, 1fr) 30px 36px; gap: 10px; font-size: 11.5px; color: var(--faint); margin-bottom: 4px; }
+.legend span:nth-child(3), .legend span:nth-child(4) { text-align: right; }
+
+.notes { margin: 12px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.notes li { font-size: 13px; padding: 7px 10px; border-radius: 8px; background: var(--warn-weak); color: var(--warn); }
+.notes li.bad { background: var(--err-weak); color: var(--err); }
+
+/* reference */
+.ref { margin-top: 40px; background: var(--panel); border-radius: 14px; box-shadow: var(--shadow), inset 0 0 0 1px var(--line); padding: 18px 20px 20px; }
+.ref h2 { margin: 0 0 4px; font-size: 17px; }
+.ref p { margin: 0 0 16px; color: var(--soft); font-size: 14px; max-width: 70ch; }
+.ref-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); gap: 6px; }
+.cell { border-radius: 8px; background: var(--well); box-shadow: inset 0 0 0 1px var(--line); padding: 6px 4px; text-align: center; line-height: 1.2; }
+.cell b { display: block; font-size: 16px; }
+.cell small { color: var(--faint); font-size: 12px; }
+.cell.max { background: var(--acc-weak); box-shadow: none; }
+.cell.max b { color: var(--acc); }
+
+.toast { position: fixed; left: 50%; bottom: 22px; transform: translate(-50%, 20px); opacity: 0; pointer-events: none; background: var(--ink); color: var(--panel); padding: 10px 16px; border-radius: 10px; font-weight: 600; font-size: 14px; transition: opacity 200ms var(--ease), transform 300ms var(--ease); z-index: 50; max-width: calc(100vw - 32px); }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+.toast.err { background: var(--err); color: #fff; }
+
+@media (max-width: 820px) {
+  .panes { grid-template-columns: minmax(0, 1fr); }
+  .pane, textarea, .out { min-height: 240px; }
+}
+@media (max-width: 560px) {
+  .top { padding: 0 12px 0 14px; gap: 10px; }
+  .wrap { padding: 20px 16px 56px; }
+  .cards { grid-template-columns: minmax(0, 1fr); }
+  .dir-pair span { padding: 6px 9px; font-size: 13px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="home" href="../index.html"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M10 3L5 8l5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>VGC tools</span></a>
+  <h1>EV Converter</h1>
+  <button id="theme-toggle" class="icon-btn" type="button" aria-label="Switch between light and dark mode">
+    <svg class="sun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+    <svg class="moon" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 1 0 10.5 10.5z"/></svg>
+  </button>
+</header>
+
+<main class="wrap">
+  <p class="lede">Paste a team or a Poképaste link. Showdown EVs become Champions stat points as you type, and Champions points convert back the same way.</p>
+
+  <div class="dir">
+    <div class="dir-pair" aria-live="polite">
+      <span class="from" id="dir-from">Showdown EVs</span>
+      <button class="swap" id="swap" type="button" aria-label="Swap direction" title="Swap direction">
+        <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h11l-3-3M16 13H5l3 3"/></svg>
+      </button>
+      <span class="to" id="dir-to">Champions points</span>
+    </div>
+    <span class="dir-note" id="dir-note"></span>
+  </div>
+
+  <div class="panes">
+    <section class="pane" aria-labelledby="in-h">
+      <div class="pane-head">
+        <h2 id="in-h">Your team</h2>
+        <button class="ghost" id="clear" type="button" disabled>Clear</button>
+      </div>
+      <label for="paste" class="sr">Team in Showdown format, or a Poképaste link</label>
+      <textarea id="paste" spellcheck="false" autocomplete="off" placeholder="Garchomp @ Life Orb&#10;Ability: Rough Skin&#10;Level: 50&#10;EVs: 4 HP / 252 Atk / 252 Spe&#10;Jolly Nature&#10;- Protect&#10;- Earthquake&#10;&#10;or https://pokepast.es/…"></textarea>
+      <div class="link-bar" id="link-bar" hidden>
+        <span id="link-text">This looks like a Poképaste link.</span>
+        <button class="primary" id="fetch" type="button">Load team</button>
+      </div>
+    </section>
+
+    <section class="pane" aria-labelledby="out-h">
+      <div class="pane-head">
+        <h2 id="out-h">Converted<small id="out-sub"></small></h2>
+        <button class="primary" id="copy" type="button" disabled>Copy</button>
+      </div>
+      <div class="out" id="out" aria-live="polite" data-empty="The converted team appears here."></div>
+    </section>
+  </div>
+
+  <section id="team" hidden>
+    <div class="team-head"><h2>Stat points</h2><p id="team-sub"></p></div>
+    <div class="cards" id="cards"></div>
+  </section>
+
+  <section class="ref" aria-labelledby="ref-h">
+    <h2 id="ref-h">Every value at a glance</h2>
+    <p>At level 50 the first 4 EVs give one stat point, then every 8 more give another. So a Champions point is worth 8 EVs, minus 4 for the first. EVs that don’t reach the next point are wasted.</p>
+    <div class="ref-grid" id="ref-grid"></div>
+  </section>
+</main>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="sprites.js"></script>
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const MAX_PTS = 32, MAX_TOTAL = 66, MAX_EV = 252, MAX_EV_TOTAL = 508;
+  const STATS = ['HP', 'Atk', 'Def', 'SpA', 'SpD', 'Spe'];
+
+  /* ---------- theme ---------- */
+  $('theme-toggle').addEventListener('click', () => {
+    const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    document.cookie = 'theme=' + next + '; max-age=' + (60 * 60 * 24 * 365) + '; path=/; SameSite=Lax';
+  });
+
+  /* ---------- maths ----------
+     Level 50: the first 4 EVs give +1 stat, then +1 every 8 EVs.
+     EVs -> points rounds down (spare EVs are wasted); points -> EVs is the
+     smallest EV count that reaches those points.                        */
+  const toPoints = ev => Math.min(MAX_PTS, Math.floor((Math.max(0, ev) + 4) / 8));
+  const toEVs = pt => pt <= 0 ? 0 : Math.min(MAX_EV, pt * 8 - 4);
+
+  /* ---------- reading a paste ---------- */
+  const evLine = /^(\s*EVs:\s*)(.+?)\s*$/i;
+  function readSpread(rest) {
+    const s = {};
+    rest.split('/').forEach(part => {
+      const m = part.trim().match(/^(\d+)\s*([A-Za-z]+)$/);
+      if (!m) return;
+      const key = STATS.find(k => k.toLowerCase() === m[2].toLowerCase());
+      if (key) s[key] = parseInt(m[1], 10);
+    });
+    return s;
+  }
+  function blocks(text) {
+    return text.replace(/\r/g, '').split(/\n\s*\n/).map(b => b.trim()).filter(Boolean);
+  }
+  function monInfo(block) {
+    const first = block.split('\n')[0] || '';
+    const [left, item = ''] = first.split('@').map(x => x.trim());
+    const brackets = [...left.matchAll(/\(([^)]+)\)/g)].map(m => m[1].trim()).filter(x => !/^[MF]$/i.test(x));
+    const species = brackets.length ? brackets[brackets.length - 1] : left.replace(/\s*\([MF]\)\s*$/i, '').trim();
+    const line = block.split('\n').find(l => evLine.test(l));
+    return { species, item, spread: line ? readSpread(line.match(evLine)[2]) : null };
+  }
+
+  /* ---------- direction: guessed from the numbers, overridable ---------- */
+  let dir = 'to-points', manual = false;
+  function guess(text) {
+    let anyEV = false, big = false;
+    blocks(text).forEach(b => {
+      const s = monInfo(b).spread; if (!s) return;
+      anyEV = true;
+      const vals = Object.values(s), sum = vals.reduce((a, v) => a + v, 0);
+      if (vals.some(v => v > MAX_PTS) || sum > MAX_TOTAL) big = true;
+    });
+    if (!anyEV) return null;
+    return big ? 'to-points' : 'to-evs';
+  }
+  function showDir() {
+    const toPts = dir === 'to-points';
+    $('dir-from').textContent = toPts ? 'Showdown EVs' : 'Champions points';
+    $('dir-to').textContent = toPts ? 'Champions points' : 'Showdown EVs';
+    $('swap').classList.toggle('turned', !toPts);
+    $('out-sub').textContent = toPts ? 'Champions points' : 'Showdown EVs';
+  }
+  function note(text) {
+    const n = $('dir-note');
+    if (!text.trim() || !guess(text)) { n.textContent = ''; return; }
+    n.innerHTML = manual
+      ? 'Direction set by you. <button type="button" id="auto">Detect again</button>'
+      : (dir === 'to-points' ? 'These look like Showdown EVs.' : 'These look like Champions points.');
+    const a = $('auto'); if (a) a.onclick = () => { manual = false; update(); };
+  }
+
+  /* ---------- convert ---------- */
+  function convertText(text) {
+    const fn = dir === 'to-points' ? toPoints : toEVs;
+    let changed = 0;
+    const lines = text.replace(/\r/g, '').split('\n').map(line => {
+      const m = line.match(evLine);
+      if (!m) return { line, hit: false };
+      const out = m[2].replace(/(\d+)(\s*)([A-Za-z]+)/g, (_, n, sp, st) => fn(parseInt(n, 10)) + sp + st);
+      changed++;
+      return { line: m[1] + out, hit: true };
+    });
+    return { lines, changed };
+  }
+
+  const SPR = window.TL_SPRITES || { cdn: '', dex: {} };
+  const lower = {}; Object.keys(SPR.dex).forEach(k => { lower[k.toLowerCase()] = SPR.dex[k]; });
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  function sprite(name) {
+    const k = name.toLowerCase();
+    const d = SPR.dex[name] || lower[k] || lower[k.replace(/-mega(-[xyz])?$/, '')];
+    return d ? SPR.cdn + d + '.png' : '';
+  }
+
+  function card(block) {
+    const { species, item, spread } = monInfo(block);
+    if (!species || !spread) return '';
+    const toPts = dir === 'to-points';
+    const pts = {}, evs = {};
+    STATS.forEach(k => {
+      const v = spread[k] || 0;
+      pts[k] = toPts ? toPoints(v) : Math.min(v, MAX_PTS);
+      evs[k] = toPts ? v : toEVs(v);
+    });
+    const total = STATS.reduce((a, k) => a + pts[k], 0);
+    const notes = [];
+    if (toPts) {
+      const wasted = STATS.filter(k => spread[k] && (spread[k] + 4) % 8 && spread[k] < MAX_EV)
+        .map(k => `${k} ${spread[k]}`);
+      if (wasted.length) notes.push(['', `Some EVs don’t reach a full point: ${wasted.join(', ')}. The point count is rounded down.`]);
+      const evSum = STATS.reduce((a, k) => a + (spread[k] || 0), 0);
+      if (evSum > MAX_EV_TOTAL) notes.push(['bad', `This spread uses ${evSum} EVs; the limit is ${MAX_EV_TOTAL}.`]);
+    } else {
+      const over = STATS.filter(k => (spread[k] || 0) > MAX_PTS);
+      if (over.length) notes.push(['bad', `${over.join(', ')} above ${MAX_PTS} points, the most one stat can have.`]);
+    }
+    if (total > MAX_TOTAL) notes.push(['bad', `${total} points in all; Champions allows ${MAX_TOTAL}.`]);
+    const src = sprite(species);
+    return `<article class="mon">
+      <div class="mon-top">
+        ${src ? `<img src="${src}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'ph',textContent:'${esc(species.charAt(0))}'}))">` : `<span class="ph">${esc(species.charAt(0))}</span>`}
+        <div class="mon-name"><b title="${esc(species)}">${esc(species)}</b><small>${esc(item || 'No item')}</small></div>
+        <div class="total${total > MAX_TOTAL ? ' over' : ''}"><b>${total}</b><small>of ${MAX_TOTAL} points</small></div>
+      </div>
+      <div class="legend" aria-hidden="true"><span></span><span></span><span>Pts</span><span>EVs</span></div>
+      <div class="rows">${STATS.map(k => `
+        <div class="row${pts[k] ? '' : ' zero'}" aria-label="${k}: ${pts[k]} points, ${evs[k]} EVs">
+          <span class="stat">${k}</span>
+          <span class="pips" aria-hidden="true">${Array.from({ length: MAX_PTS }, (_, i) => `<i${i < pts[k] ? ' class="on"' : ''}></i>`).join('')}</span>
+          <span class="pts">${pts[k]}</span><span class="ev">${evs[k]}</span>
+        </div>`).join('')}
+      </div>
+      ${notes.length ? `<ul class="notes">${notes.map(([c, t]) => `<li class="${c}">${esc(t)}</li>`).join('')}</ul>` : ''}
+    </article>`;
+  }
+
+  let converted = '';
+  function update() {
+    const text = $('paste').value;
+    const isLink = /^\s*(https?:\/\/)?(www\.)?pokepast\.es\/[a-z0-9]+\/?\s*$/i.test(text);
+    $('link-bar').hidden = !isLink;
+    $('clear').disabled = !text;
+
+    if (!manual) { const g = guess(text); if (g) dir = g; }
+    showDir(); note(text);
+
+    const out = $('out');
+    if (!text.trim() || isLink) {
+      out.textContent = ''; converted = ''; $('copy').disabled = true; $('team').hidden = true; return;
+    }
+    const { lines, changed } = convertText(text);
+    converted = lines.map(l => l.line).join('\n');
+    out.innerHTML = lines.map(l => l.hit ? `<mark>${esc(l.line)}</mark>` : esc(l.line)).join('\n');
+    $('copy').disabled = !changed;
+    if (!changed) out.innerHTML = '';
+    out.dataset.empty = changed ? '' : 'No EV lines found yet. Each Pokémon needs a line like “EVs: 252 Atk / 4 SpD / 252 Spe”.';
+
+    const cards = blocks(text).map(card).filter(Boolean);
+    $('team').hidden = !cards.length;
+    $('cards').innerHTML = cards.join('');
+    $('team-sub').textContent = cards.length ? `${cards.length} Pokémon, after conversion` : '';
+  }
+
+  $('paste').addEventListener('input', update);
+  $('swap').addEventListener('click', () => { dir = dir === 'to-points' ? 'to-evs' : 'to-points'; manual = true; update(); });
+  $('clear').addEventListener('click', () => { $('paste').value = ''; manual = false; update(); $('paste').focus(); });
+
+  /* ---------- Poképaste link ---------- */
+  $('fetch').addEventListener('click', async () => {
+    const btn = $('fetch');
+    let url = $('paste').value.trim().replace(/\/$/, '');
+    if (!/^https?:\/\//.test(url)) url = 'https://' + url;
+    btn.disabled = true; btn.textContent = 'Loading…';
+    try {
+      const r = await fetch(url + '/json');
+      if (!r.ok) throw new Error(r.status === 404 ? 'That Poképaste doesn’t exist.' : 'Poképaste didn’t answer. Try again in a moment.');
+      const j = await r.json();
+      if (!(j.paste || '').trim()) throw new Error('That Poképaste is empty.');
+      $('paste').value = j.paste.replace(/\r/g, '').trim();
+      manual = false; update();
+      toast(j.title ? `Loaded “${j.title}”` : 'Team loaded');
+    } catch (e) {
+      toast(e instanceof TypeError ? 'Couldn’t reach Poképaste. Check your connection.' : e.message, 'err');
+    } finally { btn.disabled = false; btn.textContent = 'Load team'; }
+  });
+
+  /* ---------- copy ---------- */
+  $('copy').addEventListener('click', () => {
+    if (!converted) return;
+    const done = () => toast('Converted team copied');
+    navigator.clipboard.writeText(converted).then(done).catch(() => {
+      const ta = document.createElement('textarea'); ta.value = converted; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); ta.remove(); done();
+    });
+  });
+
+  /* ---------- reference ---------- */
+  $('ref-grid').innerHTML = Array.from({ length: MAX_PTS + 1 }, (_, p) =>
+    `<div class="cell${p === MAX_PTS ? ' max' : ''}"><b>${p}</b><small>${toEVs(p)} EVs</small></div>`).join('');
+
+  let tt;
+  function toast(msg, kind) {
+    const t = $('toast'); t.textContent = msg; t.className = 'toast show' + (kind ? ' ' + kind : '');
+    clearTimeout(tt); tt = setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  update();
+})();
+</script>
+</body>
+</html>
